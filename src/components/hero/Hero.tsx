@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 import abstractArt from "@/assets/abstract-art.jpg";
 
 const Hero = () => {
   return (
-    <section id="home" className="relative min-h-screen overflow-hidden">
+    <section className="relative min-h-screen overflow-hidden">
       {/* Background image with overlay */}
       <div className="absolute inset-0">
         <img src={heroBg} alt="Fresh organic produce" className="h-full w-full object-cover" />
@@ -35,15 +36,16 @@ const Hero = () => {
               Affordable and fast delivery. Direct from the farm to your door.
               Experience freshness like never before.
             </p>
-            <motion.a
-              href="#bundles"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl"
-            >
-              Buy Now
-              <ArrowRight size={18} />
-            </motion.a>
+            <Link to="/shop">
+              <motion.span
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl"
+              >
+                Buy Now
+                <ArrowRight size={18} />
+              </motion.span>
+            </Link>
           </motion.div>
 
           {/* Abstract art */}

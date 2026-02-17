@@ -1,13 +1,14 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Sprout } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ToSellBanner = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section id="tosell" ref={ref} className="bg-primary py-20 lg:py-24">
+    <section ref={ref} className="bg-primary py-20 lg:py-24">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -28,13 +29,15 @@ const ToSellBanner = () => {
               </p>
             </div>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            className="rounded-full bg-accent px-8 py-3.5 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl"
-          >
-            Partner With Us
-          </motion.button>
+          <Link to="/business">
+            <motion.span
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-block rounded-full bg-accent px-8 py-3.5 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl"
+            >
+              Partner With Us
+            </motion.span>
+          </Link>
         </motion.div>
       </div>
     </section>

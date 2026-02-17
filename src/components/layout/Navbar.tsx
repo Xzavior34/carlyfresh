@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingCart, Menu, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { navLinks } from "@/data/mockData";
 
@@ -8,12 +9,18 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { itemCount } = useCart();
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   return (
     <>
@@ -28,32 +35,34 @@ const Navbar = () => {
         }`}
       >
         <div className="container mx-auto flex items-center justify-between px-6 py-4 lg:px-12">
-          <a href="#home" className="font-display text-2xl font-bold tracking-tight text-primary">
+          <Link to="/" className="font-display text-2xl font-bold tracking-tight text-primary">
             CarlyFresh
-          </a>
+          </Link>
 
           {/* Desktop links */}
           <div className="hidden items-center gap-8 md:flex">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.label}
-                href={link.href}
-                className="font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary"
+                to={link.href}
+                className={`font-body text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === link.href ? "text-primary" : "text-foreground/70"
+                }`}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <a
-              href="#pricing"
+            <Link
+              to="/pricing"
               className="hidden font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary md:block"
             >
               Login
-            </a>
-            <button className="relative p-2 text-foreground/70 transition-colors hover:text-primary">
+            </Link>
+            <Link to="/shop" className="relative p-2 text-foreground/70 transition-colors hover:text-primary">
               <ShoppingCart size={22} />
               {itemCount > 0 && (
                 <motion.span
@@ -64,7 +73,7 @@ const Navbar = () => {
                   {itemCount}
                 </motion.span>
               )}
-            </button>
+            </Link>
             <button
               className="p-2 text-foreground/70 md:hidden"
               onClick={() => setMobileOpen(true)}
@@ -93,15 +102,20 @@ const Navbar = () => {
             </div>
             <div className="flex flex-col gap-6 px-6 pt-8">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.label}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
+                  to={link.href}
                   className="font-display text-3xl font-semibold text-foreground transition-colors hover:text-primary"
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
+              <Link
+                to="/pricing"
+                className="font-display text-3xl font-semibold text-foreground transition-colors hover:text-primary"
+              >
+                Login
+              </Link>
             </div>
           </motion.div>
         )}
