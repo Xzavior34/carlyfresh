@@ -1,13 +1,17 @@
 // NOTE: Form submission is currently simulating a 200 OK response.
 // TODO: Connect to EmailJS or Backend API.
 
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ContactForm from "@/components/forms/ContactForm";
 
 const Contact = () => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const contentInView = useInView(contentRef, { once: true, margin: "-80px" });
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -20,57 +24,55 @@ const Contact = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="font-display text-4xl font-bold text-primary-foreground md:text-5xl">
+            <h1 className="font-display text-3xl font-bold text-primary-foreground sm:text-4xl md:text-5xl">
               Contact Us
             </h1>
-            <p className="mt-3 font-body text-lg text-primary-foreground/70">
+            <p className="mt-3 font-body text-base text-primary-foreground/70 sm:text-lg">
               We'd love to hear from you. Get in touch and we'll respond promptly.
             </p>
           </motion.div>
         </div>
       </section>
 
-      <section className="py-24">
+      <section ref={contentRef} className="py-16 sm:py-24">
         <div className="container mx-auto px-6 lg:px-12">
-          <div className="grid gap-12 lg:grid-cols-5">
+          <div className="grid gap-10 sm:gap-12 lg:grid-cols-5">
             {/* Form */}
-            <div className="lg:col-span-3">
-              <div className="rounded-3xl bg-card p-8 shadow-lg">
-                <h2 className="mb-6 font-display text-2xl font-bold text-foreground">Send a Message</h2>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={contentInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5 }}
+              className="lg:col-span-3"
+            >
+              <div className="rounded-3xl bg-card p-6 sm:p-8 shadow-lg">
+                <h2 className="mb-6 font-display text-xl sm:text-2xl font-bold text-foreground">Send a Message</h2>
                 <ContactForm />
               </div>
-            </div>
+            </motion.div>
 
             {/* Sidebar */}
-            <div className="lg:col-span-2">
-              <div className="space-y-8">
-                <div className="flex gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <MapPin size={22} />
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={contentInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="lg:col-span-2"
+            >
+              <div className="space-y-6 sm:space-y-8">
+                {[
+                  { icon: MapPin, title: "Address", text: "52 Ikwere Road, Port Harcourt" },
+                  { icon: Phone, title: "Phone", text: "+234 800 CARLY (22759)" },
+                  { icon: Mail, title: "Email", text: "hello@carlyfresh.com" },
+                ].map((item, i) => (
+                  <div key={item.title} className="flex gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <item.icon size={22} />
+                    </div>
+                    <div>
+                      <h3 className="font-display text-sm font-semibold text-foreground">{item.title}</h3>
+                      <p className="font-body text-sm text-muted-foreground">{item.text}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-display text-sm font-semibold text-foreground">Address</h3>
-                    <p className="font-body text-sm text-muted-foreground">52 Ikwere Road, Port Harcourt</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <Phone size={22} />
-                  </div>
-                  <div>
-                    <h3 className="font-display text-sm font-semibold text-foreground">Phone</h3>
-                    <p className="font-body text-sm text-muted-foreground">+234 800 CARLY (22759)</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <Mail size={22} />
-                  </div>
-                  <div>
-                    <h3 className="font-display text-sm font-semibold text-foreground">Email</h3>
-                    <p className="font-body text-sm text-muted-foreground">hello@carlyfresh.com</p>
-                  </div>
-                </div>
+                ))}
                 <div className="flex gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Clock size={22} />
@@ -82,7 +84,7 @@ const Contact = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>

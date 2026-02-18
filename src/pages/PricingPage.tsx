@@ -1,8 +1,8 @@
 // NOTE: Pricing logic is mocked.
 // TODO: Connect Stripe/Paystack API for payment processing.
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -10,6 +10,8 @@ import { pricingPlans } from "@/data/mockData";
 
 const PricingPage = () => {
   const [yearly, setYearly] = useState(false);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const cardsInView = useInView(cardsRef, { once: true, margin: "-80px" });
 
   const getPrice = (monthlyPrice: number) => {
     if (monthlyPrice === 0) return 0;
@@ -26,12 +28,12 @@ const PricingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-16 text-center"
+            className="mb-12 sm:mb-16 text-center"
           >
             <span className="mb-2 block font-body text-xs font-semibold uppercase tracking-widest text-accent">
               Plans
             </span>
-            <h1 className="font-display text-4xl font-bold text-foreground md:text-5xl">
+            <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl md:text-5xl">
               Choose Your Plan
             </h1>
             <p className="mx-auto mt-4 max-w-md font-body text-muted-foreground">
@@ -59,14 +61,14 @@ const PricingPage = () => {
             </div>
           </motion.div>
 
-          <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
+          <div ref={cardsRef} className="mx-auto grid max-w-5xl gap-6 sm:gap-8 md:grid-cols-3">
             {pricingPlans.map((plan, i) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={cardsInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: i * 0.15 }}
-                className={`relative rounded-3xl p-8 transition-shadow ${
+                className={`relative rounded-3xl p-6 sm:p-8 transition-shadow ${
                   plan.recommended
                     ? "border-2 border-primary bg-card shadow-xl"
                     : "border border-border bg-card shadow-md"
@@ -77,16 +79,16 @@ const PricingPage = () => {
                     Recommended
                   </span>
                 )}
-                <h3 className="font-display text-2xl font-bold text-foreground">{plan.name}</h3>
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="font-display text-5xl font-bold text-foreground">
+                  <span className="font-display text-4xl sm:text-5xl font-bold text-foreground">
                     €{getPrice(plan.price)}
                   </span>
                   <span className="font-body text-muted-foreground">
                     /{yearly ? "yr" : "mo"}
                   </span>
                 </div>
-                <ul className="mt-8 space-y-3">
+                <ul className="mt-6 sm:mt-8 space-y-3">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3 font-body text-sm text-foreground/80">
                       <Check size={18} className="mt-0.5 shrink-0 text-primary" />
@@ -97,7 +99,7 @@ const PricingPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`mt-8 w-full rounded-full py-3.5 font-body text-sm font-semibold transition-colors ${
+                  className={`mt-6 sm:mt-8 w-full rounded-full py-3.5 font-body text-sm font-semibold transition-colors ${
                     plan.recommended
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
                       : "border border-border bg-secondary text-foreground hover:bg-muted"
