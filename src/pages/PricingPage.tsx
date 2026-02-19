@@ -82,7 +82,7 @@ const PricingPage = () => {
                 <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="font-display text-4xl sm:text-5xl font-bold text-foreground">
-                    €{getPrice(plan.price)}
+                    ₦{getPrice(plan.price).toLocaleString("en-NG")}
                   </span>
                   <span className="font-body text-muted-foreground">
                     /{yearly ? "yr" : "mo"}

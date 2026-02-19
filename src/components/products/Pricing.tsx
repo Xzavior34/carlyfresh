@@ -47,7 +47,7 @@ const Pricing = () => {
               )}
               <h3 className="font-display text-2xl font-bold text-foreground">{plan.name}</h3>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="font-display text-5xl font-bold text-foreground">€{plan.price}</span>
+                <span className="font-display text-5xl font-bold text-foreground">₦{plan.price.toLocaleString("en-NG")}</span>
                 <span className="font-body text-muted-foreground">/{plan.period}</span>
               </div>
               <ul className="mt-8 space-y-3">

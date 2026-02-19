@@ -66,7 +66,7 @@ export const bundles: Bundle[] = [
     id: "breakfast-essentials",
     name: "Breakfast Essentials",
     description: "Start your morning with farm-fresh eggs, artisan bread, and organic juice.",
-    price: 24.99,
+    price: 9500,
     image: "breakfast",
     tag: "Popular",
   },
@@ -74,7 +74,7 @@ export const bundles: Bundle[] = [
     id: "family-feast-box",
     name: "Family Feast Box",
     description: "A complete dinner spread for 4, featuring seasonal vegetables and premium cuts.",
-    price: 49.99,
+    price: 18500,
     image: "family",
     tag: "Best Value",
   },
@@ -82,14 +82,14 @@ export const bundles: Bundle[] = [
     id: "fruits-collection",
     name: "Fruits Collection",
     description: "A vibrant mix of tropical and seasonal fruits, handpicked at peak ripeness.",
-    price: 19.99,
+    price: 7500,
     image: "fruits",
   },
   {
     id: "chefs-special",
     name: "Chef's Special",
     description: "Curated ingredients for gourmet home cooking. Recipes included.",
-    price: 39.99,
+    price: 15000,
     image: "chef",
     tag: "New",
   },
@@ -97,20 +97,20 @@ export const bundles: Bundle[] = [
 
 // TODO: Connect to Supabase Backend
 export const products: Product[] = [
-  { id: "p1", name: "Organic Tomatoes", price: 3.99, category: "Vegetables", image: "🍅", description: "Vine-ripened organic tomatoes, 1kg pack." },
-  { id: "p2", name: "Fresh Spinach", price: 2.49, category: "Vegetables", image: "🥬", description: "Crisp baby spinach leaves, 500g." },
-  { id: "p3", name: "Bell Peppers Mix", price: 4.99, category: "Vegetables", image: "🫑", description: "Red, yellow & green peppers, 3 pack." },
-  { id: "p4", name: "Sweet Potatoes", price: 3.29, category: "Vegetables", image: "🍠", description: "Farm-fresh sweet potatoes, 1kg." },
-  { id: "p5", name: "Tropical Mango", price: 5.99, category: "Fruits", image: "🥭", description: "Ripe Alphonso mangoes, 3 pack.", tag: "Popular" },
-  { id: "p6", name: "Strawberry Punnet", price: 4.49, category: "Fruits", image: "🍓", description: "Hand-picked strawberries, 400g." },
-  { id: "p7", name: "Banana Bunch", price: 1.99, category: "Fruits", image: "🍌", description: "Organic Cavendish bananas, 6 pack." },
-  { id: "p8", name: "Avocados", price: 6.49, category: "Fruits", image: "🥑", description: "Hass avocados, perfectly ripe, 4 pack.", tag: "New" },
-  { id: "p9", name: "Breakfast Essentials", price: 24.99, category: "Bundles", image: "🥐", description: "Eggs, bread, juice & jam — morning sorted.", tag: "Best Value" },
-  { id: "p10", name: "Family Feast Box", price: 49.99, category: "Bundles", image: "🍱", description: "Complete dinner for 4 with premium cuts." },
-  { id: "p11", name: "Extra Virgin Olive Oil", price: 12.99, category: "Oils", image: "🫒", description: "Cold-pressed Italian olive oil, 500ml." },
-  { id: "p12", name: "Coconut Oil", price: 8.99, category: "Oils", image: "🥥", description: "Organic virgin coconut oil, 500ml." },
-  { id: "p13", name: "Chef's Special", price: 39.99, category: "Bundles", image: "👨‍🍳", description: "Curated gourmet ingredients with recipes.", tag: "New" },
-  { id: "p14", name: "Red Onions", price: 2.29, category: "Vegetables", image: "🧅", description: "Fresh red onions, 1kg bag." },
+  { id: "p1", name: "Organic Tomatoes", price: 1500, category: "Vegetables", image: "🍅", description: "Vine-ripened organic tomatoes, 1kg pack." },
+  { id: "p2", name: "Fresh Spinach", price: 950, category: "Vegetables", image: "🥬", description: "Crisp baby spinach leaves, 500g." },
+  { id: "p3", name: "Bell Peppers Mix", price: 1800, category: "Vegetables", image: "🫑", description: "Red, yellow & green peppers, 3 pack." },
+  { id: "p4", name: "Sweet Potatoes", price: 1200, category: "Vegetables", image: "🍠", description: "Farm-fresh sweet potatoes, 1kg." },
+  { id: "p5", name: "Tropical Mango", price: 2200, category: "Fruits", image: "🥭", description: "Ripe Alphonso mangoes, 3 pack.", tag: "Popular" },
+  { id: "p6", name: "Strawberry Punnet", price: 1700, category: "Fruits", image: "🍓", description: "Hand-picked strawberries, 400g." },
+  { id: "p7", name: "Banana Bunch", price: 750, category: "Fruits", image: "🍌", description: "Organic Cavendish bananas, 6 pack." },
+  { id: "p8", name: "Avocados", price: 2500, category: "Fruits", image: "🥑", description: "Hass avocados, perfectly ripe, 4 pack.", tag: "New" },
+  { id: "p9", name: "Breakfast Essentials", price: 9500, category: "Bundles", image: "🥐", description: "Eggs, bread, juice & jam — morning sorted.", tag: "Best Value" },
+  { id: "p10", name: "Family Feast Box", price: 18500, category: "Bundles", image: "🍱", description: "Complete dinner for 4 with premium cuts." },
+  { id: "p11", name: "Extra Virgin Olive Oil", price: 4800, category: "Oils", image: "🫒", description: "Cold-pressed Italian olive oil, 500ml." },
+  { id: "p12", name: "Coconut Oil", price: 3500, category: "Oils", image: "🥥", description: "Organic virgin coconut oil, 500ml." },
+  { id: "p13", name: "Chef's Special", price: 15000, category: "Bundles", image: "👨‍🍳", description: "Curated gourmet ingredients with recipes.", tag: "New" },
+  { id: "p14", name: "Red Onions", price: 850, category: "Vegetables", image: "🧅", description: "Fresh red onions, 1kg bag." },
 ];
 
 // TODO: Connect to Supabase Backend
@@ -199,7 +199,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "fresh-premium",
     name: "Fresh Premium",
-    price: 29.99,
+    price: 9900,
     period: "mo",
     features: [
       "Free unlimited delivery",
@@ -214,7 +214,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "premium-plus",
     name: "Premium Plus",
-    price: 49.99,
+    price: 19900,
     period: "mo",
     features: [
       "Everything in Fresh Premium",
