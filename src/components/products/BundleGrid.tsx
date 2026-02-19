@@ -100,7 +100,7 @@ const BundleGrid = () => {
                   {bundle.description}
                 </p>
                 <p className="mt-3 font-display text-xl font-bold text-primary">
-                  €{bundle.price.toFixed(2)}
+                  ₦{bundle.price.toLocaleString("en-NG")}
                 </p>
               </div>
             </motion.div>

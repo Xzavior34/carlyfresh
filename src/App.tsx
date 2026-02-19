@@ -14,6 +14,10 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
+import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
+import DriverDashboard from "./pages/dashboard/DriverDashboard";
+import SellerOnboarding from "./pages/onboarding/SellerOnboarding";
+import DriverOnboarding from "./pages/onboarding/DriverOnboarding";
 
 const queryClient = new QueryClient();
 
@@ -36,10 +40,13 @@ const App = () => (
             {/* Dashboard portals */}
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route path="seller" element={<SellerDashboard />} />
-              {/* TODO: Add buyer and driver dashboard pages */}
-              <Route path="buyer" element={<SellerDashboard />} />
-              <Route path="driver" element={<SellerDashboard />} />
+              <Route path="buyer" element={<BuyerDashboard />} />
+              <Route path="driver" element={<DriverDashboard />} />
             </Route>
+
+            {/* Onboarding flows (standalone, no dashboard layout) */}
+            <Route path="/onboarding/seller" element={<SellerOnboarding />} />
+            <Route path="/onboarding/driver" element={<DriverOnboarding />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

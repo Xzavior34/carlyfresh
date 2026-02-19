@@ -28,7 +28,7 @@ const ProductCard = ({ product }: { product: Product }) => {
           {product.description}
         </p>
         <div className="mt-3 flex items-center justify-between">
-          <span className="font-display text-lg font-bold text-primary">€{product.price.toFixed(2)}</span>
+          <span className="font-display text-lg font-bold text-primary">₦{product.price.toLocaleString("en-NG")}</span>
           <motion.button
             onClick={() => addItem(product.id, product.name, product.price)}
             whileHover={{ scale: 1.1 }}
