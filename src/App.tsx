@@ -12,6 +12,8 @@ import PricingPage from "./pages/PricingPage";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
+import DashboardLayout from "./components/dashboard/DashboardLayout";
+import SellerDashboard from "./pages/dashboard/SellerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,15 @@ const App = () => (
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
+
+            {/* Dashboard portals */}
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route path="seller" element={<SellerDashboard />} />
+              {/* TODO: Add buyer and driver dashboard pages */}
+              <Route path="buyer" element={<SellerDashboard />} />
+              <Route path="driver" element={<SellerDashboard />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
