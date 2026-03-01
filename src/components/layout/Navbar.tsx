@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Menu, X } from "lucide-react";
+import { ShoppingCart, Menu, X, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { navLinks } from "@/data/mockData";
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { itemCount } = useCart();
+  const { user, role } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -56,12 +58,22 @@ const Navbar = () => {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <Link
-              to="/pricing"
-              className="hidden font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary md:block"
-            >
-              Login
-            </Link>
+            {user ? (
+              <Link
+                to={`/dashboard/${role || "buyer"}`}
+                className="hidden font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary md:flex items-center gap-1.5"
+              >
+                <User size={16} />
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary md:block"
+              >
+                Login
+              </Link>
+            )}
             <Link to="/shop" className="relative p-2 text-foreground/70 transition-colors hover:text-primary">
               <ShoppingCart size={22} />
               {itemCount > 0 && (
@@ -110,12 +122,21 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                to="/pricing"
-                className="font-display text-3xl font-semibold text-foreground transition-colors hover:text-primary"
-              >
-                Login
-              </Link>
+              {user ? (
+                <Link
+                  to={`/dashboard/${role || "buyer"}`}
+                  className="font-display text-3xl font-semibold text-foreground transition-colors hover:text-primary"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className="font-display text-3xl font-semibold text-foreground transition-colors hover:text-primary"
+                >
+                  Login
+                </Link>
+              )}
             </div>
           </motion.div>
         )}
