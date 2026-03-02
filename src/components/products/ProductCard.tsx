@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import type { Product } from "@/data/mockData";
+import type { DBProduct } from "./ProductGrid";
 
-const ProductCard = ({ product }: { product: Product }) => {
+const ProductCard = ({ product }: { product: DBProduct }) => {
   const { addItem } = useCart();
 
   return (
@@ -12,11 +12,10 @@ const ProductCard = ({ product }: { product: Product }) => {
       className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg"
     >
       <div className="relative flex h-40 items-center justify-center bg-secondary text-6xl">
-        {product.image}
-        {product.tag && (
-          <span className="absolute left-3 top-3 rounded-full bg-primary px-2.5 py-0.5 font-body text-[10px] font-semibold text-primary-foreground">
-            {product.tag}
-          </span>
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-4xl text-muted-foreground">📦</span>
         )}
       </div>
       <div className="p-4">
@@ -24,9 +23,6 @@ const ProductCard = ({ product }: { product: Product }) => {
           {product.category}
         </p>
         <h3 className="mt-1 font-display text-base font-semibold text-foreground">{product.name}</h3>
-        <p className="mt-1 font-body text-xs leading-relaxed text-muted-foreground line-clamp-2">
-          {product.description}
-        </p>
         <div className="mt-3 flex items-center justify-between">
           <span className="font-display text-lg font-bold text-primary">₦{product.price.toLocaleString("en-NG")}</span>
           <motion.button

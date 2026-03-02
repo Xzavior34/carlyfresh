@@ -1,13 +1,12 @@
-import { productCategories } from "@/data/mockData";
-
 interface CategoryFilterProps {
   selected: string;
   onSelect: (cat: string) => void;
   search: string;
   onSearch: (val: string) => void;
+  categories: string[];
 }
 
-const CategoryFilter = ({ selected, onSelect, search, onSearch }: CategoryFilterProps) => {
+const CategoryFilter = ({ selected, onSelect, search, onSearch, categories }: CategoryFilterProps) => {
   return (
     <div className="space-y-6">
       <div>
@@ -22,7 +21,7 @@ const CategoryFilter = ({ selected, onSelect, search, onSearch }: CategoryFilter
       <div>
         <h3 className="mb-3 font-display text-sm font-semibold text-foreground">Categories</h3>
         <div className="flex flex-wrap gap-2 lg:flex-col lg:gap-1">
-          {productCategories.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => onSelect(cat)}
