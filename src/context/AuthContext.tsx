@@ -31,14 +31,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchRole = async (userId: string) => {
     // TODO: Replace with typed query once types regenerate
     const { data, error } = await supabase
-      .from("user_roles" as any)
+      .from("user_roles")
       .select("role")
       .eq("user_id", userId)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!error && data) {
-      setRole((data as any).role as AppRole);
+      setRole(data.role as AppRole);
     }
   };
 

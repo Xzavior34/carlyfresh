@@ -1,17 +1,15 @@
 /**
  * Seller Dashboard — Vendor Portal Overview
- * DATA SOURCE: Currently using mock data for UI approval. Awaiting DB connection.
- * TODO: Connect to Supabase tables: seller_metrics, products, orders
+ * DATA SOURCE: Live Supabase — products, orders tables
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   TrendingUp,
   Package,
-  ShoppingCart,
-  Users,
   Clock,
+  Users,
   CheckCircle2,
   AlertCircle,
   Truck,
@@ -27,14 +25,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  sellerMetrics,
-  sellerInventory,
-  sellerRecentOrders,
-  formatNaira,
-  getStatusColor,
-  type InventoryItem,
-} from "@/lib/mockDashboardData";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { formatNaira, getStatusColor } from "@/lib/mockDashboardData";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Product = Tables<"products">;
+type Order = Tables<"orders">;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -45,13 +42,6 @@ const fadeUp = {
   }),
 };
 
-const metricCards = [
-  { label: "Total Sales", value: formatNaira(sellerMetrics.totalSales), icon: TrendingUp, accent: "text-primary" },
-  { label: "Pending Orders", value: sellerMetrics.pendingOrders.toString(), icon: Clock, accent: "text-accent" },
-  { label: "Active Products", value: sellerMetrics.activeProducts.toString(), icon: Package, accent: "text-primary" },
-  { label: "Total Customers", value: sellerMetrics.totalCustomers.toString(), icon: Users, accent: "text-accent" },
-];
-
 const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   pending: AlertCircle,
   processing: Clock,
@@ -61,17 +51,51 @@ const statusIcons: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 export default function SellerDashboard() {
-  // TODO: Replace with real-time inventory state from Supabase
-  const [inventory, setInventory] = useState<InventoryItem[]>(sellerInventory);
+  const { user } = useAuth();
+  const [inventory, setInventory] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const toggleStock = (id: string) => {
-    // TODO: PATCH /api/products/:id { inStock: !current }
-    setInventory((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, inStock: !item.inStock } : item
-      )
-    );
+  useEffect(() => {
+    if (!user) return;
+    const fetchData = async () => {
+      const [prodRes, ordRes] = await Promise.all([
+        supabase.from("products").select("*").eq("vendor_id", user.id),
+        supabase.from("orders").select("*").eq("vendor_id", user.id).order("created_at", { ascending: false }).limit(10),
+      ]);
+      if (prodRes.data) setInventory(prodRes.data);
+      if (ordRes.data) setOrders(ordRes.data);
+      setLoading(false);
+    };
+    fetchData();
+  }, [user]);
+
+  const toggleStock = async (id: string, current: boolean) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ in_stock: !current })
+      .eq("id", id);
+    if (!error) {
+      setInventory((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, in_stock: !current } : item))
+      );
+    }
   };
+
+  const activeProducts = inventory.filter((p) => p.in_stock).length;
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+  const totalSales = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+  const metricCards = [
+    { label: "Total Sales", value: formatNaira(totalSales), icon: TrendingUp, accent: "text-primary" },
+    { label: "Pending Orders", value: pendingOrders.toString(), icon: Clock, accent: "text-accent" },
+    { label: "Active Products", value: activeProducts.toString(), icon: Package, accent: "text-primary" },
+    { label: "Total Orders", value: orders.length.toString(), icon: Users, accent: "text-accent" },
+  ];
+
+  if (loading) {
+    return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
+  }
 
   return (
     <div className="space-y-8 max-w-7xl">
@@ -129,7 +153,6 @@ export default function SellerDashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-display">Inventory Management</CardTitle>
               <CardDescription className="font-body text-sm">
-                {/* DATA SOURCE: Mock inventory list. TODO: Fetch from products table */}
                 Manage your product stock levels and availability.
               </CardDescription>
             </CardHeader>
@@ -157,35 +180,42 @@ export default function SellerDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-body tabular-nums">
-                          {formatNaira(item.price)}
+                          {formatNaira(Number(item.price))}
                         </TableCell>
                         <TableCell className="text-center">
                           <span
                             className={`font-body tabular-nums font-medium ${
-                              item.stockLevel === 0
+                              item.stock_level === 0
                                 ? "text-destructive"
-                                : item.stockLevel < 15
+                                : item.stock_level < 15
                                 ? "text-accent"
                                 : "text-primary"
                             }`}
                           >
-                            {item.stockLevel}
+                            {item.stock_level}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
                             <Switch
-                              checked={item.inStock}
-                              onCheckedChange={() => toggleStock(item.id)}
+                              checked={item.in_stock}
+                              onCheckedChange={() => toggleStock(item.id, item.in_stock)}
                               className="data-[state=checked]:bg-primary"
                             />
                             <span className="text-xs font-body text-muted-foreground w-16">
-                              {item.inStock ? "In Stock" : "Out"}
+                              {item.in_stock ? "In Stock" : "Out"}
                             </span>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
+                    {inventory.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground font-body">
+                          No products yet. Add your first product to get started.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -203,13 +233,16 @@ export default function SellerDashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-display">Recent Orders</CardTitle>
               <CardDescription className="font-body text-sm">
-                {/* DATA SOURCE: Mock orders. TODO: Real-time subscription on orders table */}
                 Incoming orders that need your attention.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {sellerRecentOrders.map((order) => {
+              {orders.length === 0 && (
+                <p className="text-sm text-muted-foreground font-body text-center py-6">No orders yet.</p>
+              )}
+              {orders.map((order) => {
                 const StatusIcon = statusIcons[order.status] || Clock;
+                const items = Array.isArray(order.items) ? order.items : [];
                 return (
                   <div
                     key={order.id}
@@ -221,20 +254,20 @@ export default function SellerDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium font-body text-foreground truncate">
-                          {order.id}
+                          #{order.order_number}
                         </p>
                         <Badge
                           variant="secondary"
-                          className={`text-[10px] font-body shrink-0 ${getStatusColor(order.status)}`}
+                          className={`text-[10px] font-body shrink-0 ${getStatusColor(order.status as any)}`}
                         >
                           {order.status}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
-                        {order.customerName} · {order.items.length} item{order.items.length > 1 ? "s" : ""}
+                        {items.length} item{items.length !== 1 ? "s" : ""}
                       </p>
                       <p className="text-sm font-semibold text-foreground font-body mt-1">
-                        {formatNaira(order.total)}
+                        {formatNaira(Number(order.total_amount))}
                       </p>
                     </div>
                   </div>
