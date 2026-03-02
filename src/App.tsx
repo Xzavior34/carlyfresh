@@ -19,6 +19,7 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import SellerDashboard from "./pages/dashboard/SellerDashboard";
 import BuyerDashboard from "./pages/dashboard/BuyerDashboard";
 import DriverDashboard from "./pages/dashboard/DriverDashboard";
+import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import SellerOnboarding from "./pages/onboarding/SellerOnboarding";
 import DriverOnboarding from "./pages/onboarding/DriverOnboarding";
 
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="seller" element={<SellerDashboard />} />
                 <Route path="buyer" element={<BuyerDashboard />} />
                 <Route path="driver" element={<DriverDashboard />} />
+                <Route path="admin" element={<AdminDashboard />} />
               </Route>
 
               {/* Onboarding flows (standalone, no dashboard layout) */}

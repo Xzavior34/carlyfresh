@@ -1,10 +1,9 @@
 /**
  * Buyer Dashboard — Customer Portal
- * DATA SOURCE: Currently using mock data for UI approval. Awaiting DB connection.
- * TODO: Connect to Supabase tables: orders, subscriptions, order_history
+ * DATA SOURCE: Live Supabase — orders table
  */
 
-import { useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Package,
@@ -20,42 +19,60 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  buyerActiveOrders,
-  buyerOrderHistory,
-  buyerSubscription,
-  formatNaira,
-  getStatusColor,
-} from "@/lib/mockDashboardData";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { formatNaira, getStatusColor } from "@/lib/mockDashboardData";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Order = Tables<"orders">;
 
 // Timeline steps for order tracking
 const trackingSteps = [
-  { key: "confirmed", label: "Confirmed", icon: CheckCircle2 },
-  { key: "preparing", label: "Preparing", icon: Package },
-  { key: "out-for-delivery", label: "Out for Delivery", icon: Truck },
+  { key: "pending", label: "Confirmed", icon: CheckCircle2 },
+  { key: "processing", label: "Preparing", icon: Package },
+  { key: "in-transit", label: "Out for Delivery", icon: Truck },
   { key: "delivered", label: "Delivered", icon: CheckCircle2 },
 ];
 
 function getStepIndex(status: string): number {
   const map: Record<string, number> = {
-    confirmed: 0,
-    preparing: 1,
-    "out-for-delivery": 2,
+    pending: 0,
+    processing: 1,
+    packaged: 1,
+    "in-transit": 2,
     delivered: 3,
   };
   return map[status] ?? 0;
 }
 
 export default function BuyerDashboard() {
-  const activeOrder = buyerActiveOrders[0];
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchOrders = async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("buyer_id", user.id)
+        .order("created_at", { ascending: false });
+      if (data) setOrders(data);
+      setLoading(false);
+    };
+    fetchOrders();
+  }, [user]);
+
+  const activeOrders = orders.filter((o) => o.status !== "delivered");
+  const deliveredOrders = orders.filter((o) => o.status === "delivered");
+  const activeOrder = activeOrders[0];
   const currentStep = activeOrder ? getStepIndex(activeOrder.status) : 0;
+  const totalSpent = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+  if (loading) return <p className="text-muted-foreground font-body p-8">Loading orders…</p>;
 
   return (
     <div className="space-y-8 max-w-7xl">
@@ -65,7 +82,7 @@ export default function BuyerDashboard() {
           My Orders
         </h1>
         <p className="text-muted-foreground font-body mt-1">
-          Track your deliveries and manage your subscription.
+          Track your deliveries and view order history.
         </p>
       </div>
 
@@ -81,10 +98,10 @@ export default function BuyerDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg font-display">
-                    Track Order — {activeOrder.id}
+                    Track Order — #{activeOrder.order_number}
                   </CardTitle>
                   <CardDescription className="font-body mt-1">
-                    {activeOrder.vendorName} · Arriving in {activeOrder.estimatedArrival}
+                    {formatNaira(Number(activeOrder.total_amount))}
                   </CardDescription>
                 </div>
                 <Badge className="bg-primary/10 text-primary font-body border-0">
@@ -96,14 +113,11 @@ export default function BuyerDashboard() {
             <CardContent>
               {/* Progress timeline */}
               <div className="relative flex items-center justify-between mt-2 mb-6">
-                {/* Background line */}
                 <div className="absolute top-5 left-0 right-0 h-0.5 bg-border" />
-                {/* Progress line */}
                 <div
                   className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500"
                   style={{ width: `${(currentStep / (trackingSteps.length - 1)) * 100}%` }}
                 />
-
                 {trackingSteps.map((step, i) => {
                   const isComplete = i <= currentStep;
                   const isCurrent = i === currentStep;
@@ -135,14 +149,10 @@ export default function BuyerDashboard() {
               <div className="flex flex-wrap gap-4 pt-4 border-t border-border/50">
                 <div className="font-body text-sm">
                   <span className="text-muted-foreground">Items: </span>
-                  <span className="text-foreground font-medium">{activeOrder.items.join(", ")}</span>
+                  <span className="text-foreground font-medium">
+                    {Array.isArray(activeOrder.items) ? (activeOrder.items as any[]).length : 0} item(s)
+                  </span>
                 </div>
-                {activeOrder.driverName && (
-                  <div className="font-body text-sm">
-                    <span className="text-muted-foreground">Driver: </span>
-                    <span className="text-foreground font-medium">{activeOrder.driverName}</span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -161,8 +171,7 @@ export default function BuyerDashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-display">Order History</CardTitle>
               <CardDescription className="font-body text-sm">
-                {/* TODO: Fetch from orders table filtered by buyer_id */}
-                Your past purchases and quick reorder options.
+                Your past purchases and their statuses.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -171,41 +180,33 @@ export default function BuyerDashboard() {
                   <TableHeader>
                     <TableRow className="bg-muted/40">
                       <TableHead className="font-body text-xs uppercase tracking-wider">Order</TableHead>
-                      <TableHead className="font-body text-xs uppercase tracking-wider">Items</TableHead>
                       <TableHead className="font-body text-xs uppercase tracking-wider text-right">Total</TableHead>
                       <TableHead className="font-body text-xs uppercase tracking-wider text-center">Status</TableHead>
-                      <TableHead className="font-body text-xs uppercase tracking-wider text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {buyerOrderHistory.map((order) => (
+                    {orders.map((order) => (
                       <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
                         <TableCell className="font-medium font-body text-foreground">
-                          {order.id}
-                        </TableCell>
-                        <TableCell className="font-body text-sm text-muted-foreground max-w-[200px] truncate">
-                          {order.items.join(", ")}
+                          #{order.order_number}
                         </TableCell>
                         <TableCell className="text-right font-body tabular-nums font-medium">
-                          {formatNaira(order.total)}
+                          {formatNaira(Number(order.total_amount))}
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="secondary" className={`text-[10px] font-body ${getStatusColor(order.status)}`}>
+                          <Badge variant="secondary" className={`text-[10px] font-body ${getStatusColor(order.status as any)}`}>
                             {order.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs font-body gap-1"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            Reorder
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))}
+                    {orders.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground font-body">
+                          No orders yet. Start shopping!
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -213,7 +214,7 @@ export default function BuyerDashboard() {
           </Card>
         </motion.div>
 
-        {/* Subscription Card — 1 col */}
+        {/* Spending Summary — 1 col */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -223,33 +224,18 @@ export default function BuyerDashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-display flex items-center gap-2">
                 <Crown className="h-5 w-5 text-accent" />
-                Subscription
+                Summary
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Plan name & status */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-display text-xl font-bold text-foreground">
-                    {buyerSubscription.plan}
-                  </p>
-                  <p className="font-body text-sm text-muted-foreground mt-0.5">
-                    ₦29,900/mo
-                  </p>
-                </div>
-                <Badge className="bg-primary/10 text-primary border-0 font-body text-xs capitalize">
-                  {buyerSubscription.status}
-                </Badge>
-              </div>
-
               <div className="space-y-3 pt-3 border-t border-border/50">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                     <CalendarDays className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-body">Next Delivery</p>
-                    <p className="text-sm font-medium font-body text-foreground">{buyerSubscription.nextDelivery}</p>
+                    <p className="text-xs text-muted-foreground font-body">Total Orders</p>
+                    <p className="text-sm font-medium font-body text-foreground">{orders.length}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -257,15 +243,11 @@ export default function BuyerDashboard() {
                     <Wallet className="h-4 w-4 text-accent" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-body">Monthly Spend</p>
-                    <p className="text-sm font-medium font-body text-foreground">{formatNaira(buyerSubscription.monthlySpend)}</p>
+                    <p className="text-xs text-muted-foreground font-body">Total Spent</p>
+                    <p className="text-sm font-medium font-body text-foreground">{formatNaira(totalSpent)}</p>
                   </div>
                 </div>
               </div>
-
-              <Button className="w-full mt-2 font-body" variant="outline" size="sm">
-                Manage Subscription
-              </Button>
             </CardContent>
           </Card>
         </motion.div>

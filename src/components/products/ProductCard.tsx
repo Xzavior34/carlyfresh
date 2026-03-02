@@ -26,7 +26,7 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
         <div className="mt-3 flex items-center justify-between">
           <span className="font-display text-lg font-bold text-primary">₦{product.price.toLocaleString("en-NG")}</span>
           <motion.button
-            onClick={() => addItem(product.id, product.name, product.price)}
+            onClick={() => addItem(product.id, product.name, product.price, product.vendor_id)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md"

@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 
 // TODO: Derive role from Supabase Auth user metadata
-type DashboardRole = "buyer" | "seller" | "driver";
+type DashboardRole = "buyer" | "seller" | "driver" | "admin";
 
 interface NavItem {
   title: string;
@@ -67,15 +67,25 @@ const roleNavItems: Record<DashboardRole, NavItem[]> = {
     { title: "Status", url: "/dashboard/driver/status", icon: ToggleRight },
     { title: "Settings", url: "/dashboard/driver/settings", icon: Settings },
   ],
+  admin: [
+    { title: "Overview", url: "/dashboard/admin", icon: LayoutDashboard },
+    { title: "Products", url: "/dashboard/admin", icon: Package },
+    { title: "Users", url: "/dashboard/admin", icon: Users },
+    { title: "Orders", url: "/dashboard/admin", icon: ShoppingCart },
+    { title: "Deliveries", url: "/dashboard/admin", icon: Truck },
+    { title: "Settings", url: "/dashboard/admin/settings", icon: Settings },
+  ],
 };
 
 const roleTitles: Record<DashboardRole, string> = {
   seller: "Vendor Portal",
   buyer: "Customer Portal",
   driver: "Driver Portal",
+  admin: "Admin Portal",
 };
 
 function getRoleFromPath(pathname: string): DashboardRole {
+  if (pathname.includes("/dashboard/admin")) return "admin";
   if (pathname.includes("/dashboard/driver")) return "driver";
   if (pathname.includes("/dashboard/buyer")) return "buyer";
   return "seller";
@@ -141,7 +151,7 @@ export default function DashboardLayout() {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {(["buyer", "seller", "driver"] as DashboardRole[]).map((r) => (
+                  {(["buyer", "seller", "driver", "admin"] as DashboardRole[]).map((r) => (
                     <SidebarMenuItem key={r}>
                       <SidebarMenuButton
                         asChild
@@ -152,6 +162,7 @@ export default function DashboardLayout() {
                           {r === "buyer" && <ShoppingCart className="h-4 w-4" />}
                           {r === "seller" && <Package className="h-4 w-4" />}
                           {r === "driver" && <Truck className="h-4 w-4" />}
+                          {r === "admin" && <BarChart3 className="h-4 w-4" />}
                           <span className="font-body">{roleTitles[r]}</span>
                         </Link>
                       </SidebarMenuButton>
