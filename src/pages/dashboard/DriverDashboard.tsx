@@ -1,10 +1,9 @@
 /**
  * Driver Dashboard — Mobile-Optimized Portal
- * DATA SOURCE: Currently using mock data for UI approval. Awaiting DB connection.
- * TODO: Connect to Supabase tables: driver_status, delivery_jobs, driver_earnings
+ * DATA SOURCE: Live Supabase — delivery_jobs table
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
@@ -19,21 +18,60 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import {
-  driverAvailableJobs,
-  driverEarnings,
-  formatNaira,
-} from "@/lib/mockDashboardData";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { formatNaira } from "@/lib/mockDashboardData";
+import type { Tables } from "@/integrations/supabase/types";
+import { toast } from "@/hooks/use-toast";
+
+type DeliveryJob = Tables<"delivery_jobs">;
 
 export default function DriverDashboard() {
-  // TODO: Sync driver online status with Supabase realtime
+  const { user } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
-  const [acceptedJobs, setAcceptedJobs] = useState<Set<string>>(new Set());
+  const [jobs, setJobs] = useState<DeliveryJob[]>([]);
+  const [myJobs, setMyJobs] = useState<DeliveryJob[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAcceptJob = (jobId: string) => {
-    // TODO: POST /api/jobs/:id/accept
-    setAcceptedJobs((prev) => new Set(prev).add(jobId));
+  useEffect(() => {
+    if (!user) return;
+    const fetchJobs = async () => {
+      const [availRes, myRes] = await Promise.all([
+        supabase.from("delivery_jobs").select("*").eq("status", "available").order("created_at", { ascending: false }),
+        supabase.from("delivery_jobs").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }),
+      ]);
+      if (availRes.data) setJobs(availRes.data);
+      if (myRes.data) setMyJobs(myRes.data);
+      setLoading(false);
+    };
+    fetchJobs();
+  }, [user]);
+
+  const handleAcceptJob = async (jobId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("delivery_jobs")
+      .update({ driver_id: user.id, status: "accepted" as any })
+      .eq("id", jobId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Move from available to my jobs
+    const accepted = jobs.find((j) => j.id === jobId);
+    if (accepted) {
+      setJobs((prev) => prev.filter((j) => j.id !== jobId));
+      setMyJobs((prev) => [{ ...accepted, driver_id: user.id, status: "accepted" }, ...prev]);
+    }
+    toast({ title: "Job accepted!" });
   };
+
+  // Earnings from completed jobs
+  const completedJobs = myJobs.filter((j) => j.status === "completed");
+  const todayEarnings = completedJobs.reduce((sum, j) => sum + Number(j.payout_amount), 0);
+  const totalTrips = completedJobs.length;
+
+  if (loading) return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -47,7 +85,7 @@ export default function DriverDashboard() {
         </p>
       </div>
 
-      {/* STATUS TOGGLE — The hero element */}
+      {/* STATUS TOGGLE */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -100,10 +138,10 @@ export default function DriverDashboard() {
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Today", value: formatNaira(driverEarnings.today), icon: Wallet, accent: "text-primary" },
-            { label: "This Week", value: formatNaira(driverEarnings.thisWeek), icon: TrendingUp, accent: "text-accent" },
-            { label: "This Month", value: formatNaira(driverEarnings.thisMonth), icon: TrendingUp, accent: "text-primary" },
-            { label: "Trips Today", value: driverEarnings.completedToday.toString(), icon: CheckCircle2, accent: "text-accent" },
+            { label: "Earnings", value: formatNaira(todayEarnings), icon: Wallet, accent: "text-primary" },
+            { label: "Completed", value: totalTrips.toString(), icon: CheckCircle2, accent: "text-accent" },
+            { label: "Available", value: jobs.length.toString(), icon: TrendingUp, accent: "text-primary" },
+            { label: "Accepted", value: myJobs.filter((j) => j.status === "accepted").length.toString(), icon: Package, accent: "text-accent" },
           ].map((item) => (
             <Card key={item.label} className="border border-border">
               <CardContent className="p-4">
@@ -134,91 +172,76 @@ export default function DriverDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* TODO: Subscribe to real-time delivery_jobs table */}
             <AnimatePresence>
-              {driverAvailableJobs.map((job) => {
-                const isAccepted = acceptedJobs.has(job.id);
-                return (
-                  <motion.div
-                    key={job.id}
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -100 }}
-                    className={`rounded-xl border p-4 transition-all ${
-                      isAccepted
-                        ? "border-primary/30 bg-primary/5"
-                        : "border-border hover:border-primary/20 hover:bg-muted/20"
-                    }`}
-                  >
-                    {/* Route */}
-                    <div className="flex items-start gap-3">
-                      <div className="flex flex-col items-center gap-1 pt-1">
-                        <div className="h-2.5 w-2.5 rounded-full bg-primary" />
-                        <div className="w-px h-8 bg-border" />
-                        <div className="h-2.5 w-2.5 rounded-full bg-accent" />
+              {jobs.map((job) => (
+                <motion.div
+                  key={job.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
+                  className="rounded-xl border p-4 transition-all border-border hover:border-primary/20 hover:bg-muted/20"
+                >
+                  {/* Route */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col items-center gap-1 pt-1">
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                      <div className="w-px h-8 bg-border" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-accent" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-body uppercase text-muted-foreground">Pickup</span>
+                        <Badge variant="secondary" className="text-[10px] font-body">{job.id.slice(0, 8)}</Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-body uppercase text-muted-foreground">Pickup</span>
-                          <Badge variant="secondary" className="text-[10px] font-body">{job.id}</Badge>
-                        </div>
-                        <p className="font-body text-sm font-medium text-foreground truncate">
-                          {job.pickupVendor}
+                      <p className="font-body text-sm font-medium text-foreground truncate">
+                        {job.pickup_address}
+                      </p>
+
+                      <div className="mt-3">
+                        <span className="text-[10px] font-body uppercase text-muted-foreground">Dropoff</span>
+                        <p className="font-body text-sm font-medium text-foreground">
+                          {job.dropoff_address}
                         </p>
-                        <p className="font-body text-xs text-muted-foreground">{job.pickupAddress}</p>
-
-                        <div className="mt-3">
-                          <span className="text-[10px] font-body uppercase text-muted-foreground">Dropoff</span>
-                          <p className="font-body text-sm font-medium text-foreground">
-                            {job.deliveryArea}
-                          </p>
-                          <p className="font-body text-xs text-muted-foreground">{job.deliveryAddress}</p>
-                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Footer: distance, payout, action */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {job.distance}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                          <Package className="h-3 w-3" />
-                          {job.items.length} item{job.items.length > 1 ? "s" : ""}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-display text-lg font-bold text-primary">
-                          {formatNaira(job.estimatedPayout)}
-                        </span>
-                        {isAccepted ? (
-                          <Badge className="bg-primary text-primary-foreground font-body text-xs border-0">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Accepted
-                          </Badge>
-                        ) : (
-                          <Button
-                            size="sm"
-                            className="font-body text-xs bg-primary hover:bg-primary/90"
-                            onClick={() => handleAcceptJob(job.id)}
-                            disabled={!isOnline}
-                          >
-                            Accept Job
-                          </Button>
-                        )}
+                  {/* Footer */}
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        Delivery
                       </div>
                     </div>
-                  </motion.div>
-                );
-              })}
+                    <div className="flex items-center gap-3">
+                      <span className="font-display text-lg font-bold text-primary">
+                        {formatNaira(Number(job.payout_amount))}
+                      </span>
+                      <Button
+                        size="sm"
+                        className="font-body text-xs bg-primary hover:bg-primary/90"
+                        onClick={() => handleAcceptJob(job.id)}
+                        disabled={!isOnline}
+                      >
+                        Accept Job
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </AnimatePresence>
 
-            {!isOnline && (
+            {jobs.length === 0 && (
               <p className="text-center font-body text-sm text-muted-foreground py-4">
-                Go online to start accepting delivery jobs.
+                No available jobs right now.
+              </p>
+            )}
+
+            {!isOnline && jobs.length > 0 && (
+              <p className="text-center font-body text-sm text-muted-foreground py-2">
+                Go online to accept delivery jobs.
               </p>
             )}
           </CardContent>
