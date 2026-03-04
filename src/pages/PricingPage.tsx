@@ -1,12 +1,23 @@
-// NOTE: Pricing logic is mocked.
-// TODO: Connect Stripe/Paystack API for payment processing.
-
 import { useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { pricingPlans } from "@/data/mockData";
+
+const pricingPlans = [
+  {
+    id: "starter", name: "Starter", price: 0, period: "mo", recommended: false,
+    features: ["Pay per delivery", "Standard delivery (2-3 days)", "Access to all bundles", "Basic order tracking"],
+  },
+  {
+    id: "fresh-premium", name: "Fresh Premium", price: 9900, period: "mo", recommended: true,
+    features: ["Free unlimited delivery", "Priority delivery (same day)", "Exclusive premium bundles", "Advanced order tracking", "Priority customer support", "Early access to new products"],
+  },
+  {
+    id: "premium-plus", name: "Premium Plus", price: 19900, period: "mo", recommended: false,
+    features: ["Everything in Fresh Premium", "Dedicated account manager", "Custom bundle builder", "Bulk order discounts", "API access for businesses", "White-glove onboarding", "24/7 priority support"],
+  },
+];
 
 const PricingPage = () => {
   const [yearly, setYearly] = useState(false);
@@ -40,7 +51,6 @@ const PricingPage = () => {
               Start for free or unlock premium benefits with our subscription plans.
             </p>
 
-            {/* Toggle */}
             <div className="mt-8 flex items-center justify-center gap-3">
               <span className={`font-body text-sm ${!yearly ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                 Monthly

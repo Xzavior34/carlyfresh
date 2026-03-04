@@ -1,7 +1,13 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Search, ShoppingBag, MapPin, Smile } from "lucide-react";
-import { howItWorksSteps } from "@/data/mockData";
+
+const howItWorksSteps = [
+  { id: 1, title: "Discover", description: "Browse curated bundles and fresh produce from local farms.", icon: "Search" },
+  { id: 2, title: "Order", description: "Add items to your cart and checkout in under 60 seconds.", icon: "ShoppingBag" },
+  { id: 3, title: "Track", description: "Follow your order in real-time from farm to your doorstep.", icon: "MapPin" },
+  { id: 4, title: "Enjoy", description: "Unbox the freshest food, delivered with care and love.", icon: "Smile" },
+];
 
 const iconMap: Record<string, React.ReactNode> = {
   Search: <Search size={28} />,

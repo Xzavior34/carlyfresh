@@ -1,13 +1,15 @@
-// NOTE: Business inquiry form is simulated.
-// TODO: Connect to Backend API for processing bulk orders.
-
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { TrendingDown, UserCheck, CalendarClock } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BusinessForm from "@/components/forms/BusinessForm";
-import { businessBenefits } from "@/data/mockData";
+
+const businessBenefits = [
+  { id: "b1", title: "Bulk Pricing", description: "Volume discounts that scale with your order size. Save more when you buy more.", icon: "TrendingDown" },
+  { id: "b2", title: "Dedicated Account Manager", description: "A single point of contact who understands your business needs.", icon: "UserCheck" },
+  { id: "b3", title: "Flexible Delivery", description: "Schedule deliveries that fit your business hours. Daily, weekly, or custom.", icon: "CalendarClock" },
+];
 
 const iconMap: Record<string, React.ReactNode> = {
   TrendingDown: <TrendingDown size={28} />,
@@ -25,7 +27,6 @@ const Business = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* Hero */}
       <section className="bg-primary pt-28 pb-20">
         <div className="container mx-auto px-6 lg:px-12">
           <motion.div
@@ -47,7 +48,6 @@ const Business = () => {
         </div>
       </section>
 
-      {/* Benefits */}
       <section ref={benefitsRef} className="py-16 sm:py-24">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 md:grid-cols-3">
@@ -70,7 +70,6 @@ const Business = () => {
         </div>
       </section>
 
-      {/* Inquiry Form */}
       <section ref={formRef} className="bg-secondary py-16 sm:py-24">
         <div className="container mx-auto px-6 lg:px-12">
           <motion.div

@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { formatNaira, getStatusColor } from "@/lib/mockDashboardData";
+import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Product = Tables<"products">;
@@ -68,6 +68,18 @@ export default function SellerDashboard() {
       setLoading(false);
     };
     fetchData();
+
+    // Realtime subscription for new orders
+    const channel = supabase
+      .channel("seller-orders")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `vendor_id=eq.${user.id}` },
+        () => { fetchData(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const toggleStock = async (id: string, current: boolean) => {

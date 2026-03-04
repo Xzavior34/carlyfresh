@@ -32,7 +32,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { formatNaira, getStatusColor } from "@/lib/mockDashboardData";
+import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -88,7 +88,24 @@ export default function AdminDashboard() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    fetchAll();
+
+    // Realtime subscriptions for orders and delivery_jobs
+    const ordersChannel = supabase
+      .channel("admin-orders")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchAll(); })
+      .subscribe();
+    const jobsChannel = supabase
+      .channel("admin-jobs")
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => { fetchAll(); })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(jobsChannel);
+    };
+  }, []);
 
   // Product CRUD
   const openAddProduct = () => {
