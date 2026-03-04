@@ -1,7 +1,12 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Star, Quote } from "lucide-react";
-import { reviews } from "@/data/mockData";
+
+const reviews = [
+  { id: "r1", name: "Mabel", text: "CarlyFresh gives so fast. It is amazing.", rating: 5 },
+  { id: "r2", name: "Uduak", text: "I like that the packaging maintains the freshness, and it comes all cleaned.", rating: 5 },
+  { id: "r3", name: "Oluch", text: "The customer service explains well, that's what I find cool and my supply is now steady.", rating: 5 },
+];
 
 const ReviewCarousel = () => {
   const ref = useRef<HTMLDivElement>(null);

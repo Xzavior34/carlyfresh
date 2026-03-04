@@ -1,31 +1,36 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { bundles } from "@/data/mockData";
 import { useCart } from "@/context/CartContext";
-import bundleBreakfast from "@/assets/bundle-breakfast.jpg";
-import bundleFamily from "@/assets/bundle-family.jpg";
-import bundleFruits from "@/assets/bundle-fruits.jpg";
-import bundleChef from "@/assets/bundle-chef.jpg";
-
-const imageMap: Record<string, string> = {
-  breakfast: bundleBreakfast,
-  family: bundleFamily,
-  fruits: bundleFruits,
-  chef: bundleChef,
-};
+import { supabase } from "@/integrations/supabase/client";
+import type { DBProduct } from "./ProductGrid";
 
 const BundleGrid = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
+  const [bundles, setBundles] = useState<DBProduct[]>([]);
+
+  useEffect(() => {
+    const fetchBundles = async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", "Bundles")
+        .eq("in_stock", true);
+      if (data) setBundles(data);
+    };
+    fetchBundles();
+  }, []);
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({ left: dir === "left" ? -340 : 340, behavior: "smooth" });
     }
   };
+
+  if (bundles.length === 0) return null;
 
   return (
     <section id="bundles" ref={ref} className="py-24 lg:py-32">
@@ -75,18 +80,17 @@ const BundleGrid = () => {
               style={{ scrollSnapAlign: "start" }}
             >
               <div className="relative h-56 overflow-hidden">
-                <img
-                  src={imageMap[bundle.image]}
-                  alt={bundle.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                {bundle.tag && (
-                  <span className="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 font-body text-xs font-semibold text-primary-foreground">
-                    {bundle.tag}
-                  </span>
+                {bundle.image_url ? (
+                  <img
+                    src={bundle.image_url}
+                    alt={bundle.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-secondary text-4xl text-muted-foreground">📦</div>
                 )}
                 <motion.button
-                  onClick={() => addItem(bundle.id, bundle.name, bundle.price)}
+                  onClick={() => addItem(bundle.id, bundle.name, bundle.price, bundle.vendor_id)}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   className="absolute bottom-4 right-4 flex h-10 w-10 translate-y-4 items-center justify-center rounded-full bg-accent text-accent-foreground opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
@@ -96,9 +100,6 @@ const BundleGrid = () => {
               </div>
               <div className="p-5">
                 <h3 className="font-display text-lg font-semibold text-foreground">{bundle.name}</h3>
-                <p className="mt-1 font-body text-sm leading-relaxed text-muted-foreground">
-                  {bundle.description}
-                </p>
                 <p className="mt-3 font-display text-xl font-bold text-primary">
                   ₦{bundle.price.toLocaleString("en-NG")}
                 </p>

@@ -14,6 +14,7 @@ interface CartContextType {
   items: CartItem[];
   itemCount: number;
   total: number;
+  isCheckingOut: boolean;
   addItem: (id: string, name: string, price: number, vendorId?: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -24,6 +25,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -47,38 +49,42 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => setItems([]);
 
   const checkout = async (buyerId: string): Promise<boolean> => {
-    if (items.length === 0) return false;
+    if (items.length === 0 || isCheckingOut) return false;
+    setIsCheckingOut(true);
 
-    // Group items by vendor (use first vendor or a placeholder)
-    const vendorId = items[0]?.vendorId || buyerId;
+    try {
+      const vendorId = items[0]?.vendorId || buyerId;
 
-    const orderItems = items.map((i) => ({
-      product_id: i.id,
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity,
-    }));
+      const orderItems = items.map((i) => ({
+        product_id: i.id,
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+      }));
 
-    const { error } = await supabase.from("orders").insert({
-      buyer_id: buyerId,
-      vendor_id: vendorId,
-      items: orderItems as any,
-      total_amount: total,
-      status: "pending",
-    });
+      const { error } = await supabase.from("orders").insert({
+        buyer_id: buyerId,
+        vendor_id: vendorId,
+        items: orderItems as any,
+        total_amount: total,
+        status: "pending",
+      });
 
-    if (error) {
-      toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
-      return false;
+      if (error) {
+        toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+
+      clearCart();
+      toast({ title: "Order placed!", description: "Your order has been submitted successfully." });
+      return true;
+    } finally {
+      setIsCheckingOut(false);
     }
-
-    clearCart();
-    toast({ title: "Order placed!", description: "Your order has been submitted successfully." });
-    return true;
   };
 
   return (
-    <CartContext.Provider value={{ items, itemCount, total, addItem, removeItem, clearCart, checkout }}>
+    <CartContext.Provider value={{ items, itemCount, total, isCheckingOut, addItem, removeItem, clearCart, checkout }}>
       {children}
     </CartContext.Provider>
   );

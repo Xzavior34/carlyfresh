@@ -1,7 +1,17 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
-import { pricingPlans } from "@/data/mockData";
+
+const pricingPlans = [
+  {
+    id: "starter", name: "Starter", price: 0, period: "mo", recommended: false,
+    features: ["Pay per delivery", "Standard delivery (2-3 days)", "Access to all bundles", "Basic order tracking"],
+  },
+  {
+    id: "fresh-premium", name: "Fresh Premium", price: 9900, period: "mo", recommended: true,
+    features: ["Free unlimited delivery", "Priority delivery (same day)", "Exclusive premium bundles", "Advanced order tracking", "Priority customer support", "Early access to new products"],
+  },
+];
 
 const Pricing = () => {
   const ref = useRef<HTMLDivElement>(null);

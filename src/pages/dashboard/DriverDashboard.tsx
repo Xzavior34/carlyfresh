@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { formatNaira } from "@/lib/mockDashboardData";
+import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -45,6 +45,18 @@ export default function DriverDashboard() {
       setLoading(false);
     };
     fetchJobs();
+
+    // Realtime subscription for new delivery jobs
+    const channel = supabase
+      .channel("driver-jobs")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_jobs" },
+        () => { fetchJobs(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const handleAcceptJob = async (jobId: string) => {

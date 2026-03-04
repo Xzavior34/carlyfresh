@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { formatNaira, getStatusColor } from "@/lib/mockDashboardData";
+import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Order = Tables<"orders">;
@@ -64,6 +64,18 @@ export default function BuyerDashboard() {
       setLoading(false);
     };
     fetchOrders();
+
+    // Realtime subscription for order status updates
+    const channel = supabase
+      .channel("buyer-orders")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `buyer_id=eq.${user.id}` },
+        () => { fetchOrders(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const activeOrders = orders.filter((o) => o.status !== "delivered");

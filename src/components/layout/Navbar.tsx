@@ -4,7 +4,14 @@ import { ShoppingCart, Menu, X, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { navLinks } from "@/data/mockData";
+
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "To Buy", href: "/shop" },
+  { label: "To Sell", href: "/business" },
+  { label: "Business", href: "/business" },
+  { label: "Support", href: "/contact" },
+];
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -19,7 +26,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
@@ -41,7 +47,6 @@ const Navbar = () => {
             CarlyFresh
           </Link>
 
-          {/* Desktop links */}
           <div className="hidden items-center gap-8 md:flex">
             {navLinks.map((link) => (
               <Link
@@ -56,7 +61,6 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-4">
             {user ? (
               <Link
@@ -96,7 +100,6 @@ const Navbar = () => {
         </div>
       </motion.nav>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
