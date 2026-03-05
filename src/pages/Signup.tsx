@@ -90,33 +90,36 @@ const Signup = () => {
             </Link>
             <h2 className="font-display text-3xl font-bold text-foreground">Create your account</h2>
             <p className="mt-2 font-body text-muted-foreground">
-              Pick your role and get started in minutes
+              Select your account type and get started in minutes
             </p>
           </div>
 
           {/* Role selector */}
-          <div className="grid grid-cols-3 gap-3">
-            {roles.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => setSelectedRole(r.value)}
-                className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all font-body text-xs ${
-                  selectedRole === r.value
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/40"
-                }`}
-              >
-                {selectedRole === r.value && (
-                  <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                    <Check className="h-3 w-3 text-primary-foreground" />
-                  </div>
-                )}
-                {r.icon}
-                <span className="font-semibold">{r.label}</span>
-                <span className="text-[10px] text-muted-foreground leading-tight text-center">{r.desc}</span>
-              </button>
-            ))}
+          <div>
+            <Label className="font-body text-sm font-medium mb-3 block">Select Your Account Type *</Label>
+            <div className="grid grid-cols-3 gap-3">
+              {roles.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setSelectedRole(r.value)}
+                  className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all font-body text-xs ${
+                    selectedRole === r.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  {selectedRole === r.value && (
+                    <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-3 w-3 text-primary-foreground" />
+                    </div>
+                  )}
+                  {r.icon}
+                  <span className="font-semibold">{r.label}</span>
+                  <span className="text-[10px] text-muted-foreground leading-tight text-center">{r.desc}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

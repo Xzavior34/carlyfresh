@@ -1,6 +1,5 @@
 /**
  * AuthContext — Manages authentication state and user role
- * TODO: Add session refresh handling for long-lived sessions
  * DATA SOURCE: Lovable Cloud (Supabase Auth + user_roles table)
  */
 
@@ -16,11 +15,13 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; role?: AppRole | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const ADMIN_EMAIL = "admin@gmail.com";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -28,8 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchRole = async (userId: string) => {
-    // TODO: Replace with typed query once types regenerate
+  const fetchRole = async (userId: string): Promise<AppRole | null> => {
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -38,19 +38,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
 
     if (!error && data) {
-      setRole(data.role as AppRole);
+      const r = data.role as AppRole;
+      setRole(r);
+      return r;
     }
+    return null;
   };
 
   useEffect(() => {
-    // Set up auth listener BEFORE getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to avoid deadlock with Supabase auth
           setTimeout(() => fetchRole(session.user.id), 0);
         } else {
           setRole(null);
@@ -71,12 +72,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, role: AppRole) => {
+  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole) => {
+    // Block admin role selection for non-admin emails
+    const finalRole = email.toLowerCase() === ADMIN_EMAIL ? "admin" : 
+      (selectedRole === "admin" ? "buyer" : selectedRole);
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: { full_name: fullName, role: finalRole },
         emailRedirectTo: window.location.origin,
       },
     });
@@ -85,7 +90,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
+    if (error) return { error: error as Error | null, role: null };
+    
+    // Fetch role after sign in
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    let userRole: AppRole | null = null;
+    if (authUser) {
+      userRole = await fetchRole(authUser.id);
+    }
+    return { error: null, role: userRole };
   };
 
   const signOut = async () => {
