@@ -18,7 +18,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { signIn, role } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -26,7 +26,7 @@ const Login = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const { error } = await signIn(email, password);
+    const { error, role } = await signIn(email, password);
 
     if (error) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
@@ -36,11 +36,13 @@ const Login = () => {
 
     toast({ title: "Welcome back!", description: "Redirecting to your dashboard…" });
 
-    // Wait briefly for role to load then redirect
+    // Redirect based on role
     setTimeout(() => {
-      // Role will be fetched by AuthContext; redirect handled by App routing
-      navigate("/dashboard/buyer");
-    }, 500);
+      if (role === "admin") navigate("/admin");
+      else if (role === "seller") navigate("/vendor");
+      else if (role === "driver") navigate("/driver");
+      else navigate("/");
+    }, 300);
   };
 
   return (
