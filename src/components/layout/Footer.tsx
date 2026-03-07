@@ -1,4 +1,4 @@
-import { Leaf } from "lucide-react";
+import { Leaf, Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
