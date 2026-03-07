@@ -125,6 +125,7 @@ const PricingPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSubscribe(plan)}
                   className={`mt-6 sm:mt-8 w-full rounded-full py-3.5 font-body text-sm font-semibold transition-colors ${
                     plan.recommended
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"

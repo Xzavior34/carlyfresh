@@ -184,7 +184,13 @@ export default function DriverDashboard() {
               ))}
             </AnimatePresence>
             {(jobs?.length ?? 0) === 0 && (
-              <p className="text-center font-body text-sm text-muted-foreground py-4">No available jobs right now.</p>
+              <div className="flex flex-col items-center py-10">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                  <Navigation className="h-7 w-7 text-primary" />
+                </div>
+                <p className="font-display text-base font-semibold text-foreground mb-1">No available jobs</p>
+                <p className="font-body text-sm text-muted-foreground max-w-xs text-center">Check back soon — new delivery requests appear here in real time.</p>
+              </div>
             )}
             {!isOnline && (jobs?.length ?? 0) > 0 && (
               <p className="text-center font-body text-sm text-muted-foreground py-2">Go online to accept delivery jobs.</p>
