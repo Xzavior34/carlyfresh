@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { toast } from "@/hooks/use-toast";
 
 const pricingPlans = [
   {
