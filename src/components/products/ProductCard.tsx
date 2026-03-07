@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import type { DBProduct } from "./ProductGrid";
+import StarRating from "./StarRating";
 
 const ProductCard = ({ product }: { product: DBProduct }) => {
   const { addItem } = useCart();
@@ -23,7 +24,8 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
           {product.category}
         </p>
         <h3 className="mt-1 font-display text-base font-semibold text-foreground">{product.name}</h3>
-        <div className="mt-3 flex items-center justify-between">
+        <StarRating productId={product.id} />
+        <div className="mt-2 flex items-center justify-between">
           <span className="font-display text-lg font-bold text-primary">₦{product.price.toLocaleString("en-NG")}</span>
           <motion.button
             onClick={() => addItem(product.id, product.name, product.price, product.vendor_id)}
