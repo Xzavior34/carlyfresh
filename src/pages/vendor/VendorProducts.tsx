@@ -88,13 +88,13 @@ export default function VendorProducts() {
     setErrors({});
     setSaving(true);
 
-    const payload = { ...parsed.data, vendor_id: user.id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0 };
+    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: user.id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0 };
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
       toast({ title: "Product updated" });
     } else {
-      const { error } = await supabase.from("products").insert(payload);
+      const { error } = await supabase.from("products").insert([payload]);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
       toast({ title: "Product added" });
     }
