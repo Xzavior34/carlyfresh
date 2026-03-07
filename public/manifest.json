@@ -1,7 +1,7 @@
 {
-  "name": "CarlyFresh — Farm-Fresh Produce Delivered",
+  "name": "CarlyFresh | Premium Farm-to-Table",
   "short_name": "CarlyFresh",
-  "description": "Farm-fresh produce delivered directly to your door.",
+  "description": "Nigeria's premium farm-to-table marketplace. Fresh produce delivered to your doorstep.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
