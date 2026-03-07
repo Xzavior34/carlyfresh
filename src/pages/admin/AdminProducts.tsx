@@ -213,10 +213,7 @@ export default function AdminProducts() {
               </Select>
               {errors.vendor_id && <p className="text-xs text-destructive font-body">{errors.vendor_id}</p>}
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Image URL (optional)</Label>
-              <Input value={form.image_url} onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))} className="font-body" />
-            </div>
+            <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)} className="font-body" disabled={saving}>Cancel</Button>

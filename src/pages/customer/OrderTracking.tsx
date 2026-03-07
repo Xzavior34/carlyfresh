@@ -125,6 +125,19 @@ export default function OrderTracking() {
                       {order.status}
                     </Badge>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="font-body gap-2 text-xs"
+                    onClick={() => {
+                      const msg = encodeURIComponent(
+                        `Track my CarlyFresh grocery order #${order.order_number} here: ${window.location.href}`
+                      );
+                      window.open(`https://wa.me/?text=${msg}`, "_blank");
+                    }}
+                  >
+                    <Share2 className="h-3.5 w-3.5" /> Share via WhatsApp
+                  </Button>
                   <p className="font-body text-sm text-muted-foreground">
                     Placed on {new Date(order.created_at).toLocaleDateString("en-NG", { dateStyle: "long" })}
                   </p>

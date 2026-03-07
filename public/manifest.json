@@ -1,0 +1,21 @@
+{
+  "name": "CarlyFresh — Farm-Fresh Produce Delivered",
+  "short_name": "CarlyFresh",
+  "description": "Farm-fresh produce delivered directly to your door.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8CB954",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
