@@ -86,7 +86,7 @@ export default function BuyerDashboard() {
   const currentStep = activeOrder ? getStepIndex(activeOrder.status) : 0;
   const totalSpent = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading orders…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-8 max-w-7xl">
