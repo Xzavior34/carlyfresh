@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type Order = Tables<"orders">;
 
@@ -30,7 +31,7 @@ export default function VendorOrders() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading orders…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6 max-w-7xl">

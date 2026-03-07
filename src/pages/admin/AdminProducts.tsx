@@ -17,6 +17,7 @@ import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type Product = Tables<"products">;
 
@@ -109,7 +110,7 @@ export default function AdminProducts() {
     setDeleting(null);
   };
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading products…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6 max-w-7xl">

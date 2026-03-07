@@ -8,7 +8,7 @@ const ToSellBanner = () => {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section ref={ref} className="bg-primary py-20 lg:py-24">
+    <section ref={ref} className="bg-primary py-12 md:py-20 lg:py-24">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

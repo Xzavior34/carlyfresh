@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type Product = Tables<"products">;
 type Order = Tables<"orders">;
@@ -171,7 +172,7 @@ export default function AdminDashboard() {
     { label: "Pending Deliveries", value: pendingDeliveries.toString(), icon: Truck, accent: "text-accent" },
   ];
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading admin panel…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-8 max-w-7xl">

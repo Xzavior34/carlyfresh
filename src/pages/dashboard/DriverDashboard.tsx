@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type DeliveryJob = Tables<"delivery_jobs">;
 
@@ -73,7 +74,7 @@ export default function DriverDashboard() {
   const todayEarnings = completedJobs.reduce((sum, j) => sum + Number(j?.payout_amount ?? 0), 0);
   const totalTrips = completedJobs.length;
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">

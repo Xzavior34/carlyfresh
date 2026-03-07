@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type Product = Tables<"products">;
 type Order = Tables<"orders">;
@@ -106,7 +107,7 @@ export default function SellerDashboard() {
   ];
 
   if (loading) {
-    return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
+    return <DashboardSkeleton />;
   }
 
   return (

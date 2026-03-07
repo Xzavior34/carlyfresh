@@ -33,13 +33,13 @@ const BundleGrid = () => {
   if (bundles.length === 0) return null;
 
   return (
-    <section id="bundles" ref={ref} className="py-24 lg:py-32">
+    <section id="bundles" ref={ref} className="py-12 md:py-24 lg:py-32">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="mb-12 flex items-end justify-between"
+          className="mb-8 md:mb-12 flex items-end justify-between"
         >
           <div>
             <span className="mb-2 block font-body text-xs font-semibold uppercase tracking-widest text-accent">
