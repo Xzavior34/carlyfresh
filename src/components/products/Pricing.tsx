@@ -18,6 +18,16 @@ const pricingPlans = [
 const Pricing = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const navigate = useNavigate();
+
+  const handleClick = (plan: typeof pricingPlans[number]) => {
+    if (plan.price === 0) {
+      navigate("/signup");
+      return;
+    }
+    toast({ title: "Subscription initiated!", description: `You selected ${plan.name}. Redirecting…` });
+    setTimeout(() => navigate("/pricing"), 1500);
+  };
 
   return (
     <section id="pricing" ref={ref} className="py-12 md:py-24 lg:py-32">
