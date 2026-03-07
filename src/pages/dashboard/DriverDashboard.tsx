@@ -1,18 +1,11 @@
 /**
- * Driver Dashboard — Mobile-Optimized Portal
- * DATA SOURCE: Live Supabase — delivery_jobs table
+ * Driver Dashboard — Mobile-Optimized with loading states & null safety
  */
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MapPin,
-  Navigation,
-  Package,
-  Wallet,
-  CheckCircle2,
-  TrendingUp,
-  Zap,
+  MapPin, Navigation, Package, Wallet, CheckCircle2, TrendingUp, Zap, Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +25,7 @@ export default function DriverDashboard() {
   const [jobs, setJobs] = useState<DeliveryJob[]>([]);
   const [myJobs, setMyJobs] = useState<DeliveryJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -46,122 +40,83 @@ export default function DriverDashboard() {
     };
     fetchJobs();
 
-    // Realtime subscription for new delivery jobs
     const channel = supabase
       .channel("driver-jobs")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "delivery_jobs" },
-        () => { fetchJobs(); }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => { fetchJobs(); })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const handleAcceptJob = async (jobId: string) => {
-    if (!user) return;
+    if (!user || accepting) return;
+    setAccepting(jobId);
     const { error } = await supabase
       .from("delivery_jobs")
       .update({ driver_id: user.id, status: "accepted" as any })
       .eq("id", jobId);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      setAccepting(null);
       return;
     }
-    // Move from available to my jobs
     const accepted = jobs.find((j) => j.id === jobId);
     if (accepted) {
       setJobs((prev) => prev.filter((j) => j.id !== jobId));
       setMyJobs((prev) => [{ ...accepted, driver_id: user.id, status: "accepted" }, ...prev]);
     }
     toast({ title: "Job accepted!" });
+    setAccepting(null);
   };
 
-  // Earnings from completed jobs
-  const completedJobs = myJobs.filter((j) => j.status === "completed");
-  const todayEarnings = completedJobs.reduce((sum, j) => sum + Number(j.payout_amount), 0);
+  const completedJobs = myJobs?.filter((j) => j?.status === "completed") ?? [];
+  const todayEarnings = completedJobs.reduce((sum, j) => sum + Number(j?.payout_amount ?? 0), 0);
   const totalTrips = completedJobs.length;
 
   if (loading) return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-          Driver Dashboard
-        </h1>
-        <p className="text-muted-foreground font-body mt-1">
-          Manage your deliveries and track earnings.
-        </p>
+        <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">Driver Dashboard</h1>
+        <p className="text-muted-foreground font-body mt-1">Manage your deliveries and track earnings.</p>
       </div>
 
       {/* STATUS TOGGLE */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        <Card
-          className={`border-2 transition-all duration-500 ${
-            isOnline
-              ? "border-primary bg-gradient-to-br from-primary/5 to-primary/10"
-              : "border-border bg-card"
-          }`}
-        >
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}>
+        <Card className={`border-2 transition-all duration-500 ${isOnline ? "border-primary bg-gradient-to-br from-primary/5 to-primary/10" : "border-border bg-card"}`}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div
-                  className={`relative h-14 w-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                    isOnline ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  }`}
-                >
+                <div className={`relative h-14 w-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${isOnline ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
                   <Zap className="h-7 w-7" />
-                  {isOnline && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent border-2 border-card animate-pulse" />
-                  )}
+                  {isOnline && <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-accent border-2 border-card animate-pulse" />}
                 </div>
                 <div>
-                  <p className="font-display text-xl font-bold text-foreground">
-                    {isOnline ? "Online" : "Offline"}
-                  </p>
-                  <p className="font-body text-sm text-muted-foreground">
-                    {isOnline ? "Accepting deliveries" : "Toggle to start accepting jobs"}
-                  </p>
+                  <p className="font-display text-xl font-bold text-foreground">{isOnline ? "Online" : "Offline"}</p>
+                  <p className="font-body text-sm text-muted-foreground">{isOnline ? "Accepting deliveries" : "Toggle to start accepting jobs"}</p>
                 </div>
               </div>
-              <Switch
-                checked={isOnline}
-                onCheckedChange={setIsOnline}
-                className="h-8 w-14 data-[state=checked]:bg-primary"
-              />
+              <Switch checked={isOnline} onCheckedChange={setIsOnline} className="h-8 w-14 data-[state=checked]:bg-primary" />
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
       {/* Earnings Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15, duration: 0.4 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: "Earnings", value: formatNaira(todayEarnings), icon: Wallet, accent: "text-primary" },
             { label: "Completed", value: totalTrips.toString(), icon: CheckCircle2, accent: "text-accent" },
-            { label: "Available", value: jobs.length.toString(), icon: TrendingUp, accent: "text-primary" },
-            { label: "Accepted", value: myJobs.filter((j) => j.status === "accepted").length.toString(), icon: Package, accent: "text-accent" },
+            { label: "Available", value: (jobs?.length ?? 0).toString(), icon: TrendingUp, accent: "text-primary" },
+            { label: "Accepted", value: (myJobs?.filter((j) => j?.status === "accepted")?.length ?? 0).toString(), icon: Package, accent: "text-accent" },
           ].map((item) => (
             <Card key={item.label} className="border border-border">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <item.icon className={`h-4 w-4 ${item.accent}`} />
-                  <span className="text-[10px] font-body uppercase tracking-wider text-muted-foreground">
-                    {item.label}
-                  </span>
+                  <span className="text-[10px] font-body uppercase tracking-wider text-muted-foreground">{item.label}</span>
                 </div>
                 <p className="font-display text-lg font-bold text-foreground">{item.value}</p>
               </CardContent>
@@ -171,21 +126,16 @@ export default function DriverDashboard() {
       </motion.div>
 
       {/* Available Jobs Feed */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.4 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>
         <Card className="border border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-display flex items-center gap-2">
-              <Navigation className="h-5 w-5 text-primary" />
-              Available Jobs
+              <Navigation className="h-5 w-5 text-primary" /> Available Jobs
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <AnimatePresence>
-              {jobs.map((job) => (
+              {jobs?.map((job) => (
                 <motion.div
                   key={job.id}
                   layout
@@ -194,7 +144,6 @@ export default function DriverDashboard() {
                   exit={{ opacity: 0, x: -100 }}
                   className="rounded-xl border p-4 transition-all border-border hover:border-primary/20 hover:bg-muted/20"
                 >
-                  {/* Route */}
                   <div className="flex items-start gap-3">
                     <div className="flex flex-col items-center gap-1 pt-1">
                       <div className="h-2.5 w-2.5 rounded-full bg-primary" />
@@ -204,39 +153,28 @@ export default function DriverDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-body uppercase text-muted-foreground">Pickup</span>
-                        <Badge variant="secondary" className="text-[10px] font-body">{job.id.slice(0, 8)}</Badge>
+                        <Badge variant="secondary" className="text-[10px] font-body">{job?.id?.slice(0, 8) || "N/A"}</Badge>
                       </div>
-                      <p className="font-body text-sm font-medium text-foreground truncate">
-                        {job.pickup_address}
-                      </p>
-
+                      <p className="font-body text-sm font-medium text-foreground truncate">{job?.pickup_address || "N/A"}</p>
                       <div className="mt-3">
                         <span className="text-[10px] font-body uppercase text-muted-foreground">Dropoff</span>
-                        <p className="font-body text-sm font-medium text-foreground">
-                          {job.dropoff_address}
-                        </p>
+                        <p className="font-body text-sm font-medium text-foreground">{job?.dropoff_address || "N/A"}</p>
                       </div>
                     </div>
                   </div>
-
-                  {/* Footer */}
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        Delivery
-                      </div>
+                    <div className="flex items-center gap-1 text-xs font-body text-muted-foreground">
+                      <MapPin className="h-3 w-3" /> Delivery
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-display text-lg font-bold text-primary">
-                        {formatNaira(Number(job.payout_amount))}
-                      </span>
+                      <span className="font-display text-lg font-bold text-primary">{formatNaira(Number(job?.payout_amount ?? 0))}</span>
                       <Button
                         size="sm"
-                        className="font-body text-xs bg-primary hover:bg-primary/90"
+                        className="font-body text-xs bg-primary hover:bg-primary/90 gap-1"
                         onClick={() => handleAcceptJob(job.id)}
-                        disabled={!isOnline}
+                        disabled={!isOnline || accepting === job.id}
                       >
+                        {accepting === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                         Accept Job
                       </Button>
                     </div>
@@ -244,17 +182,11 @@ export default function DriverDashboard() {
                 </motion.div>
               ))}
             </AnimatePresence>
-
-            {jobs.length === 0 && (
-              <p className="text-center font-body text-sm text-muted-foreground py-4">
-                No available jobs right now.
-              </p>
+            {(jobs?.length ?? 0) === 0 && (
+              <p className="text-center font-body text-sm text-muted-foreground py-4">No available jobs right now.</p>
             )}
-
-            {!isOnline && jobs.length > 0 && (
-              <p className="text-center font-body text-sm text-muted-foreground py-2">
-                Go online to accept delivery jobs.
-              </p>
+            {!isOnline && (jobs?.length ?? 0) > 0 && (
+              <p className="text-center font-body text-sm text-muted-foreground py-2">Go online to accept delivery jobs.</p>
             )}
           </CardContent>
         </Card>
