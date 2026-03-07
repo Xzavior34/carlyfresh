@@ -70,7 +70,11 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-display text-sm font-semibold text-foreground">{item.title}</h3>
-                      <p className="font-body text-sm text-muted-foreground">{item.text}</p>
+                      {item.link ? (
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="font-body text-sm text-primary hover:underline">{item.text}</a>
+                      ) : (
+                        <p className="font-body text-sm text-muted-foreground">{item.text}</p>
+                      )}
                     </div>
                   </div>
                 ))}

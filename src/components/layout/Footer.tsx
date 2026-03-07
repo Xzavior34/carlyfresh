@@ -17,6 +17,15 @@ const Footer = () => {
             <p className="mt-3 font-body text-xs text-muted-foreground">
               52 Ikwere Road, Port Harcourt
             </p>
+            <a
+              href="https://instagram.com/carlyfresh5"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              <Instagram size={18} />
+              @Carlyfresh5
+            </a>
           </div>
           <div>
             <h4 className="mb-4 font-display text-sm font-semibold text-foreground">Shop</h4>
