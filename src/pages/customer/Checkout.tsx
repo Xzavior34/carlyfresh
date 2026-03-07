@@ -98,6 +98,7 @@ export default function Checkout() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -109,18 +110,14 @@ export default function Checkout() {
     toast({ title: "Delivery address saved", description: data.address });
   };
 
-  const handlePayment = async () => {
+  /** Create order in DB first, then let Paystack button appear with real order ID */
+  const handleCreateOrder = async () => {
     if (!user || items.length === 0 || processing) return;
     setProcessing(true);
-    const success = await checkout(user.id);
-    if (!success) { setProcessing(false); return; }
-
-    if (!PAYSTACK_PUBLIC_KEY) {
-      toast({ title: "Order placed!", description: `${formatNaira(total)} logged as pending.` });
-      navigate("/orders");
-      setProcessing(false);
-      return;
-    }
+    const orderId = await checkout(user.id);
+    if (!orderId) { setProcessing(false); return; }
+    setPlacedOrderId(orderId);
+    setOrderCreated(true);
     setProcessing(false);
   };
 
@@ -246,27 +243,27 @@ export default function Checkout() {
                   <Button className="w-full h-14 font-body text-base font-semibold" disabled>
                     Enter delivery address to continue
                   </Button>
-                ) : PAYSTACK_PUBLIC_KEY && user ? (
-                  <PaystackButton
-                    email={user.email || ""}
-                    amountKobo={Math.round(total * 100)}
-                    orderId={placedOrderId || `temp_${Date.now()}`}
-                    onSuccess={onPaystackSuccess}
-                    disabled={processing || isCheckingOut}
-                  />
-                ) : (
+                ) : !orderCreated ? (
                   <Button
                     className="w-full h-14 font-body text-base font-semibold gap-2"
-                    onClick={handlePayment}
+                    onClick={handleCreateOrder}
                     disabled={processing || isCheckingOut}
                   >
                     {processing || isCheckingOut ? (
-                      <><Loader2 className="h-5 w-5 animate-spin" /> Processing…</>
+                      <><Loader2 className="h-5 w-5 animate-spin" /> Creating order…</>
                     ) : (
-                      <><CreditCard className="h-5 w-5" /> Proceed to Payment — {formatNaira(total)}</>
+                      <><CreditCard className="h-5 w-5" /> Place Order — {formatNaira(total)}</>
                     )}
                   </Button>
-                )}
+                ) : user ? (
+                  <PaystackButton
+                    email={user.email || ""}
+                    amountKobo={Math.round(total * 100)}
+                    orderId={placedOrderId!}
+                    onSuccess={onPaystackSuccess}
+                    disabled={processing}
+                  />
+                ) : null}
               </div>
             )}
           </motion.div>

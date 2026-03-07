@@ -18,7 +18,7 @@ interface CartContextType {
   addItem: (id: string, name: string, price: number, vendorId?: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-  checkout: (buyerId: string) => Promise<boolean>;
+  checkout: (buyerId: string) => Promise<string | null>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -48,8 +48,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => setItems([]);
 
-  const checkout = async (buyerId: string): Promise<boolean> => {
-    if (items.length === 0 || isCheckingOut) return false;
+  const checkout = async (buyerId: string): Promise<string | null> => {
+    if (items.length === 0 || isCheckingOut) return null;
     setIsCheckingOut(true);
 
     try {
@@ -62,22 +62,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         quantity: i.quantity,
       }));
 
-      const { error } = await supabase.from("orders").insert({
+      const { data, error } = await supabase.from("orders").insert({
         buyer_id: buyerId,
         vendor_id: vendorId,
         items: orderItems as any,
         total_amount: total,
         status: "pending",
-      });
+      }).select("id").single();
 
       if (error) {
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
-        return false;
+        return null;
       }
 
       clearCart();
       toast({ title: "Order placed!", description: "Your order has been submitted successfully." });
-      return true;
+      return data.id;
     } finally {
       setIsCheckingOut(false);
     }
