@@ -219,10 +219,7 @@ export default function VendorProducts() {
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Image URL (optional)</Label>
-              <Input value={form.image_url} onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))} className="font-body" />
-            </div>
+            <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)} className="font-body" disabled={saving}>Cancel</Button>
