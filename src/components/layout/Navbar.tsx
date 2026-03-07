@@ -92,7 +92,7 @@ const Navbar = () => {
                 Login
               </Link>
             )}
-            <Link to="/cart" className={`relative p-2 transition-colors ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+            <Link to="/cart" className={`relative p-2 transition-colors ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
               <ShoppingCart size={22} />
               {itemCount > 0 && (
                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
