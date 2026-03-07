@@ -199,8 +199,8 @@ export default function BuyerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                    {orders?.map((order) => (
+                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
                         <TableCell className="font-medium font-body text-foreground">
                           #{order.order_number}
                         </TableCell>
