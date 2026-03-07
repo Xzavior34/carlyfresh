@@ -79,7 +79,7 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
                   <User size={16} />
                   {getDashboardLabel()}
                 </Link>
