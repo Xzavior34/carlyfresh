@@ -56,7 +56,7 @@ const Navbar = () => {
         }`}
       >
         <div className="container mx-auto flex items-center justify-between px-6 py-4 lg:px-12">
-          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-[#A3E635]" : "text-primary"}`}>
+          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-[hsl(93,40%,53%)]" : "text-primary"}`}>
             CarlyFresh
           </Link>
 
