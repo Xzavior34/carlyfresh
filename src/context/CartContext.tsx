@@ -18,7 +18,7 @@ interface CartContextType {
   addItem: (id: string, name: string, price: number, vendorId?: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-  checkout: (buyerId: string) => Promise<boolean>;
+  checkout: (buyerId: string) => Promise<string | null>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
