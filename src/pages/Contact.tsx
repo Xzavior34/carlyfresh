@@ -3,7 +3,7 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Instagram } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ContactForm from "@/components/forms/ContactForm";
@@ -62,6 +62,7 @@ const Contact = () => {
                   { icon: MapPin, title: "Address", text: "52 Ikwere Road, Port Harcourt" },
                   { icon: Phone, title: "Phone", text: "+234 800 CARLY (22759)" },
                   { icon: Mail, title: "Email", text: "hello@carlyfresh.com" },
+                  { icon: Instagram, title: "Instagram", text: "@Carlyfresh5", link: "https://instagram.com/carlyfresh5" },
                 ].map((item, i) => (
                   <div key={item.title} className="flex gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -69,7 +70,11 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="font-display text-sm font-semibold text-foreground">{item.title}</h3>
-                      <p className="font-body text-sm text-muted-foreground">{item.text}</p>
+                      {item.link ? (
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="font-body text-sm text-primary hover:underline">{item.text}</a>
+                      ) : (
+                        <p className="font-body text-sm text-muted-foreground">{item.text}</p>
+                      )}
                     </div>
                   </div>
                 ))}

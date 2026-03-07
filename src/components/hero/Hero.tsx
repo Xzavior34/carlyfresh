@@ -11,6 +11,8 @@ const Hero = () => {
       <div className="absolute inset-0">
         <img src={heroBg} alt="Fresh organic produce" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-foreground/40" />
+        {/* Top gradient for navbar contrast */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent z-10" />
       </div>
 
       <div className="container relative mx-auto flex min-h-screen items-center px-6 lg:px-12">
