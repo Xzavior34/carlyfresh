@@ -29,13 +29,13 @@ const ToSellBanner = () => {
               </p>
             </div>
           </div>
-          <Link to="/business">
+          <Link to="/signup">
             <motion.span
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}
               className="inline-block rounded-full bg-accent px-8 py-3.5 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl"
             >
-              Partner With Us
+              Start Selling
             </motion.span>
           </Link>
         </motion.div>
