@@ -1,17 +1,19 @@
 /**
- * Signup Page — Registration with role selection
- * DATA SOURCE: Lovable Cloud Auth + user_roles table
+ * Signup Page — Registration with role selection & Zod validation
  */
 
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Leaf, Eye, EyeOff, ShoppingCart, Sprout, Truck, Check } from "lucide-react";
+import { Leaf, Eye, EyeOff, ShoppingCart, Sprout, Truck, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 type AppRole = "buyer" | "seller" | "driver";
 
@@ -21,10 +23,15 @@ const roles: { value: AppRole; label: string; desc: string; icon: React.ReactNod
   { value: "driver", label: "Delivery Driver", desc: "Earn delivering orders", icon: <Truck className="h-5 w-5" /> },
 ];
 
+const signupSchema = z.object({
+  fullName: z.string().trim().min(1, "Full name is required").max(100),
+  email: z.string().trim().email("Please enter a valid email address").max(255),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128),
+});
+
+type SignupFormValues = z.infer<typeof signupSchema>;
+
 const Signup = () => {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState<AppRole>("buyer");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -32,11 +39,14 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { fullName: "", email: "", password: "" },
+  });
 
-    const { error } = await signUp(email, password, fullName, selectedRole);
+  const onSubmit = async (data: SignupFormValues) => {
+    setSubmitting(true);
+    const { error } = await signUp(data.email, data.password, data.fullName, selectedRole);
 
     if (error) {
       toast({ title: "Signup failed", description: error.message, variant: "destructive" });
@@ -44,10 +54,7 @@ const Signup = () => {
       return;
     }
 
-    toast({
-      title: "Account created!",
-      description: "Please check your email to verify your account before signing in.",
-    });
+    toast({ title: "Account created!", description: "Please check your email to verify your account before signing in." });
     navigate("/login");
   };
 
@@ -67,9 +74,7 @@ const Signup = () => {
               <Leaf className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="font-display text-5xl font-bold text-primary-foreground mb-4">
-            Join CarlyFresh
-          </h1>
+          <h1 className="font-display text-5xl font-bold text-primary-foreground mb-4">Join CarlyFresh</h1>
           <p className="font-body text-primary-foreground/80 text-lg max-w-md mx-auto">
             Whether you're buying, selling, or delivering — there's a place for you.
           </p>
@@ -85,18 +90,14 @@ const Signup = () => {
           className="w-full max-w-md space-y-8"
         >
           <div>
-            <Link to="/" className="font-display text-2xl font-bold text-primary lg:hidden block mb-8">
-              CarlyFresh
-            </Link>
+            <Link to="/" className="font-display text-2xl font-bold text-primary lg:hidden block mb-8">CarlyFresh</Link>
             <h2 className="font-display text-3xl font-bold text-foreground">Create your account</h2>
-            <p className="mt-2 font-body text-muted-foreground">
-              Select your account type and get started in minutes
-            </p>
+            <p className="mt-2 font-body text-muted-foreground">Select your account type and get started in minutes</p>
           </div>
 
           {/* Role selector */}
           <div>
-            <Label className="font-body text-sm font-medium mb-3 block">Select Your Account Type *</Label>
+            <p className="font-body text-sm font-medium mb-3">Select Your Account Type *</p>
             <div className="grid grid-cols-3 gap-3">
               {roles.map((r) => (
                 <button
@@ -122,69 +123,57 @@ const Signup = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="font-body text-sm font-medium">Full Name</Label>
-              <Input
-                id="fullName"
-                placeholder="John Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="h-12 font-body"
-              />
-            </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField control={form.control} name="fullName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-body text-sm font-medium">Full Name</FormLabel>
+                  <FormControl><Input placeholder="John Doe" {...field} className="h-12 font-body" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-body text-sm font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-12 font-body"
-              />
-            </div>
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-body text-sm font-medium">Email</FormLabel>
+                  <FormControl><Input type="email" placeholder="you@example.com" {...field} className="h-12 font-body" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="font-body text-sm font-medium">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="h-12 font-body pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
+              <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-body text-sm font-medium">Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...field}
+                        className="h-12 font-body pr-12"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
-            <Button
-              type="submit"
-              disabled={submitting}
-              className="w-full h-12 font-body text-sm font-semibold"
-            >
-              {submitting ? "Creating account…" : "Create Account"}
-            </Button>
-          </form>
+              <Button type="submit" disabled={submitting} className="w-full h-12 font-body text-sm font-semibold gap-2">
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating account…</> : "Create Account"}
+              </Button>
+            </form>
+          </Form>
 
           <p className="text-center font-body text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-primary hover:underline">
-              Sign in
-            </Link>
+            <Link to="/login" className="font-semibold text-primary hover:underline">Sign in</Link>
           </p>
         </motion.div>
       </div>

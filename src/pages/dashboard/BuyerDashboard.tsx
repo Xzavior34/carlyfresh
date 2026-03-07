@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   Package,
   Truck,
@@ -49,6 +50,7 @@ function getStepIndex(status: string): number {
 
 export default function BuyerDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -197,8 +199,8 @@ export default function BuyerDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                    {orders?.map((order) => (
+                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
                         <TableCell className="font-medium font-body text-foreground">
                           #{order.order_number}
                         </TableCell>

@@ -17,6 +17,7 @@ import About from "./pages/About";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
+import OrderTracking from "./pages/customer/OrderTracking";
 
 // Customer pages
 import Cart from "./pages/customer/Cart";
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><CustomerOrders /></ProtectedRoute>} />
+              <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
 
               {/* Admin routes */}
