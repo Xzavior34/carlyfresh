@@ -30,7 +30,7 @@ export default function VendorOrders() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading orders…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6 max-w-7xl">
