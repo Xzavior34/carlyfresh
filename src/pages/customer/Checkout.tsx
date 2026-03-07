@@ -98,6 +98,7 @@ export default function Checkout() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -109,18 +110,14 @@ export default function Checkout() {
     toast({ title: "Delivery address saved", description: data.address });
   };
 
-  const handlePayment = async () => {
+  /** Create order in DB first, then let Paystack button appear with real order ID */
+  const handleCreateOrder = async () => {
     if (!user || items.length === 0 || processing) return;
     setProcessing(true);
-    const success = await checkout(user.id);
-    if (!success) { setProcessing(false); return; }
-
-    if (!PAYSTACK_PUBLIC_KEY) {
-      toast({ title: "Order placed!", description: `${formatNaira(total)} logged as pending.` });
-      navigate("/orders");
-      setProcessing(false);
-      return;
-    }
+    const orderId = await checkout(user.id);
+    if (!orderId) { setProcessing(false); return; }
+    setPlacedOrderId(orderId);
+    setOrderCreated(true);
     setProcessing(false);
   };
 
