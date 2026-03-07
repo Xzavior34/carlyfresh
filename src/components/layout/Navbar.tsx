@@ -88,7 +88,7 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
                 Login
               </Link>
             )}
