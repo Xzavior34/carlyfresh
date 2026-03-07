@@ -171,7 +171,7 @@ export default function AdminDashboard() {
     { label: "Pending Deliveries", value: pendingDeliveries.toString(), icon: Truck, accent: "text-accent" },
   ];
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading admin panel…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-8 max-w-7xl">
