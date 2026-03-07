@@ -56,7 +56,7 @@ const Navbar = () => {
         }`}
       >
         <div className="container mx-auto flex items-center justify-between px-6 py-4 lg:px-12">
-          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-[#A3E635]" : "text-primary"}`}>
+          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-[hsl(93,40%,53%)]" : "text-primary"}`}>
             CarlyFresh
           </Link>
 
@@ -67,8 +67,8 @@ const Navbar = () => {
                 to={link.href}
                 className={`font-body text-sm font-medium transition-colors ${
                   location.pathname === link.href
-                    ? useLight ? "text-[#A3E635]" : "text-primary"
-                    : useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"
+                    ? useLight ? "text-[hsl(93,40%,53%)]" : "text-primary"
+                    : useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"
                 }`}
               >
                 {link.label}
@@ -79,7 +79,7 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
                   <User size={16} />
                   {getDashboardLabel()}
                 </Link>
@@ -88,11 +88,11 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
                 Login
               </Link>
             )}
-            <Link to="/cart" className={`relative p-2 transition-colors ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+            <Link to="/cart" className={`relative p-2 transition-colors ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
               <ShoppingCart size={22} />
               {itemCount > 0 && (
                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
