@@ -243,27 +243,27 @@ export default function Checkout() {
                   <Button className="w-full h-14 font-body text-base font-semibold" disabled>
                     Enter delivery address to continue
                   </Button>
-                ) : PAYSTACK_PUBLIC_KEY && user ? (
-                  <PaystackButton
-                    email={user.email || ""}
-                    amountKobo={Math.round(total * 100)}
-                    orderId={placedOrderId || `temp_${Date.now()}`}
-                    onSuccess={onPaystackSuccess}
-                    disabled={processing || isCheckingOut}
-                  />
-                ) : (
+                ) : !orderCreated ? (
                   <Button
                     className="w-full h-14 font-body text-base font-semibold gap-2"
-                    onClick={handlePayment}
+                    onClick={handleCreateOrder}
                     disabled={processing || isCheckingOut}
                   >
                     {processing || isCheckingOut ? (
-                      <><Loader2 className="h-5 w-5 animate-spin" /> Processing…</>
+                      <><Loader2 className="h-5 w-5 animate-spin" /> Creating order…</>
                     ) : (
-                      <><CreditCard className="h-5 w-5" /> Proceed to Payment — {formatNaira(total)}</>
+                      <><CreditCard className="h-5 w-5" /> Place Order — {formatNaira(total)}</>
                     )}
                   </Button>
-                )}
+                ) : user ? (
+                  <PaystackButton
+                    email={user.email || ""}
+                    amountKobo={Math.round(total * 100)}
+                    orderId={placedOrderId!}
+                    onSuccess={onPaystackSuccess}
+                    disabled={processing}
+                  />
+                ) : null}
               </div>
             )}
           </motion.div>
