@@ -106,7 +106,7 @@ export default function SellerDashboard() {
   ];
 
   if (loading) {
-    return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
+    return <DashboardSkeleton />;
   }
 
   return (
