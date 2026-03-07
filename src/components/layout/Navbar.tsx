@@ -67,8 +67,8 @@ const Navbar = () => {
                 to={link.href}
                 className={`font-body text-sm font-medium transition-colors ${
                   location.pathname === link.href
-                    ? useLight ? "text-[#A3E635]" : "text-primary"
-                    : useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"
+                    ? useLight ? "text-[hsl(93,40%,53%)]" : "text-primary"
+                    : useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"
                 }`}
               >
                 {link.label}
