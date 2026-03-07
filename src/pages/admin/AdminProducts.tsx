@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import ImageUploadInput from "@/components/products/ImageUploadInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
