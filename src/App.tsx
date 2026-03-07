@@ -17,6 +17,7 @@ import About from "./pages/About";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
+import OrderTracking from "./pages/customer/OrderTracking";
 
 // Customer pages
 import Cart from "./pages/customer/Cart";
