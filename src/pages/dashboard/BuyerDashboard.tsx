@@ -50,6 +50,7 @@ function getStepIndex(status: string): number {
 
 export default function BuyerDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
