@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import type { DBProduct } from "./ProductGrid";
+import StarRating from "./StarRating";
 
 const ProductCard = ({ product }: { product: DBProduct }) => {
   const { addItem } = useCart();
