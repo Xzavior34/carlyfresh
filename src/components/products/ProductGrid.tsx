@@ -54,9 +54,24 @@ const ProductGrid = () => {
 
       {/* Grid */}
       <div className="flex-1">
-        <p className="mb-6 font-body text-sm text-muted-foreground">
-          {loading ? "Loading..." : `Showing ${filtered.length} product${filtered.length !== 1 ? "s" : ""}`}
-        </p>
+        {loading ? (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 mb-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
+                <div className="h-40 bg-muted animate-pulse" />
+                <div className="p-4 space-y-3">
+                  <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                  <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                  <div className="h-5 w-16 bg-muted animate-pulse rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mb-6 font-body text-sm text-muted-foreground">
+            Showing {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+          </p>
+        )}
         <motion.div
           layout
           className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"

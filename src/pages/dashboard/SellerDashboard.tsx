@@ -224,8 +224,14 @@ export default function SellerDashboard() {
                     ))}
                     {inventory.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground font-body">
-                          No products yet. Add your first product to get started.
+                        <TableCell colSpan={5} className="text-center py-12">
+                          <div className="flex flex-col items-center">
+                            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                              <Package className="h-7 w-7 text-primary" />
+                            </div>
+                            <p className="font-display text-base font-semibold text-foreground mb-1">No products yet</p>
+                            <p className="font-body text-sm text-muted-foreground max-w-xs">Head to "My Products" to add your first harvest and start selling!</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}
@@ -251,7 +257,13 @@ export default function SellerDashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               {orders.length === 0 && (
-                <p className="text-sm text-muted-foreground font-body text-center py-6">No orders yet.</p>
+                <div className="flex flex-col items-center py-10">
+                  <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-3">
+                    <Clock className="h-7 w-7 text-accent" />
+                  </div>
+                  <p className="font-display text-base font-semibold text-foreground mb-1">No orders yet</p>
+                  <p className="font-body text-sm text-muted-foreground max-w-xs text-center">Once customers purchase your products, orders will appear here.</p>
+                </div>
               )}
               {orders.map((order) => {
                 const StatusIcon = statusIcons[order.status] || Clock;

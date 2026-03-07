@@ -217,8 +217,14 @@ export default function BuyerDashboard() {
                     ))}
                     {orders.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground font-body">
-                          No orders yet. Start shopping!
+                        <TableCell colSpan={3} className="text-center py-12">
+                          <div className="flex flex-col items-center">
+                            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                              <Package className="h-7 w-7 text-primary" />
+                            </div>
+                            <p className="font-display text-base font-semibold text-foreground mb-1">No orders yet</p>
+                            <p className="font-body text-sm text-muted-foreground max-w-xs">Browse our marketplace and place your first order to see it tracked here.</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}

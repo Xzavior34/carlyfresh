@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { toast } from "@/hooks/use-toast";
 
 const pricingPlans = [
   {
@@ -23,6 +25,20 @@ const PricingPage = () => {
   const [yearly, setYearly] = useState(false);
   const cardsRef = useRef<HTMLDivElement>(null);
   const cardsInView = useInView(cardsRef, { once: true, margin: "-80px" });
+  const navigate = useNavigate();
+
+  const handleSubscribe = (plan: typeof pricingPlans[number]) => {
+    if (plan.price === 0) {
+      navigate("/signup");
+      return;
+    }
+    toast({
+      title: "Subscription initiated!",
+      description: `You selected ${plan.name} — ${yearly ? "yearly" : "monthly"}. Redirecting to payment…`,
+    });
+    // TODO: integrate real payment flow
+    setTimeout(() => navigate("/signup"), 1500);
+  };
 
   const getPrice = (monthlyPrice: number) => {
     if (monthlyPrice === 0) return 0;
@@ -109,6 +125,7 @@ const PricingPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.03, y: -2 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSubscribe(plan)}
                   className={`mt-6 sm:mt-8 w-full rounded-full py-3.5 font-body text-sm font-semibold transition-colors ${
                     plan.recommended
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
