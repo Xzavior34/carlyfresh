@@ -30,6 +30,17 @@ Deno.serve(async (req) => {
     });
     if (userErr) return new Response(JSON.stringify({ error: userErr.message }), { status: 400, headers: corsHeaders });
     vendorId = newUser.user.id;
+
+    // Manually create profile + role since trigger may not exist
+    await supabaseAdmin.from("profiles").upsert({ user_id: vendorId, full_name: "CarlyFresh Farm", business_name: "CarlyFresh Farm" }, { onConflict: "user_id" });
+    await supabaseAdmin.from("user_roles").upsert({ user_id: vendorId, role: "seller" }, { onConflict: "user_id,role" });
+  }
+
+  // Ensure profile exists
+  const { data: profile } = await supabaseAdmin.from("profiles").select("user_id").eq("user_id", vendorId).single();
+  if (!profile) {
+    await supabaseAdmin.from("profiles").insert({ user_id: vendorId, full_name: "CarlyFresh Farm", business_name: "CarlyFresh Farm" });
+    await supabaseAdmin.from("user_roles").insert({ user_id: vendorId, role: "seller" });
   }
 
   // Update profile with business name
