@@ -62,6 +62,7 @@ const Contact = () => {
                   { icon: MapPin, title: "Address", text: "52 Ikwere Road, Port Harcourt" },
                   { icon: Phone, title: "Phone", text: "+234 800 CARLY (22759)" },
                   { icon: Mail, title: "Email", text: "hello@carlyfresh.com" },
+                  { icon: Instagram, title: "Instagram", text: "@Carlyfresh5", link: "https://instagram.com/carlyfresh5" },
                 ].map((item, i) => (
                   <div key={item.title} className="flex gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
