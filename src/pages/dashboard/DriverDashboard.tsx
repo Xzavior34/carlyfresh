@@ -73,7 +73,7 @@ export default function DriverDashboard() {
   const todayEarnings = completedJobs.reduce((sum, j) => sum + Number(j?.payout_amount ?? 0), 0);
   const totalTrips = completedJobs.length;
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading dashboard…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
