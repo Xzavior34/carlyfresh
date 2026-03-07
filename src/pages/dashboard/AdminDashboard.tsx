@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type Product = Tables<"products">;
 type Order = Tables<"orders">;

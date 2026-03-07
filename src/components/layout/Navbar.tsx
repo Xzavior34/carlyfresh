@@ -41,6 +41,10 @@ const Navbar = () => {
     return "My Orders";
   };
 
+  // On homepage without scroll, use light text. Otherwise use normal.
+  const isHomepage = location.pathname === "/";
+  const useLight = isHomepage && !scrolled;
+
   return (
     <>
       <motion.nav
@@ -52,11 +56,21 @@ const Navbar = () => {
         }`}
       >
         <div className="container mx-auto flex items-center justify-between px-6 py-4 lg:px-12">
-          <Link to="/" className="font-display text-2xl font-bold tracking-tight text-primary">CarlyFresh</Link>
+          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-[#A3E635]" : "text-primary"}`}>
+            CarlyFresh
+          </Link>
 
           <div className="hidden items-center gap-8 md:flex">
             {navLinks.map((link) => (
-              <Link key={link.label} to={link.href} className={`font-body text-sm font-medium transition-colors hover:text-primary ${location.pathname === link.href ? "text-primary" : "text-foreground/70"}`}>
+              <Link
+                key={link.label}
+                to={link.href}
+                className={`font-body text-sm font-medium transition-colors ${
+                  location.pathname === link.href
+                    ? useLight ? "text-[#A3E635]" : "text-primary"
+                    : useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"
+                }`}
+              >
                 {link.label}
               </Link>
             ))}
@@ -65,18 +79,20 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to={getDashboardLink()} className="hidden font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary md:flex items-center gap-1.5">
+                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
                   <User size={16} />
                   {getDashboardLabel()}
                 </Link>
-                <button onClick={signOut} className="hidden md:flex font-body text-sm font-medium text-foreground/70 transition-colors hover:text-destructive items-center gap-1.5">
+                <button onClick={signOut} className={`hidden md:flex font-body text-sm font-medium transition-colors items-center gap-1.5 ${useLight ? "text-white/80 hover:text-red-400" : "text-foreground/70 hover:text-destructive"}`}>
                   <LogOut size={16} />
                 </button>
               </>
             ) : (
-              <Link to="/login" className="hidden font-body text-sm font-medium text-foreground/70 transition-colors hover:text-primary md:block">Login</Link>
+              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
+                Login
+              </Link>
             )}
-            <Link to="/cart" className="relative p-2 text-foreground/70 transition-colors hover:text-primary">
+            <Link to="/cart" className={`relative p-2 transition-colors ${useLight ? "text-white/80 hover:text-[#A3E635]" : "text-foreground/70 hover:text-primary"}`}>
               <ShoppingCart size={22} />
               {itemCount > 0 && (
                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
@@ -84,7 +100,7 @@ const Navbar = () => {
                 </motion.span>
               )}
             </Link>
-            <button className="p-2 text-foreground/70 md:hidden" onClick={() => setMobileOpen(true)}><Menu size={24} /></button>
+            <button className={`p-2 md:hidden ${useLight ? "text-white/80" : "text-foreground/70"}`} onClick={() => setMobileOpen(true)}><Menu size={24} /></button>
           </div>
         </div>
       </motion.nav>

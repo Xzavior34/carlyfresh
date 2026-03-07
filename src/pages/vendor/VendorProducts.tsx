@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, PackageOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type Product = Tables<"products">;
 
@@ -112,7 +113,7 @@ export default function VendorProducts() {
     setDeleting(null);
   };
 
-  if (loading) return <p className="text-muted-foreground font-body p-8">Loading products…</p>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -124,48 +125,71 @@ export default function VendorProducts() {
         <Button size="sm" className="font-body gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> Add Product</Button>
       </div>
 
-      <Card className="border border-border">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40">
-                  <TableHead className="font-body text-xs uppercase tracking-wider">Product</TableHead>
-                  <TableHead className="font-body text-xs uppercase tracking-wider">Category</TableHead>
-                  <TableHead className="font-body text-xs uppercase tracking-wider text-right">Price</TableHead>
-                  <TableHead className="font-body text-xs uppercase tracking-wider text-center">Stock</TableHead>
-                  <TableHead className="font-body text-xs uppercase tracking-wider text-center">Status</TableHead>
-                  <TableHead className="font-body text-xs uppercase tracking-wider text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products?.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="font-medium font-body text-foreground">{item?.name || "N/A"}</TableCell>
-                    <TableCell><Badge variant="secondary" className="font-body text-[11px]">{item?.category || "N/A"}</Badge></TableCell>
-                    <TableCell className="text-right font-body tabular-nums">{formatNaira(Number(item?.price ?? 0))}</TableCell>
-                    <TableCell className="text-center font-body tabular-nums">{item?.stock_level ?? 0}</TableCell>
-                    <TableCell className="text-center">
-                      <Switch checked={item?.in_stock ?? false} onCheckedChange={() => toggleStock(item.id, item.in_stock)} className="data-[state=checked]:bg-primary" />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(item)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => del(item.id)} disabled={deleting === item.id}>
-                          {deleting === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                        </Button>
-                      </div>
-                    </TableCell>
+      {products.length === 0 ? (
+        <Card className="border border-border">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <PackageOpen className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-display text-lg font-semibold text-foreground mb-1">No products yet</h3>
+            <p className="font-body text-sm text-muted-foreground max-w-sm mb-6">
+              Add your first harvest to start selling on CarlyFresh. Your products will appear here once created.
+            </p>
+            <Button size="sm" className="font-body gap-1" onClick={openAdd}>
+              <Plus className="h-4 w-4" /> Add Your First Product
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border border-border">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="font-body text-xs uppercase tracking-wider">Product</TableHead>
+                    <TableHead className="font-body text-xs uppercase tracking-wider">Category</TableHead>
+                    <TableHead className="font-body text-xs uppercase tracking-wider text-right">Price</TableHead>
+                    <TableHead className="font-body text-xs uppercase tracking-wider text-center">Stock</TableHead>
+                    <TableHead className="font-body text-xs uppercase tracking-wider text-center">Status</TableHead>
+                    <TableHead className="font-body text-xs uppercase tracking-wider text-center">Actions</TableHead>
                   </TableRow>
-                ))}
-                {products.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground font-body">No products yet. Add your first product!</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {products?.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      className="hover:bg-muted/20 transition-colors cursor-pointer"
+                      onClick={() => openEdit(item)}
+                    >
+                      <TableCell className="font-medium font-body text-foreground">{item?.name || "N/A"}</TableCell>
+                      <TableCell><Badge variant="secondary" className="font-body text-[11px]">{item?.category || "N/A"}</Badge></TableCell>
+                      <TableCell className="text-right font-body tabular-nums">{formatNaira(Number(item?.price ?? 0))}</TableCell>
+                      <TableCell className="text-center font-body tabular-nums">{item?.stock_level ?? 0}</TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={item?.in_stock ?? false}
+                          onCheckedChange={() => toggleStock(item.id, item.in_stock)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openEdit(item); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); del(item.id); }} disabled={deleting === item.id}>
+                            {deleting === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-md">

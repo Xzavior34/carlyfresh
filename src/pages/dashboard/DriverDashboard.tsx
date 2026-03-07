@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 type DeliveryJob = Tables<"delivery_jobs">;
 
