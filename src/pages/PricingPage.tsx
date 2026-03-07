@@ -25,6 +25,20 @@ const PricingPage = () => {
   const [yearly, setYearly] = useState(false);
   const cardsRef = useRef<HTMLDivElement>(null);
   const cardsInView = useInView(cardsRef, { once: true, margin: "-80px" });
+  const navigate = useNavigate();
+
+  const handleSubscribe = (plan: typeof pricingPlans[number]) => {
+    if (plan.price === 0) {
+      navigate("/signup");
+      return;
+    }
+    toast({
+      title: "Subscription initiated!",
+      description: `You selected ${plan.name} — ${yearly ? "yearly" : "monthly"}. Redirecting to payment…`,
+    });
+    // TODO: integrate real payment flow
+    setTimeout(() => navigate("/signup"), 1500);
+  };
 
   const getPrice = (monthlyPrice: number) => {
     if (monthlyPrice === 0) return 0;
