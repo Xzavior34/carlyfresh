@@ -22,11 +22,10 @@ const Pricing = () => {
 
   const handleClick = (plan: typeof pricingPlans[number]) => {
     if (plan.price === 0) {
-      navigate("/signup");
+      navigate("/shop");
       return;
     }
-    toast({ title: "Subscription initiated!", description: `You selected ${plan.name}. Redirecting…` });
-    setTimeout(() => navigate("/pricing"), 1500);
+    navigate("/shop");
   };
 
   return (
