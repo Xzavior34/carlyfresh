@@ -2,10 +2,12 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const HealthyBanner = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const { user } = useAuth();
 
   return (
     <section ref={ref} className="py-12 lg:py-16">
@@ -22,7 +24,7 @@ const HealthyBanner = () => {
           <p className="mx-auto mb-8 max-w-lg font-body text-primary-foreground/70">
             Subscribe to a plan and get farm-fresh produce delivered to your doorstep every week.
           </p>
-          <Link to="/shop">
+          <Link to={user ? "/shop" : "/login"}>
             <motion.span
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}
