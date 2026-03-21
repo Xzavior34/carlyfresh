@@ -41,9 +41,18 @@ const Navbar = () => {
     return "My Orders";
   };
 
-  // On homepage without scroll, use light text. Otherwise use normal.
   const isHomepage = location.pathname === "/";
   const useLight = isHomepage && !scrolled;
+
+  const textClass = useLight
+    ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+    : "text-foreground/70";
+  const activeClass = useLight
+    ? "text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+    : "text-primary";
+  const hoverClass = useLight
+    ? "hover:text-white/90"
+    : "hover:text-primary";
 
   return (
     <>
@@ -52,11 +61,13 @@ const Navbar = () => {
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled ? "bg-card/95 backdrop-blur-md shadow-lg" : "bg-transparent"
+          scrolled || !isHomepage
+            ? "bg-background/95 backdrop-blur-md shadow-lg border-b border-border"
+            : "bg-transparent"
         }`}
       >
         <div className="container mx-auto flex items-center justify-between px-6 py-4 lg:px-12">
-          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-[hsl(93,40%,53%)]" : "text-primary"}`}>
+          <Link to="/" className={`font-display text-2xl font-bold tracking-tight transition-colors duration-300 ${useLight ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" : "text-primary"}`}>
             CarlyFresh
           </Link>
 
@@ -66,9 +77,7 @@ const Navbar = () => {
                 key={link.label}
                 to={link.href}
                 className={`font-body text-sm font-medium transition-colors ${
-                  location.pathname === link.href
-                    ? useLight ? "text-[hsl(93,40%,53%)]" : "text-primary"
-                    : useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"
+                  location.pathname === link.href ? activeClass : `${textClass} ${hoverClass}`
                 }`}
               >
                 {link.label}
@@ -79,20 +88,20 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
+                <Link to={getDashboardLink()} className={`hidden font-body text-sm font-medium transition-colors md:flex items-center gap-1.5 ${textClass} ${hoverClass}`}>
                   <User size={16} />
                   {getDashboardLabel()}
                 </Link>
-                <button onClick={signOut} className={`hidden md:flex font-body text-sm font-medium transition-colors items-center gap-1.5 ${useLight ? "text-white/80 hover:text-red-400" : "text-foreground/70 hover:text-destructive"}`}>
+                <button onClick={signOut} className={`hidden md:flex font-body text-sm font-medium transition-colors items-center gap-1.5 ${useLight ? "text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] hover:text-red-300" : "text-foreground/70 hover:text-destructive"}`}>
                   <LogOut size={16} />
                 </button>
               </>
             ) : (
-              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
+              <Link to="/login" className={`hidden font-body text-sm font-medium transition-colors md:block ${textClass} ${hoverClass}`}>
                 Login
               </Link>
             )}
-            <Link to="/cart" className={`relative p-2 transition-colors ${useLight ? "text-white/80 hover:text-[hsl(93,40%,53%)]" : "text-foreground/70 hover:text-primary"}`}>
+            <Link to="/cart" className={`relative p-2 transition-colors ${textClass} ${hoverClass}`}>
               <ShoppingCart size={22} />
               {itemCount > 0 && (
                 <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
@@ -100,7 +109,7 @@ const Navbar = () => {
                 </motion.span>
               )}
             </Link>
-            <button className={`p-2 md:hidden ${useLight ? "text-white/80" : "text-foreground/70"}`} onClick={() => setMobileOpen(true)}><Menu size={24} /></button>
+            <button className={`p-2 md:hidden ${textClass}`} onClick={() => setMobileOpen(true)}><Menu size={24} /></button>
           </div>
         </div>
       </motion.nav>

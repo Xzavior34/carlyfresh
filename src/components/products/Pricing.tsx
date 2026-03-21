@@ -29,7 +29,7 @@ const Pricing = () => {
   };
 
   return (
-    <section id="pricing" ref={ref} className="py-12 md:py-24 lg:py-32">
+    <section id="pricing" ref={ref} className="py-12 lg:py-16">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
