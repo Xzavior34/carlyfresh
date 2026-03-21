@@ -8,7 +8,7 @@ const HealthyBanner = () => {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section ref={ref} className="py-12 md:py-24 lg:py-32">
+    <section ref={ref} className="py-12 lg:py-16">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -22,7 +22,7 @@ const HealthyBanner = () => {
           <p className="mx-auto mb-8 max-w-lg font-body text-primary-foreground/70">
             Subscribe to a plan and get farm-fresh produce delivered to your doorstep every week.
           </p>
-          <Link to="/pricing">
+          <Link to="/shop">
             <motion.span
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}

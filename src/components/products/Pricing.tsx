@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
+
 
 const pricingPlans = [
   {
@@ -22,15 +22,14 @@ const Pricing = () => {
 
   const handleClick = (plan: typeof pricingPlans[number]) => {
     if (plan.price === 0) {
-      navigate("/signup");
+      navigate("/shop");
       return;
     }
-    toast({ title: "Subscription initiated!", description: `You selected ${plan.name}. Redirecting…` });
-    setTimeout(() => navigate("/pricing"), 1500);
+    navigate("/shop");
   };
 
   return (
-    <section id="pricing" ref={ref} className="py-12 md:py-24 lg:py-32">
+    <section id="pricing" ref={ref} className="py-12 lg:py-16">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
