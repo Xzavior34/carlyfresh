@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 const HealthyBanner = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const { user } = useAuth();
 
   return (
     <section ref={ref} className="py-12 lg:py-16">
