@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { useAuth } from "@/context/AuthContext";
 
 const pricingPlans = [
   {
@@ -19,13 +19,10 @@ const Pricing = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleClick = (plan: typeof pricingPlans[number]) => {
-    if (plan.price === 0) {
-      navigate("/shop");
-      return;
-    }
-    navigate("/shop");
+  const handleClick = () => {
+    navigate(user ? "/shop" : "/login");
   };
 
   return (
