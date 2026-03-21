@@ -37,7 +37,11 @@ import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 import { toast } from "@/hooks/use-toast";
 
-const PAYSTACK_PUBLIC_KEY = "pk_live_9950f62c1903e7055a899c9aeefe8d34097b3d94";
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
+
+if (!PAYSTACK_PUBLIC_KEY) {
+  console.error("CRITICAL: VITE_PAYSTACK_PUBLIC_KEY is not set in environment variables. Paystack payments will fail.");
+}
 
 /** Delivery address validation schema */
 const addressSchema = z.object({
