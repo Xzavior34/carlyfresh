@@ -95,7 +95,7 @@ function PaystackButton({
 }
 
 export default function Checkout() {
-  const { items, total, checkout, isCheckingOut } = useCart();
+  const { items, total, checkout, isCheckingOut, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [processing, setProcessing] = useState(false);
