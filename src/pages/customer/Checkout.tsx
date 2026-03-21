@@ -125,7 +125,7 @@ export default function Checkout() {
     setProcessing(false);
   };
 
-  const { clearCart } = useCart();
+  
 
   const onPaystackSuccess = () => {
     clearCart();
