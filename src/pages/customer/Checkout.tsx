@@ -125,7 +125,10 @@ export default function Checkout() {
     setProcessing(false);
   };
 
+  const { clearCart } = useCart();
+
   const onPaystackSuccess = () => {
+    clearCart();
     setShowSuccess(true);
     toast({ title: "Payment Successful!", description: "Your order is being processed." });
   };

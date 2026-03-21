@@ -75,8 +75,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      clearCart();
-      toast({ title: "Order placed!", description: "Your order has been submitted successfully." });
+      // Do NOT clear cart or show success here — that must only happen
+      // after Paystack confirms payment via onSuccess callback
       return data.id;
     } finally {
       setIsCheckingOut(false);
