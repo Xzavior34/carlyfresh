@@ -30,6 +30,8 @@ const productSchema = z.object({
   price: z.number({ invalid_type_error: "Price must be a number" }).min(0, "Price cannot be negative"),
   stock_level: z.number({ invalid_type_error: "Stock must be a number" }).int().min(0, "Stock cannot be negative"),
   image_url: z.string().max(500).optional(),
+  unit_of_measurement: z.string().trim().min(1, "Unit is required"),
+  price_per_unit: z.number({ invalid_type_error: "Price per unit must be a number" }).min(0, "Cannot be negative"),
 });
 
 export default function VendorProducts() {
@@ -40,7 +42,7 @@ export default function VendorProducts() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0" });
+  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchProducts = async () => {
@@ -59,14 +61,14 @@ export default function VendorProducts() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0" });
+    setForm({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "" });
     setErrors({});
     setShowModal(true);
   };
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, category: p.category, price: String(p.price), image_url: p.image_url || "", stock_level: String(p.stock_level) });
+    setForm({ name: p.name, category: p.category, price: String(p.price), image_url: p.image_url || "", stock_level: String(p.stock_level), unit_of_measurement: (p as any).unit_of_measurement || "piece", price_per_unit: String((p as any).price_per_unit || p.price) });
     setErrors({});
     setShowModal(true);
   };
@@ -79,6 +81,8 @@ export default function VendorProducts() {
       price: Number(form.price),
       stock_level: Number(form.stock_level),
       image_url: form.image_url || undefined,
+      unit_of_measurement: form.unit_of_measurement,
+      price_per_unit: Number(form.price_per_unit || form.price),
     });
 
     if (!parsed.success) {
@@ -90,7 +94,7 @@ export default function VendorProducts() {
     setErrors({});
     setSaving(true);
 
-    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: user.id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0 };
+    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: user.id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0, unit_of_measurement: parsed.data.unit_of_measurement, price_per_unit: parsed.data.price_per_unit } as any;
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
@@ -218,6 +222,25 @@ export default function VendorProducts() {
                 <Label className="font-body">Stock Level *</Label>
                 <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body" />
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-body">Unit of Measurement *</Label>
+                <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
+                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen"].map((u) => (
+                      <SelectItem key={u} value={u} className="font-body capitalize">{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.unit_of_measurement && <p className="text-xs text-destructive font-body">{errors.unit_of_measurement}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label className="font-body">Price per {form.unit_of_measurement} (₦) *</Label>
+                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body" placeholder={form.price || "0"} />
+                {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
             </div>
             <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
