@@ -26,9 +26,12 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
         <h3 className="mt-1 font-display text-base font-semibold text-foreground">{product.name}</h3>
         <StarRating productId={product.id} />
         <div className="mt-2 flex items-center justify-between">
-          <span className="font-display text-lg font-bold text-primary">₦{product.price.toLocaleString("en-NG")}</span>
+          <div>
+            <span className="font-display text-lg font-bold text-primary">₦{(product.price_per_unit || product.price).toLocaleString("en-NG")}</span>
+            <span className="text-xs text-muted-foreground font-body">/{product.unit_of_measurement || "piece"}</span>
+          </div>
           <motion.button
-            onClick={() => addItem(product.id, product.name, product.price, product.vendor_id)}
+            onClick={() => addItem(product.id, product.name, product.price_per_unit || product.price, product.vendor_id, product.unit_of_measurement || "piece", product.price_per_unit || product.price)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md"

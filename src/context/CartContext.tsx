@@ -8,6 +8,8 @@ interface CartItem {
   price: number;
   quantity: number;
   vendorId?: string;
+  unit: string;
+  pricePerUnit: number;
 }
 
 interface CartContextType {
@@ -15,7 +17,8 @@ interface CartContextType {
   itemCount: number;
   total: number;
   isCheckingOut: boolean;
-  addItem: (id: string, name: string, price: number, vendorId?: string) => void;
+  addItem: (id: string, name: string, price: number, vendorId?: string, unit?: string, pricePerUnit?: number) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   checkout: (buyerId: string) => Promise<string | null>;
@@ -30,7 +33,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const addItem = (id: string, name: string, price: number, vendorId?: string) => {
+  const addItem = (id: string, name: string, price: number, vendorId?: string, unit: string = "piece", pricePerUnit: number = price) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === id);
       if (existing) {
@@ -38,8 +41,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           item.id === id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id, name, price, quantity: 1, vendorId }];
+      return [...prev, { id, name, price: pricePerUnit, quantity: 1, vendorId, unit, pricePerUnit }];
     });
+  };
+
+  const updateQuantity = (id: string, quantity: number) => {
+    if (quantity <= 0) {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      return;
+    }
+    setItems((prev) => prev.map((item) => item.id === id ? { ...item, quantity } : item));
   };
 
   const removeItem = (id: string) => {
@@ -84,7 +95,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <CartContext.Provider value={{ items, itemCount, total, isCheckingOut, addItem, removeItem, clearCart, checkout }}>
+    <CartContext.Provider value={{ items, itemCount, total, isCheckingOut, addItem, updateQuantity, removeItem, clearCart, checkout }}>
       {children}
     </CartContext.Provider>
   );

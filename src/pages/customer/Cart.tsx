@@ -1,16 +1,17 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Trash2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 
 export default function Cart() {
-  const { items, total, removeItem, addItem, clearCart } = useCart();
+  const { items, total, removeItem, updateQuantity, clearCart } = useCart();
   const { user } = useAuth();
 
   return (
@@ -37,13 +38,28 @@ export default function Cart() {
               <div className="space-y-4">
                 {items.map((item) => (
                   <Card key={item.id} className="border border-border">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex-1">
+                    <CardContent className="p-4 flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
                         <p className="font-body font-medium text-foreground">{item.name}</p>
-                        <p className="font-body text-sm text-muted-foreground">{formatNaira(item.price)} × {item.quantity}</p>
+                        <p className="font-body text-sm text-muted-foreground">
+                          {formatNaira(item.pricePerUnit)} / {item.unit || "piece"}
+                        </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className="font-display font-bold text-foreground">{formatNaira(item.price * item.quantity)}</p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val)) updateQuantity(item.id, val);
+                            }}
+                            className="w-20 h-9 text-center font-body tabular-nums"
+                          />
+                          <span className="text-xs text-muted-foreground font-body whitespace-nowrap">{item.unit || "pcs"}</span>
+                        </div>
+                        <p className="font-display font-bold text-foreground whitespace-nowrap">{formatNaira(item.pricePerUnit * item.quantity)}</p>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => removeItem(item.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
