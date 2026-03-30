@@ -234,8 +234,8 @@ export default function Checkout() {
                   <CardContent className="space-y-3">
                     {items.map((item) => (
                       <div key={item.id} className="flex items-center justify-between font-body text-sm">
-                        <span className="text-foreground">{item.name} × {item.quantity}</span>
-                        <span className="font-medium tabular-nums">{formatNaira(item.price * item.quantity)}</span>
+                        <span className="text-foreground">{item.name} × {item.quantity} {item.unit || "pcs"}</span>
+                        <span className="font-medium tabular-nums">{formatNaira(item.pricePerUnit * item.quantity)}</span>
                       </div>
                     ))}
                     <div className="pt-3 border-t border-border flex items-center justify-between">
