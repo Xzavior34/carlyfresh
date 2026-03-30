@@ -90,7 +90,7 @@ const BundleGrid = () => {
                   <div className="flex h-full w-full items-center justify-center bg-secondary text-4xl text-muted-foreground">📦</div>
                 )}
                 <motion.button
-                  onClick={() => addItem(bundle.id, bundle.name, bundle.price, bundle.vendor_id)}
+                  onClick={() => addItem(bundle.id, bundle.name, bundle.price_per_unit || bundle.price, bundle.vendor_id, bundle.unit_of_measurement || "piece", bundle.price_per_unit || bundle.price)}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   className="absolute bottom-4 right-4 flex h-10 w-10 translate-y-4 items-center justify-center rounded-full bg-accent text-accent-foreground opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
@@ -101,7 +101,7 @@ const BundleGrid = () => {
               <div className="p-5">
                 <h3 className="font-display text-lg font-semibold text-foreground">{bundle.name}</h3>
                 <p className="mt-3 font-display text-xl font-bold text-primary">
-                  ₦{bundle.price.toLocaleString("en-NG")}
+                  ₦{(bundle.price_per_unit || bundle.price).toLocaleString("en-NG")}<span className="text-sm font-normal text-muted-foreground">/{bundle.unit_of_measurement || "piece"}</span>
                 </p>
               </div>
             </motion.div>

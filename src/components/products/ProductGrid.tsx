@@ -13,6 +13,8 @@ export interface DBProduct {
   in_stock: boolean;
   stock_level: number;
   vendor_id: string;
+  unit_of_measurement: string;
+  price_per_unit: number;
 }
 
 const ProductGrid = () => {

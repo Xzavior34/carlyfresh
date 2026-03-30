@@ -125,7 +125,9 @@ export type Database = {
           in_stock: boolean
           name: string
           price: number
+          price_per_unit: number
           stock_level: number
+          unit_of_measurement: string
           updated_at: string
           vendor_id: string
         }
@@ -137,7 +139,9 @@ export type Database = {
           in_stock?: boolean
           name: string
           price?: number
+          price_per_unit?: number
           stock_level?: number
+          unit_of_measurement?: string
           updated_at?: string
           vendor_id: string
         }
@@ -149,7 +153,9 @@ export type Database = {
           in_stock?: boolean
           name?: string
           price?: number
+          price_per_unit?: number
           stock_level?: number
+          unit_of_measurement?: string
           updated_at?: string
           vendor_id?: string
         }
