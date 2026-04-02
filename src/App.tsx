@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Public pages
 import Index from "./pages/Index";
@@ -18,6 +19,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import OrderTracking from "./pages/customer/OrderTracking";
+import VerifyEmail from "./pages/VerifyEmail";
 
 // Customer pages
 import Cart from "./pages/customer/Cart";
@@ -78,6 +80,7 @@ const App = () => (
     <AuthProvider>
       <CartProvider>
         <TooltipProvider>
+          <ErrorBoundary>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -92,6 +95,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
 
               {/* Customer routes (authenticated buyers) */}
               <Route path="/cart" element={<Cart />} />
@@ -135,6 +139,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </ErrorBoundary>
         </TooltipProvider>
       </CartProvider>
     </AuthProvider>
