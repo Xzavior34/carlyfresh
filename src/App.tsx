@@ -95,7 +95,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
+              
 
               {/* Customer routes (authenticated buyers) */}
               <Route path="/cart" element={<Cart />} />
