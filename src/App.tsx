@@ -80,6 +80,7 @@ const App = () => (
     <AuthProvider>
       <CartProvider>
         <TooltipProvider>
+          <ErrorBoundary>
           <Toaster />
           <Sonner />
           <BrowserRouter>
