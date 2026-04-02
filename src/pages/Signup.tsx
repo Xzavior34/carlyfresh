@@ -54,8 +54,8 @@ const Signup = () => {
       return;
     }
 
-    toast({ title: "Account created!", description: "Please check your email to verify your account before signing in." });
-    navigate("/login");
+    toast({ title: "Account created!", description: "Please check your email for a verification code." });
+    navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
   };
 
   return (
