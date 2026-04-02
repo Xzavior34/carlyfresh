@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Leaf, Loader2, MailCheck } from "lucide-react";
+import { Leaf, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ export default function VerifyEmail() {
   const [otp, setOtp] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  const [bypassing, setBypassing] = useState(false);
   const navigate = useNavigate();
 
   const handleVerify = async () => {
@@ -31,7 +32,7 @@ export default function VerifyEmail() {
       setVerifying(false);
       return;
     }
-    toast.success("Email verified! Redirecting to login…");
+    toast.success("Email verified! Redirecting…");
     setTimeout(() => navigate("/login"), 1500);
   };
 
@@ -51,6 +52,12 @@ export default function VerifyEmail() {
       toast.success("Verification code resent to " + email);
     }
     setResending(false);
+  };
+
+  const handleDevBypass = async () => {
+    setBypassing(true);
+    toast.success("Verification bypassed (Dev Mode). Redirecting to login…");
+    setTimeout(() => navigate("/login"), 1000);
   };
 
   return (
@@ -78,6 +85,12 @@ export default function VerifyEmail() {
             <span className="font-semibold text-foreground">{email || "your email"}</span>.
             Enter it below to activate your account.
           </p>
+          <div className="flex items-start gap-2 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-left mt-3">
+            <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+            <p className="font-body text-xs text-yellow-800">
+              If you don't see the email within 60 seconds, please check your <strong>Spam/Junk folder</strong>. Free-tier email delivery can sometimes be delayed.
+            </p>
+          </div>
         </div>
 
         <div className="flex justify-center">
@@ -118,6 +131,19 @@ export default function VerifyEmail() {
             Sign up again
           </Link>
         </p>
+
+        {/* Dev bypass */}
+        <div className="pt-4 border-t border-border">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDevBypass}
+            disabled={bypassing}
+            className="font-body text-xs text-muted-foreground gap-2 opacity-60 hover:opacity-100"
+          >
+            {bypassing ? <><Loader2 className="h-3 w-3 animate-spin" /> Bypassing…</> : "Bypass Verification (Dev Mode)"}
+          </Button>
+        </div>
       </motion.div>
     </div>
   );
