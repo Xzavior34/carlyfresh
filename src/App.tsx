@@ -19,7 +19,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import OrderTracking from "./pages/customer/OrderTracking";
-import VerifyEmail from "./pages/VerifyEmail";
+
 
 // Customer pages
 import Cart from "./pages/customer/Cart";
@@ -95,7 +95,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
+              
 
               {/* Customer routes (authenticated buyers) */}
               <Route path="/cart" element={<Cart />} />
