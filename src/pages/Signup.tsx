@@ -54,8 +54,18 @@ const Signup = () => {
       return;
     }
 
-    toast({ title: "Account created!", description: "Please check your email for a verification code." });
-    navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
+    // Check if the user got auto-confirmed (email verification disabled on backend)
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session) {
+      // User is already logged in — email confirm is off
+      toast({ title: "Account created!", description: "Welcome to CarlyFresh!" });
+      const dashMap: Record<string, string> = { buyer: "/dashboard/buyer", seller: "/dashboard/seller", driver: "/dashboard/driver", admin: "/dashboard/admin" };
+      navigate(dashMap[selectedRole] || "/dashboard/buyer");
+    } else {
+      toast({ title: "Account created!", description: "Please check your email for a verification code." });
+      navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
+    }
+    setSubmitting(false);
   };
 
   return (
