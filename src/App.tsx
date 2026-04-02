@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ScrollToTop from "@/components/layout/ScrollToTop";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Public pages
 import Index from "./pages/Index";
