@@ -58,7 +58,13 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode;
   const { user, role, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center font-body text-muted-foreground">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (requiredRole && role !== requiredRole) return <Navigate to="/login" replace />;
+  if (requiredRole && role !== requiredRole) {
+    // Redirect to user's actual dashboard instead of login
+    if (role === "admin") return <Navigate to="/admin" replace />;
+    if (role === "seller") return <Navigate to="/vendor" replace />;
+    if (role === "driver") return <Navigate to="/driver" replace />;
+    return <Navigate to="/" replace />;
+  }
   return <>{children}</>;
 };
 
