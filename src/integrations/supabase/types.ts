@@ -199,56 +199,6 @@ export type Database = {
         }
         Relationships: []
       }
-      transactions: {
-        Row: {
-          created_at: string
-          description: string
-          gross_amount: number
-          id: string
-          net_amount: number
-          platform_fee: number
-          related_order_id: string | null
-          status: Database["public"]["Enums"]["transaction_status"]
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at: string
-          vendor_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          gross_amount?: number
-          id?: string
-          net_amount?: number
-          platform_fee?: number
-          related_order_id?: string | null
-          status?: Database["public"]["Enums"]["transaction_status"]
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at?: string
-          vendor_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          gross_amount?: number
-          id?: string
-          net_amount?: number
-          platform_fee?: number
-          related_order_id?: string | null
-          status?: Database["public"]["Enums"]["transaction_status"]
-          type?: Database["public"]["Enums"]["transaction_type"]
-          updated_at?: string
-          vendor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_related_order_id_fkey"
-            columns: ["related_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_roles: {
         Row: {
           id: string
@@ -264,42 +214,6 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-        }
-        Relationships: []
-      }
-      withdrawal_requests: {
-        Row: {
-          account_number: string
-          admin_notes: string | null
-          amount: number
-          bank_name: string
-          created_at: string
-          id: string
-          status: Database["public"]["Enums"]["withdrawal_status"]
-          updated_at: string
-          vendor_id: string
-        }
-        Insert: {
-          account_number: string
-          admin_notes?: string | null
-          amount: number
-          bank_name: string
-          created_at?: string
-          id?: string
-          status?: Database["public"]["Enums"]["withdrawal_status"]
-          updated_at?: string
-          vendor_id: string
-        }
-        Update: {
-          account_number?: string
-          admin_notes?: string | null
-          amount?: number
-          bank_name?: string
-          created_at?: string
-          id?: string
-          status?: Database["public"]["Enums"]["withdrawal_status"]
-          updated_at?: string
-          vendor_id?: string
         }
         Relationships: []
       }
@@ -329,9 +243,6 @@ export type Database = {
         | "packaged"
         | "in-transit"
         | "delivered"
-      transaction_status: "completed" | "pending"
-      transaction_type: "sale" | "commission" | "withdrawal"
-      withdrawal_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -468,9 +379,6 @@ export const Constants = {
         "in-transit",
         "delivered",
       ],
-      transaction_status: ["completed", "pending"],
-      transaction_type: ["sale", "commission", "withdrawal"],
-      withdrawal_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
