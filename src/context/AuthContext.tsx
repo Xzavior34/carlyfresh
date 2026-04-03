@@ -42,38 +42,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRole(r);
       return r;
     }
+    setRole(null);
     return null;
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          setTimeout(() => fetchRole(session.user.id), 0);
+          // Keep loading true until role is fetched
+          const r = await fetchRole(session.user.id);
+          if (mounted) {
+            setRole(r);
+            setLoading(false);
+          }
         } else {
           setRole(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id);
+        await fetchRole(session.user.id);
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole) => {
-    // Block admin role selection for non-admin emails
     const finalRole = email.toLowerCase() === ADMIN_EMAIL ? "admin" : 
       (selectedRole === "admin" ? "buyer" : selectedRole);
 
@@ -92,7 +104,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error as Error | null, role: null };
     
-    // Fetch role after sign in
     const { data: { user: authUser } } = await supabase.auth.getUser();
     let userRole: AppRole | null = null;
     if (authUser) {
