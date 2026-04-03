@@ -30,26 +30,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (userId: string): Promise<AppRole | null> => {
-    try {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .limit(1)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
 
-      if (error) throw error;
-
-      if (data && data.role) {
-        const r = data.role as AppRole;
-        setRole(r);
-        return r;
-      }
-    } catch (error) {
-      console.error("Role fetch error:", error);
+    if (!error && data) {
+      const r = data.role as AppRole;
+      setRole(r);
+      return r;
     }
-    
-    // If anything fails, safely default to null so the app doesn't freeze
     setRole(null);
     return null;
   };
@@ -57,55 +49,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // THE FAILSAFE: Force the loading screen to drop after 3 seconds no matter what
-    const failsafeTimer = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 3000);
-
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
         if (!mounted) return;
-
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await fetchRole(session.user.id);
+          // Keep loading true until role is fetched
+          const r = await fetchRole(session.user.id);
+          if (mounted) {
+            setRole(r);
+            setLoading(false);
+          }
         } else {
           setRole(null);
-        }
-      } catch (error) {
-        console.error("Auth init error:", error);
-      } finally {
-        if (mounted) {
           setLoading(false);
-          clearTimeout(failsafeTimer);
         }
-      }
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        if (!mounted) return;
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          await fetchRole(newSession.user.id);
-        } else {
-          setRole(null);
-        }
-        if (mounted) setLoading(false);
       }
     );
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchRole(session.user.id);
+      }
+      if (mounted) setLoading(false);
+    });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(failsafeTimer);
     };
   }, []);
 
