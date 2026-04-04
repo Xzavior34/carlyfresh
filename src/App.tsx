@@ -39,6 +39,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 
 // Vendor pages
 import VendorOverview from "./pages/vendor/VendorOverview";
