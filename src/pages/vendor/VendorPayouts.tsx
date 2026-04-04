@@ -1,4 +1,8 @@
-import { useState } from "react";
+/**
+ * Vendor Wallet & Earnings — Real-time data from Supabase
+ */
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,27 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Wallet, TrendingUp, ArrowDownToLine, Percent, Loader2, CheckCircle2, Clock, Ban } from "lucide-react";
+import { Wallet, TrendingUp, ArrowDownToLine, Percent, Loader2, CheckCircle2, Clock, Ban, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/formatters";
-
-// ── Types ──
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  grossAmount: number;
-  platformFee: number;
-  netAmount: number;
-  status: "completed" | "pending";
-  type: "sale" | "withdrawal";
-}
-
-interface WithdrawalRequest {
-  amount: number;
-  bankName: string;
-  accountNumber: string;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
 interface WalletSummary {
   totalEarnings: number;
@@ -36,63 +25,69 @@ interface WalletSummary {
   pendingWithdrawals: number;
 }
 
-// ── Mock Data ──
-const COMMISSION_RATE = 0.15;
-
-const mockTransactions: Transaction[] = [
-  { id: "t1", date: "2026-04-02", description: "Sale: 50 Baskets of Tomatoes", grossAmount: 125000, platformFee: 18750, netAmount: 106250, status: "completed", type: "sale" },
-  { id: "t2", date: "2026-04-01", description: "Sale: 20kg Fresh Spinach", grossAmount: 34000, platformFee: 5100, netAmount: 28900, status: "completed", type: "sale" },
-  { id: "t3", date: "2026-03-30", description: "Sale: 100 Pieces of Plantain", grossAmount: 45000, platformFee: 6750, netAmount: 38250, status: "completed", type: "sale" },
-  { id: "t4", date: "2026-03-28", description: "Withdrawal to GTBank ****4521", grossAmount: 0, platformFee: 0, netAmount: -80000, status: "completed", type: "withdrawal" },
-  { id: "t5", date: "2026-03-25", description: "Sale: 30 Baskets of Peppers", grossAmount: 90000, platformFee: 13500, netAmount: 76500, status: "completed", type: "sale" },
-  { id: "t6", date: "2026-03-22", description: "Sale: 15kg Yam Flour", grossAmount: 22500, platformFee: 3375, netAmount: 19125, status: "completed", type: "sale" },
-  { id: "t7", date: "2026-04-03", description: "Sale: 200 Pieces of Oranges", grossAmount: 60000, platformFee: 9000, netAmount: 51000, status: "pending", type: "sale" },
-  { id: "t8", date: "2026-04-03", description: "Withdrawal Request", grossAmount: 0, platformFee: 0, netAmount: -50000, status: "pending", type: "withdrawal" },
-];
-
-const computeWallet = (txns: Transaction[]): WalletSummary => {
-  let totalEarnings = 0;
-  let totalCommission = 0;
-  let totalWithdrawn = 0;
-  let pendingWithdrawals = 0;
-
-  txns.forEach((t) => {
-    if (t.type === "sale" && t.status === "completed") {
-      totalEarnings += t.grossAmount;
-      totalCommission += t.platformFee;
-    }
-    if (t.type === "withdrawal" && t.status === "completed") {
-      totalWithdrawn += Math.abs(t.netAmount);
-    }
-    if (t.type === "withdrawal" && t.status === "pending") {
-      pendingWithdrawals += Math.abs(t.netAmount);
-    }
-  });
-
-  const availableBalance = totalEarnings - totalCommission - totalWithdrawn - pendingWithdrawals;
-  return { totalEarnings, totalCommission, totalWithdrawn, availableBalance, pendingWithdrawals };
-};
-
 export default function VendorPayouts() {
-  const [transactions] = useState<Transaction[]>(mockTransactions);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<WithdrawalRequest>({ amount: 0, bankName: "", accountNumber: "" });
+  const [form, setForm] = useState({ amount: 0, bankName: "", accountNumber: "" });
 
-  const wallet = computeWallet(transactions);
+  const fetchData = async () => {
+    if (!user) return;
+    const [txRes, wdRes] = await Promise.all([
+      supabase.from("transactions").select("*").eq("vendor_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("withdrawal_requests").select("*").eq("vendor_id", user.id).order("created_at", { ascending: false }),
+    ]);
+    setTransactions(txRes.data || []);
+    setWithdrawals(wdRes.data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  // Compute wallet summary from real data
+  const wallet: WalletSummary = (() => {
+    let totalEarnings = 0, totalCommission = 0;
+    (transactions || []).forEach((t) => {
+      if (t.type === "sale" && t.status === "completed") {
+        totalEarnings += Number(t.gross_amount);
+        totalCommission += Number(t.platform_fee);
+      }
+    });
+    const completedWithdrawals = (withdrawals || []).filter((w) => w.status === "approved").reduce((s: number, w: any) => s + Number(w.amount), 0);
+    const pendingWithdrawals = (withdrawals || []).filter((w) => w.status === "pending").reduce((s: number, w: any) => s + Number(w.amount), 0);
+    const availableBalance = totalEarnings - totalCommission - completedWithdrawals - pendingWithdrawals;
+    return { totalEarnings, totalCommission, totalWithdrawn: completedWithdrawals, availableBalance, pendingWithdrawals };
+  })();
 
   const handleWithdraw = async () => {
     if (form.amount <= 0) return toast.error("Enter a valid amount");
     if (form.amount > wallet.availableBalance) return toast.error("Amount exceeds available balance");
     if (!form.bankName.trim()) return toast.error("Enter your bank name");
-    if (form.accountNumber.length < 10) return toast.error("Enter a valid 10-digit account number");
+    if (form.accountNumber.length !== 10) return toast.error("Enter a valid 10-digit account number");
 
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    toast.success("Withdrawal request submitted! Admin will review shortly.");
+    const { error } = await supabase.from("withdrawal_requests").insert({
+      vendor_id: user!.id,
+      amount: form.amount,
+      bank_name: form.bankName,
+      account_number: form.accountNumber,
+    });
     setSubmitting(false);
+
+    if (error) {
+      toast.error("Failed to submit withdrawal request");
+      return;
+    }
+
+    toast.success("Withdrawal request submitted! Admin will review shortly.");
     setWithdrawOpen(false);
     setForm({ amount: 0, bankName: "", accountNumber: "" });
+    fetchData();
   };
 
   const metrics = [
@@ -101,6 +96,8 @@ export default function VendorPayouts() {
     { label: "Commission Paid (15%)", value: formatNaira(wallet.totalCommission), icon: Percent, color: "text-orange-500" },
     { label: "Total Withdrawn", value: formatNaira(wallet.totalWithdrawn), icon: ArrowDownToLine, color: "text-blue-500" },
   ];
+
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-6">
@@ -146,41 +143,91 @@ export default function VendorPayouts() {
           <CardTitle className="text-lg font-display">Transaction History</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto w-full">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="font-body">Date</TableHead>
-                  <TableHead className="font-body">Description</TableHead>
-                  <TableHead className="font-body text-right">Gross</TableHead>
-                  <TableHead className="font-body text-right">Fee (15%)</TableHead>
-                  <TableHead className="font-body text-right">Net</TableHead>
-                  <TableHead className="font-body text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-body text-sm whitespace-nowrap">{new Date(t.date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}</TableCell>
-                    <TableCell className="font-body text-sm max-w-[200px] truncate">{t.description}</TableCell>
-                    <TableCell className="font-body text-sm text-right">{t.type === "sale" ? formatNaira(t.grossAmount) : "—"}</TableCell>
-                    <TableCell className="font-body text-sm text-right text-orange-500">{t.type === "sale" ? `-${formatNaira(t.platformFee)}` : "—"}</TableCell>
-                    <TableCell className={`font-body text-sm text-right font-semibold ${t.type === "withdrawal" ? "text-red-500" : "text-primary"}`}>
-                      {t.type === "withdrawal" ? `-${formatNaira(Math.abs(t.netAmount))}` : formatNaira(t.netAmount)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={t.status === "completed" ? "default" : "secondary"} className="gap-1 text-xs">
-                        {t.status === "completed" ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        {t.status === "completed" ? "Completed" : "Pending"}
-                      </Badge>
-                    </TableCell>
+          {transactions.length === 0 ? (
+            <div className="py-16 text-center">
+              <ReceiptText className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+              <p className="font-body text-muted-foreground">No transactions yet.</p>
+              <p className="font-body text-xs text-muted-foreground mt-1">Sales will appear here once your orders are delivered.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-body">Date</TableHead>
+                    <TableHead className="font-body">Description</TableHead>
+                    <TableHead className="font-body text-right">Gross</TableHead>
+                    <TableHead className="font-body text-right">Fee (15%)</TableHead>
+                    <TableHead className="font-body text-right">Net</TableHead>
+                    <TableHead className="font-body text-center">Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-body text-sm whitespace-nowrap">
+                        {new Date(t.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                      </TableCell>
+                      <TableCell className="font-body text-sm max-w-[200px] truncate">{t.description}</TableCell>
+                      <TableCell className="font-body text-sm text-right">{t.type === "sale" ? formatNaira(t.gross_amount) : "—"}</TableCell>
+                      <TableCell className="font-body text-sm text-right text-orange-500">{t.type === "sale" ? `-${formatNaira(t.platform_fee)}` : "—"}</TableCell>
+                      <TableCell className={`font-body text-sm text-right font-semibold ${t.type === "withdrawal" ? "text-destructive" : "text-primary"}`}>
+                        {t.type === "withdrawal" ? `-${formatNaira(Math.abs(t.net_amount))}` : formatNaira(t.net_amount)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={t.status === "completed" ? "default" : "secondary"} className="gap-1 text-xs">
+                          {t.status === "completed" ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {t.status === "completed" ? "Completed" : "Pending"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Withdrawal History */}
+      {withdrawals.length > 0 && (
+        <Card className="border border-border">
+          <CardHeader>
+            <CardTitle className="text-lg font-display">Withdrawal Requests</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="font-body">Date</TableHead>
+                    <TableHead className="font-body">Bank</TableHead>
+                    <TableHead className="font-body text-right">Amount</TableHead>
+                    <TableHead className="font-body text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {withdrawals.map((w) => (
+                    <TableRow key={w.id}>
+                      <TableCell className="font-body text-sm whitespace-nowrap">
+                        {new Date(w.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                      </TableCell>
+                      <TableCell className="font-body text-sm">{w.bank_name} ****{w.account_number.slice(-4)}</TableCell>
+                      <TableCell className="font-body text-sm text-right font-semibold">{formatNaira(w.amount)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={w.status === "approved" ? "default" : w.status === "rejected" ? "destructive" : "secondary"} className="gap-1 text-xs">
+                          {w.status === "approved" ? <CheckCircle2 className="h-3 w-3" /> : w.status === "rejected" ? <Ban className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {w.status.charAt(0).toUpperCase() + w.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Withdrawal Modal */}
       <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
@@ -194,39 +241,20 @@ export default function VendorPayouts() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label className="font-body">Amount (₦)</Label>
-              <Input
-                type="number"
-                placeholder="e.g. 50000"
-                value={form.amount || ""}
-                onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
-                max={wallet.availableBalance}
-              />
-              {form.amount > wallet.availableBalance && (
-                <p className="text-xs text-destructive font-body">Exceeds available balance</p>
-              )}
+              <Input type="number" placeholder="e.g. 50000" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} max={wallet.availableBalance} />
+              {form.amount > wallet.availableBalance && <p className="text-xs text-destructive font-body">Exceeds available balance</p>}
             </div>
             <div className="space-y-2">
               <Label className="font-body">Bank Name</Label>
-              <Input
-                placeholder="e.g. GTBank, Access Bank"
-                value={form.bankName}
-                onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-              />
+              <Input placeholder="e.g. GTBank, Access Bank" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label className="font-body">Account Number</Label>
-              <Input
-                placeholder="10-digit account number"
-                maxLength={10}
-                value={form.accountNumber}
-                onChange={(e) => setForm({ ...form, accountNumber: e.target.value.replace(/\D/g, "") })}
-              />
+              <Input placeholder="10-digit account number" maxLength={10} value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value.replace(/\D/g, "") })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setWithdrawOpen(false)} disabled={submitting} className="font-body">
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setWithdrawOpen(false)} disabled={submitting} className="font-body">Cancel</Button>
             <Button onClick={handleWithdraw} disabled={submitting || form.amount > wallet.availableBalance} className="gap-2 font-body">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               Submit Request
