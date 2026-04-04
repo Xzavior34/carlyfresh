@@ -112,6 +112,7 @@ const App = () => (
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />
+                <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 
