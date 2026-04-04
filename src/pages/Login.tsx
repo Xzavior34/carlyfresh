@@ -49,7 +49,7 @@ const Login = () => {
       if (role === "admin") navigate("/admin");
       else if (role === "seller") navigate("/vendor");
       else if (role === "driver") navigate("/driver");
-      else navigate("/");
+      else navigate("/shop");
     }, 300);
   };
 

@@ -71,7 +71,7 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
     if (role === "admin") return <Navigate to="/admin" replace />;
     if (role === "seller") return <Navigate to="/vendor" replace />;
     if (role === "driver") return <Navigate to="/driver" replace />;
-    return <Navigate to="/" replace />;
+    return <Navigate to="/shop" replace />;
   }
   return <>{children}</>;
 };

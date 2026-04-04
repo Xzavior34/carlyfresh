@@ -4,7 +4,7 @@ import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Leaf } from "lucide-react";
+import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Leaf, Banknote } from "lucide-react";
 
 const navItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const navItems = [
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Deliveries", url: "/admin/deliveries", icon: Truck },
+  { title: "Withdrawals", url: "/admin/withdrawals", icon: Banknote },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
