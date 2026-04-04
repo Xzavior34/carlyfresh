@@ -39,6 +39,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 
 // Vendor pages
 import VendorOverview from "./pages/vendor/VendorOverview";
@@ -70,7 +71,7 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
     if (role === "admin") return <Navigate to="/admin" replace />;
     if (role === "seller") return <Navigate to="/vendor" replace />;
     if (role === "driver") return <Navigate to="/driver" replace />;
-    return <Navigate to="/" replace />;
+    return <Navigate to="/shop" replace />;
   }
   return <>{children}</>;
 };
@@ -111,6 +112,7 @@ const App = () => (
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />
+                <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 
