@@ -44,7 +44,16 @@ export default function AdminWithdrawals() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    const channel = supabase
+      .channel("admin-withdrawals")
+      .on("postgres_changes", { event: "*", schema: "public", table: "withdrawal_requests" }, () => {
+        fetchData();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const handleApprove = async (w: Withdrawal) => {
     setProcessing(w.id);
