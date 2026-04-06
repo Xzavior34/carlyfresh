@@ -14,31 +14,37 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<(Profile & { role?: string; totalSales?: number })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetch = async () => {
-      const [profRes, rolesRes, ordersRes] = await Promise.all([
-        supabase.from("profiles").select("*"),
-        supabase.from("user_roles").select("*"),
-        supabase.from("orders").select("vendor_id, total_amount"),
-      ]);
-      if (profRes.data && rolesRes.data) {
-        const roleMap = new Map(rolesRes.data.map((r) => [r.user_id, r.role]));
-        // Calculate vendor sales
-        const salesMap = new Map<string, number>();
-        if (ordersRes.data) {
-          ordersRes.data.forEach((o) => {
-            salesMap.set(o.vendor_id, (salesMap.get(o.vendor_id) || 0) + Number(o.total_amount));
-          });
-        }
-        setUsers(profRes.data.map((p) => ({
-          ...p,
-          role: roleMap.get(p.user_id) || "buyer",
-          totalSales: salesMap.get(p.user_id) || 0,
-        })));
+  const fetchAll = async () => {
+    const [profRes, rolesRes, ordersRes] = await Promise.all([
+      supabase.from("profiles").select("*"),
+      supabase.from("user_roles").select("*"),
+      supabase.from("orders").select("vendor_id, total_amount"),
+    ]);
+    if (profRes.data && rolesRes.data) {
+      const roleMap = new Map(rolesRes.data.map((r) => [r.user_id, r.role]));
+      const salesMap = new Map<string, number>();
+      if (ordersRes.data) {
+        ordersRes.data.forEach((o) => {
+          salesMap.set(o.vendor_id, (salesMap.get(o.vendor_id) || 0) + Number(o.total_amount));
+        });
       }
-      setLoading(false);
-    };
-    fetch();
+      setUsers(profRes.data.map((p) => ({
+        ...p,
+        role: roleMap.get(p.user_id) || "buyer",
+        totalSales: salesMap.get(p.user_id) || 0,
+      })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAll();
+    const channel = supabase
+      .channel("admin-users")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   if (loading) return <DashboardSkeleton />;
