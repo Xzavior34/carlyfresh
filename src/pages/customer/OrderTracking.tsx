@@ -214,7 +214,7 @@ export default function OrderTracking() {
                   {Array.isArray(order.items) ? (order.items as any[]).map((item: any, i: number) => (
                     <div key={i} className="flex items-center justify-between font-body text-sm">
                       <span className="text-foreground">
-                        {item?.name || "Item"} × {item?.quantity || 1}
+                        {item?.name || "Item"} ({item?.quantity || 1} {item?.unit || "piece"})
                       </span>
                       <span className="font-medium tabular-nums">
                         {formatNaira((item?.price || 0) * (item?.quantity || 1))}
