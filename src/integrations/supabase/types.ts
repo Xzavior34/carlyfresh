@@ -65,6 +65,140 @@ export type Database = {
           },
         ]
       }
+      driver_locations: {
+        Row: {
+          driver_id: string
+          id: string
+          latitude: number
+          longitude: number
+          updated_at: string
+        }
+        Insert: {
+          driver_id: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          updated_at?: string
+        }
+        Update: {
+          driver_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      driver_transactions: {
+        Row: {
+          created_at: string
+          description: string
+          driver_id: string
+          gross_amount: number
+          id: string
+          net_amount: number
+          platform_fee: number
+          related_job_id: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          driver_id: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          platform_fee?: number
+          related_job_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          driver_id?: string
+          gross_amount?: number
+          id?: string
+          net_amount?: number
+          platform_fee?: number
+          related_job_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_transactions_related_job_id_fkey"
+            columns: ["related_job_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_wallet: {
+        Row: {
+          balance: number
+          created_at: string
+          driver_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          driver_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          driver_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      driver_withdrawals: {
+        Row: {
+          account_number: string
+          admin_notes: string | null
+          amount: number
+          bank_name: string
+          created_at: string
+          driver_id: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_number: string
+          admin_notes?: string | null
+          amount: number
+          bank_name: string
+          created_at?: string
+          driver_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string
+          admin_notes?: string | null
+          amount?: number
+          bank_name?: string
+          created_at?: string
+          driver_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           buyer_id: string
