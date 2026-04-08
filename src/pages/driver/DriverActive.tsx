@@ -5,33 +5,71 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Navigation, CheckCircle2 } from "lucide-react";
+import { MapPin, Loader2, Navigation, CheckCircle2, ExternalLink, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
-import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
-type DeliveryJob = Tables<"delivery_jobs">;
+interface OrderItem {
+  name: string;
+  quantity: number;
+  unit?: string;
+  price: number;
+}
+
+interface JobWithOrder {
+  id: string;
+  order_id: string;
+  pickup_address: string;
+  dropoff_address: string;
+  payout_amount: number;
+  status: string;
+  created_at: string;
+  order_items: OrderItem[];
+  order_number: number | null;
+  order_total: number;
+}
 
 export default function DriverActive() {
   const { user } = useAuth();
-  const [jobs, setJobs] = useState<DeliveryJob[]>([]);
+  const [jobs, setJobs] = useState<JobWithOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const fetchJobs = async () => {
     if (!user) return;
-    const { data } = await supabase.from("delivery_jobs").select("*").eq("driver_id", user.id).in("status", ["accepted", "in-transit"]).order("created_at", { ascending: false });
-    if (data) setJobs(data);
+    const { data } = await supabase
+      .from("delivery_jobs")
+      .select("*, orders(order_number, total_amount, items)")
+      .eq("driver_id", user.id)
+      .in("status", ["accepted", "in-transit"])
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      const mapped: JobWithOrder[] = data.map((job: any) => ({
+        id: job.id,
+        order_id: job.order_id,
+        pickup_address: job.pickup_address,
+        dropoff_address: job.dropoff_address,
+        payout_amount: job.payout_amount,
+        status: job.status,
+        created_at: job.created_at,
+        order_items: Array.isArray(job.orders?.items) ? job.orders.items : [],
+        order_number: job.orders?.order_number ?? null,
+        order_total: job.orders?.total_amount ?? 0,
+      }));
+      setJobs(mapped);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     if (!user) return;
     fetchJobs();
-    const ch = supabase.channel("driver-active-rt")
+    const ch = supabase
+      .channel("driver-active-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs", filter: `driver_id=eq.${user.id}` }, () => fetchJobs())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -41,8 +79,13 @@ export default function DriverActive() {
     setUpdating(jobId);
     const { error } = await supabase.from("delivery_jobs").update({ status: newStatus as any }).eq("id", jobId);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: `Status updated to ${newStatus}` });
+    else toast({ title: newStatus === "completed" ? "Delivery completed! Payment added to wallet." : `Status updated to ${newStatus}` });
     setUpdating(null);
+  };
+
+  const openNavigation = (address: string) => {
+    const encoded = encodeURIComponent(address);
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, "_blank");
   };
 
   if (loading) return <DashboardSkeleton />;
@@ -65,15 +108,54 @@ export default function DriverActive() {
           <Card key={job.id} className="border border-border">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-display">Delivery #{job.id.slice(0, 8)}</CardTitle>
+                <CardTitle className="text-base font-display">
+                  {job.order_number ? `Order #${job.order_number}` : `Delivery #${job.id.slice(0, 8)}`}
+                </CardTitle>
                 <Badge variant="secondary" className="font-body text-[10px] capitalize">{job.status}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="font-body text-sm"><span className="text-muted-foreground">Pickup:</span> {job.pickup_address}</p>
-              <p className="font-body text-sm"><span className="text-muted-foreground">Dropoff:</span> {job.dropoff_address}</p>
-              <p className="font-body text-sm font-semibold text-primary">{formatNaira(Number(job.payout_amount))}</p>
-              <div className="flex gap-2 pt-2">
+              {/* Addresses */}
+              <div className="space-y-1.5">
+                <p className="font-body text-sm flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                  <span><span className="text-muted-foreground font-medium">Pickup:</span> {job.pickup_address}</span>
+                </p>
+                <p className="font-body text-sm flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+                  <span><span className="text-muted-foreground font-medium">Dropoff:</span> {job.dropoff_address}</span>
+                </p>
+              </div>
+
+              {/* Order Items */}
+              {job.order_items.length > 0 && (
+                <div className="bg-muted/50 rounded-md p-3 space-y-1">
+                  <p className="font-body text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Package className="h-3 w-3" /> Items
+                  </p>
+                  {job.order_items.map((item, idx) => (
+                    <p key={idx} className="font-body text-sm text-foreground">
+                      {item.name} ({item.quantity} {item.unit || "pc"})
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Payout */}
+              <p className="font-body text-sm font-semibold text-primary">{formatNaira(Number(job.payout_amount))} payout</p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 pt-2">
+                {/* Navigate */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="font-body gap-1"
+                  onClick={() => openNavigation(job.status === "accepted" ? job.pickup_address : job.dropoff_address)}
+                >
+                  <ExternalLink className="h-3 w-3" /> View Route
+                </Button>
+
                 {job.status === "accepted" && (
                   <Button size="sm" className="font-body gap-1" onClick={() => updateStatus(job.id, "in-transit")} disabled={updating === job.id}>
                     {updating === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <MapPin className="h-3 w-3" />} Start Delivery
