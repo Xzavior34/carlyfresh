@@ -118,7 +118,7 @@ export default function Checkout() {
   const handleCreateOrder = async () => {
     if (!user || items.length === 0 || processing) return;
     setProcessing(true);
-    const orderId = await checkout(user.id);
+    const orderId = await checkout(user.id, form.getValues("address"));
     if (!orderId) { setProcessing(false); return; }
     setPlacedOrderId(orderId);
     setOrderCreated(true);
