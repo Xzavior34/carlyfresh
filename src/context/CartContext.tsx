@@ -21,7 +21,7 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-  checkout: (buyerId: string) => Promise<string | null>;
+  checkout: (buyerId: string, deliveryAddress?: string) => Promise<string | null>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -59,7 +59,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => setItems([]);
 
-  const checkout = async (buyerId: string): Promise<string | null> => {
+  const checkout = async (buyerId: string, deliveryAddress?: string): Promise<string | null> => {
     if (items.length === 0 || isCheckingOut) return null;
     setIsCheckingOut(true);
 
@@ -71,6 +71,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         name: i.name,
         price: i.price,
         quantity: i.quantity,
+        unit: i.unit,
       }));
 
       const { data, error } = await supabase.from("orders").insert({
@@ -79,7 +80,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         items: orderItems as any,
         total_amount: total,
         status: "pending",
-      }).select("id").single();
+        delivery_address: deliveryAddress || "",
+      } as any).select("id").single();
 
       if (error) {
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
