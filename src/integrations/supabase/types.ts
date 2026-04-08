@@ -203,6 +203,7 @@ export type Database = {
         Row: {
           buyer_id: string
           created_at: string
+          delivery_address: string
           id: string
           items: Json
           order_number: number
@@ -214,6 +215,7 @@ export type Database = {
         Insert: {
           buyer_id: string
           created_at?: string
+          delivery_address?: string
           id?: string
           items?: Json
           order_number?: number
@@ -225,6 +227,7 @@ export type Database = {
         Update: {
           buyer_id?: string
           created_at?: string
+          delivery_address?: string
           id?: string
           items?: Json
           order_number?: number
