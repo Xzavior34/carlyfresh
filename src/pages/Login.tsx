@@ -6,7 +6,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Leaf, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -65,8 +66,8 @@ const Login = () => {
           className="relative z-10 text-center px-12"
         >
           <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-foreground/20 backdrop-blur-sm">
-              <Leaf className="h-8 w-8 text-primary-foreground" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-foreground/20 backdrop-blur-sm overflow-hidden">
+              <BrandLogo size={56} className="rounded-2xl" />
             </div>
           </div>
           <h1 className="font-display text-5xl font-bold text-primary-foreground mb-4">CarlyFresh</h1>

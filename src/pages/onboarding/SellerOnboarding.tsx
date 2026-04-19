@@ -10,7 +10,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Leaf, CheckCircle2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -91,8 +92,8 @@ export default function SellerOnboarding() {
                 <CardContent className="p-6 md:p-8">
                   {/* Header */}
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-                      <Leaf className="h-5 w-5 text-primary-foreground" />
+                    <div className="h-10 w-10 rounded-xl flex items-center justify-center overflow-hidden">
+                      <BrandLogo size={40} className="rounded-xl" />
                     </div>
                     <div>
                       <h1 className="font-display text-2xl font-bold text-foreground">

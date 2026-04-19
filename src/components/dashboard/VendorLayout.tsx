@@ -4,7 +4,8 @@ import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Package, ShoppingCart, Wallet, LogOut, Leaf } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Wallet, LogOut } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 const navItems = [
   { title: "Overview", url: "/vendor", icon: LayoutDashboard },
@@ -23,8 +24,8 @@ export default function VendorLayout() {
         <Sidebar collapsible="icon" className="border-r border-border">
           <SidebarHeader className="p-4">
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <Leaf className="h-4 w-4 text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+                <BrandLogo size={32} className="rounded-lg" />
               </div>
               <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold tracking-tight font-display text-foreground">CarlyFresh</span>
