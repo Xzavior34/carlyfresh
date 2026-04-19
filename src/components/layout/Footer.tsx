@@ -1,5 +1,6 @@
-import { Leaf, Instagram } from "lucide-react";
+import { Instagram } from "lucide-react";
 import { Link } from "react-router-dom";
+import BrandLogo from "@/components/BrandLogo";
 
 const Footer = () => {
   return (
@@ -8,7 +9,7 @@ const Footer = () => {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-2">
-              <Leaf size={22} className="text-primary" />
+              <BrandLogo size={22} />
               <span className="font-display text-xl font-bold text-foreground">CarlyFresh</span>
             </div>
             <p className="font-body text-sm leading-relaxed text-muted-foreground">

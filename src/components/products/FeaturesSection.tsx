@@ -1,15 +1,16 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { Leaf, Truck, BadgeDollarSign } from "lucide-react";
+import { Truck, BadgeDollarSign } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 const features = [
-  { id: "f1", title: "Farm-Fresh", description: "Sourced directly from local farms. No middlemen, no stale produce.", icon: "Leaf" },
+  { id: "f1", title: "Farm-Fresh", description: "Sourced directly from local farms. No middlemen, no stale produce.", icon: "Brand" },
   { id: "f2", title: "Fast Delivery", description: "Same-day and next-day delivery to your doorstep.", icon: "Truck" },
   { id: "f3", title: "Affordable", description: "Wholesale pricing passed on to you. Save up to 30% vs retail.", icon: "BadgeDollarSign" },
 ];
 
 const iconMap: Record<string, React.ReactNode> = {
-  Leaf: <Leaf size={28} />,
+  Brand: <BrandLogo size={28} />,
   Truck: <Truck size={28} />,
   BadgeDollarSign: <BadgeDollarSign size={28} />,
 };
