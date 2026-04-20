@@ -40,6 +40,7 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
+import AdminDriverWithdrawals from "./pages/admin/AdminDriverWithdrawals";
 
 // Vendor pages
 import VendorOverview from "./pages/vendor/VendorOverview";
@@ -113,6 +114,7 @@ const App = () => (
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
+                <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 
