@@ -6,7 +6,7 @@ import abstractArt from "@/assets/abstract-art.jpg";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section className="relative overflow-hidden pt-24 pb-12 md:pt-0 md:pb-0 md:min-h-screen">
       {/* Background image with overlay */}
       <div className="absolute inset-0">
         <img src={heroBg} alt="Fresh organic produce" className="h-full w-full object-cover" />
@@ -15,14 +15,14 @@ const Hero = () => {
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent z-10" />
       </div>
 
-      <div className="container relative mx-auto flex min-h-screen items-center px-6 lg:px-12">
+      <div className="container relative mx-auto flex md:min-h-screen items-center px-6 lg:px-12">
         <div className="grid w-full items-center gap-12 lg:grid-cols-2">
           {/* Text */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="max-w-xl pt-20 lg:pt-0"
+            className="max-w-xl"
           >
             <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 font-body text-xs font-semibold uppercase tracking-widest text-accent">
               Farm to Table
