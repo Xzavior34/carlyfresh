@@ -49,9 +49,9 @@ const Footer = () => {
             <ul className="space-y-2 font-body text-sm text-muted-foreground">
               <li><Link to="/contact" className="transition-colors hover:text-primary">Help Center</Link></li>
               <li><Link to="/contact" className="transition-colors hover:text-primary">Contact</Link></li>
-              <li><Link to="/about" className="transition-colors hover:text-primary">Privacy Policy</Link></li>
-              <li><Link to="/about" className="transition-colors hover:text-primary">Terms</Link></li>
-              <li><Link to="/about" className="transition-colors hover:text-primary">Refund Policy</Link></li>
+              <li><Link to="/privacy" className="transition-colors hover:text-primary">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="transition-colors hover:text-primary">Terms</Link></li>
+              <li><Link to="/refund" className="transition-colors hover:text-primary">Refund Policy</Link></li>
             </ul>
           </div>
         </div>

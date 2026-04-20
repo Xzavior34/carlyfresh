@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
-import abstractArt from "@/assets/abstract-art.jpg";
 
 const Hero = () => {
   return (
@@ -16,13 +15,13 @@ const Hero = () => {
       </div>
 
       <div className="container relative mx-auto flex md:min-h-screen items-center px-6 lg:px-12">
-        <div className="grid w-full items-center gap-12 lg:grid-cols-2">
+        <div className="w-full">
           {/* Text */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="max-w-xl"
+            className="max-w-2xl"
           >
             <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 font-body text-xs font-semibold uppercase tracking-widest text-accent">
               Farm to Table
@@ -48,34 +47,6 @@ const Hero = () => {
                 <ArrowRight size={18} />
               </motion.span>
             </Link>
-          </motion.div>
-
-          {/* Abstract art */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="hidden lg:flex lg:justify-end"
-          >
-            <div className="relative">
-              <div className="h-[500px] w-[420px] overflow-hidden rounded-3xl shadow-2xl">
-                <img
-                  src={abstractArt}
-                  alt="Abstract geometric art"
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -bottom-6 -left-10 rounded-2xl bg-card p-5 shadow-xl"
-              >
-                <p className="font-display text-sm font-semibold text-foreground">🥬 100% Organic</p>
-                <p className="font-body text-xs text-muted-foreground">Certified Fresh</p>
-              </motion.div>
-            </div>
           </motion.div>
         </div>
       </div>
