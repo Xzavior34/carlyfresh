@@ -56,7 +56,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="mt-12 border-t border-border pt-8 text-center font-body text-xs text-muted-foreground">
-          © 2026 CarlyFresh. Built for Transparency. — Version 1.0 (Demo)
+          © 2026 CarlyFresh. Built for Transparency. All rights reserved.
         </div>
       </div>
     </footer>
