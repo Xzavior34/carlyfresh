@@ -9,7 +9,7 @@ const Hero = () => {
     <section className="relative overflow-hidden pt-24 pb-12 md:pt-0 md:pb-0 md:min-h-screen">
       {/* Background image with overlay */}
       <div className="absolute inset-0">
-        <img src={heroBg} alt="Fresh organic produce" className="h-full w-full object-cover" />
+        <img src={heroBg} alt="Fresh organic produce" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-foreground/40" />
         {/* Top gradient for navbar contrast */}
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 to-transparent z-10" />
@@ -62,6 +62,8 @@ const Hero = () => {
                 <img
                   src={abstractArt}
                   alt="Abstract geometric art"
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover"
                 />
               </div>

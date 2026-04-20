@@ -1,115 +1,95 @@
+/**
+ * Featured Products grid — replaces the previous "Bundles only" carousel.
+ * Shows up to 8 in-stock products so the section is always meaningful and
+ * never collapses into an empty gap on the homepage.
+ */
 import { useRef, useState, useEffect } from "react";
 import { motion, useInView } from "framer-motion";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import ProductCard from "./ProductCard";
 import type { DBProduct } from "./ProductGrid";
 
-const BundleGrid = () => {
+const FeaturedProducts = () => {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const { addItem } = useCart();
-  const [bundles, setBundles] = useState<DBProduct[]>([]);
+  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const [products, setProducts] = useState<DBProduct[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBundles = async () => {
+    const fetch = async () => {
       const { data } = await supabase
         .from("products")
         .select("*")
-        .eq("category", "Bundles")
-        .eq("in_stock", true);
-      if (data) setBundles(data);
+        .eq("in_stock", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (data) setProducts(data as DBProduct[]);
+      setLoading(false);
     };
-    fetchBundles();
+    fetch();
   }, []);
 
-  const scroll = (dir: "left" | "right") => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: dir === "left" ? -340 : 340, behavior: "smooth" });
-    }
-  };
-
-  if (bundles.length === 0) return null;
+  if (!loading && products.length === 0) return null;
 
   return (
-    <section id="bundles" ref={ref} className="py-10 md:py-16">
+    <section id="featured" ref={ref} className="py-10 md:py-16 bg-secondary/30">
       <div className="container mx-auto px-6 lg:px-12">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="mb-8 md:mb-12 flex items-end justify-between"
+          transition={{ duration: 0.5 }}
+          className="mb-8 flex items-end justify-between gap-4"
         >
           <div>
             <span className="mb-2 block font-body text-xs font-semibold uppercase tracking-widest text-accent">
-              Curated for you
+              Fresh Picks
             </span>
-            <h2 className="font-display text-4xl font-bold text-foreground md:text-5xl">
-              Fresh Bundles
+            <h2 className="font-display text-3xl font-bold text-foreground md:text-4xl lg:text-5xl">
+              Featured Products
             </h2>
           </div>
-          <div className="hidden gap-2 md:flex">
-            <button
-              onClick={() => scroll("left")}
-              className="rounded-full border border-border p-3 text-foreground/50 transition-colors hover:border-primary hover:text-primary"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={() => scroll("right")}
-              className="rounded-full border border-border p-3 text-foreground/50 transition-colors hover:border-primary hover:text-primary"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
+          <Link
+            to="/shop"
+            className="hidden items-center gap-1.5 rounded-full border border-border px-4 py-2 font-body text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary md:inline-flex"
+          >
+            Shop all <ArrowRight size={16} />
+          </Link>
         </motion.div>
 
-        <div
-          ref={scrollRef}
-          className="-mx-6 flex gap-6 overflow-x-auto px-6 pb-4 scrollbar-hide lg:-mx-0 lg:px-0"
-          style={{ scrollSnapType: "x mandatory" }}
-        >
-          {bundles.map((bundle, i) => (
-            <motion.div
-              key={bundle.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="group relative min-w-[300px] flex-shrink-0 cursor-pointer overflow-hidden rounded-2xl bg-card shadow-md transition-shadow hover:shadow-xl"
-              style={{ scrollSnapAlign: "start" }}
-            >
-              <div className="relative h-56 overflow-hidden">
-                {bundle.image_url ? (
-                  <img
-                    src={bundle.image_url}
-                    alt={bundle.name}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-secondary text-4xl text-muted-foreground">📦</div>
-                )}
-                <motion.button
-                  onClick={() => addItem(bundle.id, bundle.name, bundle.price_per_unit || bundle.price, bundle.vendor_id, bundle.unit_of_measurement || "piece", bundle.price_per_unit || bundle.price)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="absolute bottom-4 right-4 flex h-10 w-10 translate-y-4 items-center justify-center rounded-full bg-accent text-accent-foreground opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
-                >
-                  <Plus size={20} />
-                </motion.button>
-              </div>
-              <div className="p-5">
-                <h3 className="font-display text-lg font-semibold text-foreground">{bundle.name}</h3>
-                <p className="mt-3 font-display text-xl font-bold text-primary">
-                  ₦{(bundle.price_per_unit || bundle.price).toLocaleString("en-NG")}<span className="text-sm font-normal text-muted-foreground">/{bundle.unit_of_measurement || "piece"}</span>
-                </p>
-              </div>
-            </motion.div>
-          ))}
+        {loading ? (
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-64 rounded-2xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {products.map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+              >
+                <ProductCard product={p} />
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-8 text-center md:hidden">
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-6 py-3 font-body text-sm font-semibold text-primary-foreground"
+          >
+            Shop all <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
     </section>
   );
 };
 
-export default BundleGrid;
+export default FeaturedProducts;
