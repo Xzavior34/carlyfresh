@@ -12,6 +12,8 @@ const BrandLogo = ({ className, size = 24 }: BrandLogoProps) => {
       alt="CarlyFresh"
       width={size}
       height={size}
+      loading="lazy"
+      decoding="async"
       className={cn("object-cover rounded-md", className)}
       style={{ width: size, height: size }}
     />

@@ -14,7 +14,7 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
     >
       <div className="relative flex h-40 items-center justify-center bg-secondary text-6xl">
         {product.image_url ? (
-          <img src={product.image_url} alt={product.name} loading="lazy" className="h-full w-full object-cover" />
+          <img src={product.image_url} alt={product.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <span className="text-4xl text-muted-foreground">📦</span>
         )}
