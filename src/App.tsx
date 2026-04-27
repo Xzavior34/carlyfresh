@@ -108,7 +108,8 @@ const App = () => (
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
               <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-              <Route path="/update-password" element={<GuestRoute><UpdatePassword /></GuestRoute>} />
+              {/* Removed GuestRoute wrapper below to fix the redirect issue */}
+              <Route path="/update-password" element={<UpdatePassword />} />
               
               {/* Customer routes (authenticated buyers) */}
               <Route path="/cart" element={<Cart />} />
