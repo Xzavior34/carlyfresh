@@ -20,6 +20,8 @@ import Terms from "./pages/Terms";
 import Refund from "./pages/Refund";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 import OrderTracking from "./pages/customer/OrderTracking";
 
@@ -101,10 +103,13 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/refund" element={<Refund />} />
+              
+              {/* Auth Routes */}
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
+              <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+              <Route path="/update-password" element={<GuestRoute><UpdatePassword /></GuestRoute>} />
               
-
               {/* Customer routes (authenticated buyers) */}
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
