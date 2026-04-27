@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 // Make sure to import your supabase client here:
-import { supabase } from "@/lib/supabase"; 
+import { supabase } from "@/integrations/supabase/client
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
