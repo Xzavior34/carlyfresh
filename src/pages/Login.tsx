@@ -1,7 +1,3 @@
-/**
- * Login Page — Premium split-screen authentication with Zod validation
- */
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
@@ -105,7 +101,12 @@ const Login = () => {
 
               <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="font-body text-sm font-medium">Password</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="font-body text-sm font-medium">Password</FormLabel>
+                    <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline font-body">
+                      Forgot password?
+                    </Link>
+                  </div>
                   <FormControl>
                     <div className="relative">
                       <Input
