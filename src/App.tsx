@@ -18,6 +18,9 @@ import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Refund from "./pages/Refund";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import OrderAction from "./pages/OrderAction";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -46,6 +49,7 @@ import AdminDeliveries from "./pages/admin/AdminDeliveries";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminDriverWithdrawals from "./pages/admin/AdminDriverWithdrawals";
+import AdminBlog from "./pages/admin/AdminBlog";
 
 // Vendor pages
 import VendorOverview from "./pages/vendor/VendorOverview";
