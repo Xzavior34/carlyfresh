@@ -107,6 +107,9 @@ const App = () => (
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/refund" element={<Refund />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/order-action/:token" element={<OrderAction />} />
               
               {/* Auth Routes */}
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
@@ -131,6 +134,7 @@ const App = () => (
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />
+                <Route path="blog" element={<AdminBlog />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 
