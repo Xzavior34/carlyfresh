@@ -14,8 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_posts: {
+        Row: {
+          author_id: string
+          body: string
+          cover_image_url: string | null
+          created_at: string
+          excerpt: string
+          id: string
+          published_at: string | null
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string
+          id?: string
+          published_at?: string | null
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string
+          id?: string
+          published_at?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       delivery_jobs: {
         Row: {
+          claim_token: string | null
           created_at: string
           driver_id: string | null
           dropoff_address: string
@@ -23,10 +127,12 @@ export type Database = {
           order_id: string
           payout_amount: number
           pickup_address: string
+          sla_deadline: string | null
           status: Database["public"]["Enums"]["job_status"]
           updated_at: string
         }
         Insert: {
+          claim_token?: string | null
           created_at?: string
           driver_id?: string | null
           dropoff_address?: string
@@ -34,10 +140,12 @@ export type Database = {
           order_id: string
           payout_amount?: number
           pickup_address?: string
+          sla_deadline?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
         Update: {
+          claim_token?: string | null
           created_at?: string
           driver_id?: string | null
           dropoff_address?: string
@@ -45,6 +153,7 @@ export type Database = {
           order_id?: string
           payout_amount?: number
           pickup_address?: string
+          sla_deadline?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
@@ -204,10 +313,12 @@ export type Database = {
           buyer_id: string
           created_at: string
           delivery_address: string
+          driver_assignment_deadline: string | null
           id: string
           items: Json
           order_number: number
           status: Database["public"]["Enums"]["order_status"]
+          supplier_response_deadline: string | null
           total_amount: number
           updated_at: string
           vendor_id: string
@@ -216,10 +327,12 @@ export type Database = {
           buyer_id: string
           created_at?: string
           delivery_address?: string
+          driver_assignment_deadline?: string | null
           id?: string
           items?: Json
           order_number?: number
           status?: Database["public"]["Enums"]["order_status"]
+          supplier_response_deadline?: string | null
           total_amount?: number
           updated_at?: string
           vendor_id: string
@@ -228,10 +341,12 @@ export type Database = {
           buyer_id?: string
           created_at?: string
           delivery_address?: string
+          driver_assignment_deadline?: string | null
           id?: string
           items?: Json
           order_number?: number
           status?: Database["public"]["Enums"]["order_status"]
+          supplier_response_deadline?: string | null
           total_amount?: number
           updated_at?: string
           vendor_id?: string
@@ -310,6 +425,7 @@ export type Database = {
         Row: {
           business_name: string | null
           created_at: string
+          driver_rating: number
           full_name: string | null
           id: string
           phone: string | null
@@ -319,6 +435,7 @@ export type Database = {
         Insert: {
           business_name?: string | null
           created_at?: string
+          driver_rating?: number
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -328,6 +445,7 @@ export type Database = {
         Update: {
           business_name?: string | null
           created_at?: string
+          driver_rating?: number
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -459,7 +577,14 @@ export type Database = {
     }
     Enums: {
       app_role: "buyer" | "seller" | "driver" | "admin"
-      job_status: "available" | "accepted" | "in-transit" | "completed"
+      job_status:
+        | "available"
+        | "accepted"
+        | "in-transit"
+        | "completed"
+        | "awaiting_supplier"
+        | "awaiting_driver"
+        | "supplier_missed"
       order_status:
         | "pending"
         | "processing"
@@ -597,7 +722,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["buyer", "seller", "driver", "admin"],
-      job_status: ["available", "accepted", "in-transit", "completed"],
+      job_status: [
+        "available",
+        "accepted",
+        "in-transit",
+        "completed",
+        "awaiting_supplier",
+        "awaiting_driver",
+        "supplier_missed",
+      ],
       order_status: [
         "pending",
         "processing",
