@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, ShoppingCart, CheckCircle2, Loader2, MapPin } from "lucide-react";
+import { CreditCard, ShoppingCart, CheckCircle2, Loader2, MapPin, Clock } from "lucide-react";
 import { usePaystackPayment } from "react-paystack";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,6 +103,7 @@ export default function Checkout() {
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [orderCreated, setOrderCreated] = useState(false);
+  const [deliveryWindow, setDeliveryWindow] = useState<string>("As soon as possible");
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -118,7 +119,7 @@ export default function Checkout() {
   const handleCreateOrder = async () => {
     if (!user || items.length === 0 || processing) return;
     setProcessing(true);
-    const orderId = await checkout(user.id, form.getValues("address"));
+    const orderId = await checkout(user.id, form.getValues("address"), deliveryWindow);
     if (!orderId) { setProcessing(false); return; }
     setPlacedOrderId(orderId);
     setOrderCreated(true);
