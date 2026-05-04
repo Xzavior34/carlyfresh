@@ -29,11 +29,11 @@ export default function DriverDashboard() {
   const fetchAll = async () => {
     if (!user) return;
     const [availRes, myRes, walletRes] = await Promise.all([
-      supabase.from("delivery_jobs").select("*").eq("status", "available").order("created_at", { ascending: false }),
+      supabase.from("delivery_jobs").select("*, orders(delivery_window)").eq("status", "available").order("created_at", { ascending: false }),
       supabase.from("delivery_jobs").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }),
       supabase.from("driver_wallet").select("*").eq("driver_id", user.id).maybeSingle(),
     ]);
-    if (availRes.data) setJobs(availRes.data);
+    if (availRes.data) setJobs(availRes.data as any);
     if (myRes.data) setMyJobs(myRes.data);
     if (walletRes.data) setWalletBalance(Number((walletRes.data as any)?.balance || 0));
     setLoading(false);
@@ -137,6 +137,11 @@ export default function DriverDashboard() {
                       <span className="text-[10px] font-body uppercase text-muted-foreground">Dropoff</span>
                       <p className="font-body text-sm font-medium text-foreground">{job?.dropoff_address || "N/A"}</p>
                     </div>
+                    {(job as any)?.orders?.delivery_window && (
+                      <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-body text-[11px] font-semibold text-primary">
+                        <Navigation className="h-3 w-3" /> {(job as any).orders.delivery_window}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">

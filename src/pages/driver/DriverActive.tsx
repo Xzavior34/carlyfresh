@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Loader2, Navigation, CheckCircle2, ExternalLink, Package } from "lucide-react";
+import { MapPin, Loader2, Navigation, CheckCircle2, ExternalLink, Package, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
@@ -30,6 +30,7 @@ interface JobWithOrder {
   order_items: OrderItem[];
   order_number: number | null;
   order_total: number;
+  delivery_window: string | null;
 }
 
 export default function DriverActive() {
@@ -42,7 +43,7 @@ export default function DriverActive() {
     if (!user) return;
     const { data } = await supabase
       .from("delivery_jobs")
-      .select("*, orders(order_number, total_amount, items)")
+      .select("*, orders(order_number, total_amount, items, delivery_window)")
       .eq("driver_id", user.id)
       .in("status", ["accepted", "in-transit"])
       .order("created_at", { ascending: false });
@@ -59,6 +60,7 @@ export default function DriverActive() {
         order_items: Array.isArray(job.orders?.items) ? job.orders.items : [],
         order_number: job.orders?.order_number ?? null,
         order_total: job.orders?.total_amount ?? 0,
+        delivery_window: job.orders?.delivery_window ?? null,
       }));
       setJobs(mapped);
     }
@@ -125,6 +127,12 @@ export default function DriverActive() {
                   <MapPin className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
                   <span><span className="text-muted-foreground font-medium">Dropoff:</span> {job.dropoff_address}</span>
                 </p>
+                {job.delivery_window && (
+                  <p className="font-body text-sm flex items-start gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                    <span><span className="text-muted-foreground font-medium">Delivery window:</span> <span className="font-semibold text-foreground">{job.delivery_window}</span></span>
+                  </p>
+                )}
               </div>
 
               {/* Order Items */}
