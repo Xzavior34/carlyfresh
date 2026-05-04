@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // Public pages
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
 import Business from "./pages/Business";
 import PricingPage from "./pages/PricingPage";
 import Contact from "./pages/Contact";
@@ -55,6 +56,7 @@ import AdminBlog from "./pages/admin/AdminBlog";
 import VendorOverview from "./pages/vendor/VendorOverview";
 import VendorProducts from "./pages/vendor/VendorProducts";
 import VendorOrders from "./pages/vendor/VendorOrders";
+import VendorReviews from "./pages/vendor/VendorReviews";
 import VendorPayouts from "./pages/vendor/VendorPayouts";
 
 // Driver pages
@@ -100,6 +102,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/shop/:productId" element={<ProductDetail />} />
               <Route path="/business" element={<Business />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/contact" element={<Contact />} />
@@ -143,6 +146,7 @@ const App = () => (
                 <Route index element={<VendorOverview />} />
                 <Route path="products" element={<VendorProducts />} />
                 <Route path="orders" element={<VendorOrders />} />
+                <Route path="reviews" element={<VendorReviews />} />
                 <Route path="payouts" element={<VendorPayouts />} />
               </Route>
 
