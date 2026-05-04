@@ -313,6 +313,7 @@ export type Database = {
           buyer_id: string
           created_at: string
           delivery_address: string
+          delivery_window: string | null
           driver_assignment_deadline: string | null
           id: string
           items: Json
@@ -327,6 +328,7 @@ export type Database = {
           buyer_id: string
           created_at?: string
           delivery_address?: string
+          delivery_window?: string | null
           driver_assignment_deadline?: string | null
           id?: string
           items?: Json
@@ -341,6 +343,7 @@ export type Database = {
           buyer_id?: string
           created_at?: string
           delivery_address?: string
+          delivery_window?: string | null
           driver_assignment_deadline?: string | null
           id?: string
           items?: Json
@@ -368,8 +371,43 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          buyer_id: string
+          comment: string
+          created_at: string
+          id: string
+          product_id: string
+          rating: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          buyer_id: string
+          comment?: string
+          created_at?: string
+          id?: string
+          product_id: string
+          rating: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          buyer_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          rating?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
+          bulk_min_qty: number | null
+          bulk_price: number | null
           category: string
           created_at: string
           id: string
@@ -384,6 +422,8 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          bulk_min_qty?: number | null
+          bulk_price?: number | null
           category?: string
           created_at?: string
           id?: string
@@ -398,6 +438,8 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          bulk_min_qty?: number | null
+          bulk_price?: number | null
           category?: string
           created_at?: string
           id?: string
