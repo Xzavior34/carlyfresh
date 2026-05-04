@@ -5,11 +5,16 @@ import { toast } from "@/hooks/use-toast";
 interface CartItem {
   id: string;
   name: string;
+  /** Effective unit price (may switch to bulk_price when qty >= bulk_min_qty) */
   price: number;
   quantity: number;
   vendorId?: string;
   unit: string;
+  /** Original (regular) per-unit price */
   pricePerUnit: number;
+  /** Bulk pricing config */
+  bulkMinQty?: number | null;
+  bulkPrice?: number | null;
 }
 
 interface CartContextType {
@@ -17,14 +22,34 @@ interface CartContextType {
   itemCount: number;
   total: number;
   isCheckingOut: boolean;
-  addItem: (id: string, name: string, price: number, vendorId?: string, unit?: string, pricePerUnit?: number) => void;
+  addItem: (
+    id: string,
+    name: string,
+    price: number,
+    vendorId?: string,
+    unit?: string,
+    pricePerUnit?: number,
+    bulkMinQty?: number | null,
+    bulkPrice?: number | null,
+  ) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-  checkout: (buyerId: string, deliveryAddress?: string) => Promise<string | null>;
+  checkout: (buyerId: string, deliveryAddress?: string, deliveryWindow?: string) => Promise<string | null>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+/** Returns the effective unit price given qty + bulk config */
+function effectiveUnitPrice(item: Pick<CartItem, "pricePerUnit" | "bulkMinQty" | "bulkPrice">, qty: number): number {
+  if (item.bulkMinQty && item.bulkPrice && qty >= item.bulkMinQty) return Number(item.bulkPrice);
+  return Number(item.pricePerUnit);
+}
+
+/** Whether bulk discount is active for this item right now */
+export function isBulkActive(item: Pick<CartItem, "bulkMinQty" | "bulkPrice" | "quantity">) {
+  return Boolean(item.bulkMinQty && item.bulkPrice && item.quantity >= item.bulkMinQty);
+}
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -33,15 +58,45 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const addItem = (id: string, name: string, price: number, vendorId?: string, unit: string = "piece", pricePerUnit: number = price) => {
+  const recompute = (item: CartItem, qty: number): CartItem => ({
+    ...item,
+    quantity: qty,
+    price: effectiveUnitPrice(item, qty),
+  });
+
+  const addItem = (
+    id: string,
+    name: string,
+    price: number,
+    vendorId?: string,
+    unit: string = "piece",
+    pricePerUnit: number = price,
+    bulkMinQty: number | null = null,
+    bulkPrice: number | null = null,
+  ) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === id);
       if (existing) {
-        return prev.map((item) =>
-          item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-        );
+        const newQty = existing.quantity + 1;
+        const wasBulk = isBulkActive(existing);
+        const updated = recompute(existing, newQty);
+        if (!wasBulk && isBulkActive(updated)) {
+          toast({ title: "Bulk Discount Applied!", description: `${name} is now at wholesale price.` });
+        }
+        return prev.map((item) => (item.id === id ? updated : item));
       }
-      return [...prev, { id, name, price: pricePerUnit, quantity: 1, vendorId, unit, pricePerUnit }];
+      const base: CartItem = {
+        id,
+        name,
+        price: pricePerUnit,
+        quantity: 1,
+        vendorId,
+        unit,
+        pricePerUnit,
+        bulkMinQty,
+        bulkPrice,
+      };
+      return [...prev, recompute(base, 1)];
     });
   };
 
@@ -50,7 +105,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setItems((prev) => prev.filter((item) => item.id !== id));
       return;
     }
-    setItems((prev) => prev.map((item) => item.id === id ? { ...item, quantity } : item));
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const wasBulk = isBulkActive(item);
+        const next = recompute(item, quantity);
+        if (!wasBulk && isBulkActive(next)) {
+          toast({ title: "Bulk Discount Applied!", description: `${item.name} is now at wholesale price.` });
+        }
+        return next;
+      })
+    );
   };
 
   const removeItem = (id: string) => {
@@ -59,7 +124,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => setItems([]);
 
-  const checkout = async (buyerId: string, deliveryAddress?: string): Promise<string | null> => {
+  const checkout = async (buyerId: string, deliveryAddress?: string, deliveryWindow?: string): Promise<string | null> => {
     if (items.length === 0 || isCheckingOut) return null;
     setIsCheckingOut(true);
 
@@ -74,22 +139,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         unit: i.unit,
       }));
 
-      const { data, error } = await supabase.from("orders").insert({
-        buyer_id: buyerId,
-        vendor_id: vendorId,
-        items: orderItems as any,
-        total_amount: total,
-        status: "pending",
-        delivery_address: deliveryAddress || "",
-      } as any).select("id").single();
+      const { data, error } = await supabase
+        .from("orders")
+        .insert({
+          buyer_id: buyerId,
+          vendor_id: vendorId,
+          items: orderItems as any,
+          total_amount: total,
+          status: "pending",
+          delivery_address: deliveryAddress || "",
+          delivery_window: deliveryWindow || null,
+        } as any)
+        .select("id")
+        .single();
 
       if (error) {
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
         return null;
       }
 
-      // Do NOT clear cart or show success here — that must only happen
-      // after Paystack confirms payment via onSuccess callback
       return data.id;
     } finally {
       setIsCheckingOut(false);

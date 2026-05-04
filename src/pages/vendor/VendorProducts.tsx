@@ -32,6 +32,8 @@ const productSchema = z.object({
   image_url: z.string().max(500).optional(),
   unit_of_measurement: z.string().trim().min(1, "Unit is required"),
   price_per_unit: z.number({ invalid_type_error: "Price per unit must be a number" }).min(0, "Cannot be negative"),
+  bulk_min_qty: z.number().int().min(2, "Minimum bulk qty must be at least 2").optional().nullable(),
+  bulk_price: z.number().min(0).optional().nullable(),
 });
 
 export default function VendorProducts() {
@@ -42,7 +44,7 @@ export default function VendorProducts() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "" });
+  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", bulk_min_qty: "", bulk_price: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchProducts = async () => {
@@ -61,20 +63,38 @@ export default function VendorProducts() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "" });
+    setForm({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", bulk_min_qty: "", bulk_price: "" });
     setErrors({});
     setShowModal(true);
   };
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, category: p.category, price: String(p.price), image_url: p.image_url || "", stock_level: String(p.stock_level), unit_of_measurement: (p as any).unit_of_measurement || "piece", price_per_unit: String((p as any).price_per_unit || p.price) });
+    setForm({
+      name: p.name,
+      category: p.category,
+      price: String(p.price),
+      image_url: p.image_url || "",
+      stock_level: String(p.stock_level),
+      unit_of_measurement: (p as any).unit_of_measurement || "piece",
+      price_per_unit: String((p as any).price_per_unit || p.price),
+      bulk_min_qty: (p as any).bulk_min_qty != null ? String((p as any).bulk_min_qty) : "",
+      bulk_price: (p as any).bulk_price != null ? String((p as any).bulk_price) : "",
+    });
     setErrors({});
     setShowModal(true);
   };
 
   const save = async () => {
     if (!user) return;
+    const bulkMinQtyNum = form.bulk_min_qty ? Number(form.bulk_min_qty) : null;
+    const bulkPriceNum = form.bulk_price ? Number(form.bulk_price) : null;
+    // Both bulk fields must be set together, or neither
+    if ((bulkMinQtyNum && !bulkPriceNum) || (!bulkMinQtyNum && bulkPriceNum)) {
+      setErrors({ bulk_min_qty: "Set BOTH minimum quantity and bulk price (or leave both empty)." });
+      return;
+    }
+
     const parsed = productSchema.safeParse({
       name: form.name,
       category: form.category,
@@ -83,6 +103,8 @@ export default function VendorProducts() {
       image_url: form.image_url || undefined,
       unit_of_measurement: form.unit_of_measurement,
       price_per_unit: Number(form.price_per_unit || form.price),
+      bulk_min_qty: bulkMinQtyNum,
+      bulk_price: bulkPriceNum,
     });
 
     if (!parsed.success) {
@@ -94,7 +116,19 @@ export default function VendorProducts() {
     setErrors({});
     setSaving(true);
 
-    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: user.id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0, unit_of_measurement: parsed.data.unit_of_measurement, price_per_unit: parsed.data.price_per_unit } as any;
+    const payload = {
+      name: parsed.data.name,
+      category: parsed.data.category,
+      price: parsed.data.price,
+      stock_level: parsed.data.stock_level,
+      vendor_id: user.id,
+      image_url: form.image_url || null,
+      in_stock: parsed.data.stock_level > 0,
+      unit_of_measurement: parsed.data.unit_of_measurement,
+      price_per_unit: parsed.data.price_per_unit,
+      bulk_min_qty: parsed.data.bulk_min_qty ?? null,
+      bulk_price: parsed.data.bulk_price ?? null,
+    } as any;
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
@@ -243,6 +277,26 @@ export default function VendorProducts() {
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
             </div>
+            {/* Wholesale / Bulk Pricing */}
+            <div className="rounded-lg border border-dashed border-accent/40 bg-accent/[0.04] p-3 space-y-3">
+              <div>
+                <p className="font-display text-sm font-semibold text-foreground">Wholesale / Bulk Pricing <span className="font-body text-[10px] font-normal text-muted-foreground">(optional)</span></p>
+                <p className="font-body text-[11px] text-muted-foreground">Buyers automatically get the bulk price when they order at or above the minimum quantity.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">Minimum Quantity</Label>
+                  <Input type="number" min="2" step="1" value={form.bulk_min_qty} onChange={(e) => setForm((p) => ({ ...p, bulk_min_qty: e.target.value }))} className="font-body" placeholder="e.g. 5" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">Bulk Price / {form.unit_of_measurement} (₦)</Label>
+                  <Input type="number" min="0" step="0.01" value={form.bulk_price} onChange={(e) => setForm((p) => ({ ...p, bulk_price: e.target.value }))} className="font-body" placeholder="e.g. 850" />
+                </div>
+              </div>
+              {errors.bulk_min_qty && <p className="text-xs text-destructive font-body">{errors.bulk_min_qty}</p>}
+              {errors.bulk_price && <p className="text-xs text-destructive font-body">{errors.bulk_price}</p>}
+            </div>
+
             <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
           </div>
           <DialogFooter>
