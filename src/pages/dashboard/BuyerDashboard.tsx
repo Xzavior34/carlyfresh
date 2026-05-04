@@ -288,6 +288,19 @@ export default function BuyerDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {reviewOrder && (
+        <LeaveReviewModal
+          open={!!reviewOrder}
+          onOpenChange={(o) => { if (!o) setReviewOrder(null); }}
+          orderItems={
+            (Array.isArray(reviewOrder.items) ? (reviewOrder.items as any[]) : [])
+              .filter((i) => i?.product_id)
+              .map((i) => ({ product_id: i.product_id, name: i.name }))
+          }
+          vendorId={reviewOrder.vendor_id}
+        />
+      )}
     </div>
   );
 }
