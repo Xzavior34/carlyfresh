@@ -15,6 +15,8 @@ export interface DBProduct {
   vendor_id: string;
   unit_of_measurement: string;
   price_per_unit: number;
+  bulk_min_qty?: number | null;
+  bulk_price?: number | null;
 }
 
 const ProductGrid = () => {

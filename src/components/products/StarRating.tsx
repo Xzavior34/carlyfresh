@@ -1,7 +1,8 @@
 import { Star } from "lucide-react";
+import { useProductRating } from "@/hooks/useProductRating";
 
-/** Deterministic pseudo-random rating from product id */
-function getRating(id: string): number {
+/** Deterministic fallback rating when no real reviews exist yet */
+function getFallbackRating(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
   const base = 3.5 + (Math.abs(hash) % 15) / 10; // 3.5–5.0
@@ -9,7 +10,8 @@ function getRating(id: string): number {
 }
 
 export default function StarRating({ productId }: { productId: string }) {
-  const rating = getRating(productId);
+  const { avg, count } = useProductRating(productId);
+  const rating = count > 0 ? avg : getFallbackRating(productId);
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
 
@@ -27,7 +29,10 @@ export default function StarRating({ productId }: { productId: string }) {
           }`}
         />
       ))}
-      <span className="font-body text-[11px] text-muted-foreground ml-0.5">{rating}</span>
+      <span className="font-body text-[11px] text-muted-foreground ml-0.5">
+        {rating}
+        {count > 0 && <span className="ml-1">({count})</span>}
+      </span>
     </div>
   );
 }
