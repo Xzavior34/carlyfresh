@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
+import LeaveReviewModal from "@/components/products/LeaveReviewModal";
 
 type Order = Tables<"orders">;
 
@@ -54,6 +55,7 @@ export default function BuyerDashboard() {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -197,6 +199,7 @@ export default function BuyerDashboard() {
                       <TableHead className="font-body text-xs uppercase tracking-wider">Order</TableHead>
                       <TableHead className="font-body text-xs uppercase tracking-wider text-right">Total</TableHead>
                       <TableHead className="font-body text-xs uppercase tracking-wider text-center">Status</TableHead>
+                      <TableHead className="font-body text-xs uppercase tracking-wider text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -213,11 +216,23 @@ export default function BuyerDashboard() {
                             {order.status}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          {order.status === "delivered" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 font-body text-xs gap-1"
+                              onClick={(e) => { e.stopPropagation(); setReviewOrder(order); }}
+                            >
+                              ★ Leave a Review
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {orders.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center py-12">
+                        <TableCell colSpan={4} className="text-center py-12">
                           <div className="flex flex-col items-center">
                             <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
                               <Package className="h-7 w-7 text-primary" />
