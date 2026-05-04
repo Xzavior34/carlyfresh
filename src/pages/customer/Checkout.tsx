@@ -227,6 +227,39 @@ export default function Checkout() {
                   </CardContent>
                 </Card>
 
+                {/* Delivery Time Slot */}
+                <Card className="border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-display flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" /> Delivery Time Slot
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        "As soon as possible",
+                        "Today: Morning",
+                        "Today: Afternoon",
+                        "Today: Evening",
+                        "Tomorrow",
+                      ].map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setDeliveryWindow(slot)}
+                          className={`rounded-lg border px-3 py-2 text-left font-body text-sm transition-colors ${
+                            deliveryWindow === slot
+                              ? "border-primary bg-primary/10 text-foreground font-semibold"
+                              : "border-border bg-card text-muted-foreground hover:bg-muted/30"
+                          }`}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Order Summary */}
                 <Card className="border border-border">
                   <CardHeader>
@@ -236,7 +269,7 @@ export default function Checkout() {
                     {items.map((item) => (
                       <div key={item.id} className="flex items-center justify-between font-body text-sm">
                         <span className="text-foreground">{item.name} × {item.quantity} {item.unit || "pcs"}</span>
-                        <span className="font-medium tabular-nums">{formatNaira(item.pricePerUnit * item.quantity)}</span>
+                        <span className="font-medium tabular-nums">{formatNaira(item.price * item.quantity)}</span>
                       </div>
                     ))}
                     <div className="pt-3 border-t border-border flex items-center justify-between">
