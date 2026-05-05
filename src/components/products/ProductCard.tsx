@@ -36,6 +36,14 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
           <h3 className="mt-1 font-display text-base font-semibold text-foreground hover:text-primary transition-colors">{product.name}</h3>
         </Link>
         <StarRating productId={product.id} />
+        {product.description && product.description.trim().length > 0 && (
+          <p className="mt-1 font-body text-xs text-muted-foreground line-clamp-2">
+            {product.description}{" "}
+            <Link to={`/shop/${product.id}`} className="text-primary hover:underline font-medium whitespace-nowrap">
+              Read more
+            </Link>
+          </p>
+        )}
         {hasBulk && (
           <p className="mt-1 font-body text-[11px] text-accent">
             ₦{Number(product.bulk_price).toLocaleString("en-NG")}/{product.unit_of_measurement} when buying {product.bulk_min_qty}+

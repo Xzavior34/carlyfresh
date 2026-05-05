@@ -17,6 +17,7 @@ export interface DBProduct {
   price_per_unit: number;
   bulk_min_qty?: number | null;
   bulk_price?: number | null;
+  description?: string | null;
 }
 
 const ProductGrid = () => {
