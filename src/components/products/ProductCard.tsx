@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -8,6 +9,9 @@ import StarRating from "./StarRating";
 const ProductCard = ({ product }: { product: DBProduct }) => {
   const { addItem } = useCart();
   const hasBulk = Boolean(product.bulk_min_qty && product.bulk_price);
+  const [expanded, setExpanded] = useState(false);
+  const description = product.description?.trim() || "";
+  const isLong = description.length > 90;
 
   return (
     <motion.div
@@ -36,16 +40,35 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
           <h3 className="mt-1 font-display text-base font-semibold text-foreground hover:text-primary transition-colors">{product.name}</h3>
         </Link>
         <StarRating productId={product.id} />
-        {product.description && product.description.trim().length > 0 && (
-          <p className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground line-clamp-2">
-            {product.description}{" "}
-            <Link
-              to={`/shop/${product.id}`}
-              className="ml-0.5 inline-flex items-center font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm whitespace-nowrap"
+        {description && (
+          <div className="mt-1.5">
+            <p
+              id={`product-desc-${product.id}`}
+              className={`font-body text-xs leading-relaxed text-muted-foreground ${expanded ? "" : "line-clamp-2"}`}
             >
-              Read more
-            </Link>
-          </p>
+              {description}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {isLong && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  aria-expanded={expanded}
+                  aria-controls={`product-desc-${product.id}`}
+                  className="inline-flex min-h-[36px] items-center font-body text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm py-1.5 -my-1.5"
+                >
+                  {expanded ? "Read less" : "Read more"}
+                </button>
+              )}
+              <Link
+                to={`/shop/${product.id}`}
+                className="inline-flex min-h-[36px] items-center font-body text-xs font-medium text-muted-foreground underline-offset-2 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm py-1.5 -my-1.5"
+                aria-label={`View full details for ${product.name}`}
+              >
+                View details →
+              </Link>
+            </div>
+          </div>
         )}
         {hasBulk && (
           <p className="mt-1 font-body text-[11px] text-accent">
