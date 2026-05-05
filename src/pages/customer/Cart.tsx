@@ -38,24 +38,36 @@ export default function Cart() {
               <div className="space-y-4">
                 {items.map((item) => {
                   const bulkActive = isBulkActive(item);
+                  const hasBulkOffer = Boolean(item.bulkMinQty && item.bulkPrice);
                   return (
                     <Card key={item.id} className="border border-border">
                       <CardContent className="p-4 flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <p className="font-body font-medium text-foreground">{item.name}</p>
-                          <p className="font-body text-sm text-muted-foreground">
-                            {formatNaira(item.price)} / {item.unit || "piece"}
-                            {bulkActive && item.pricePerUnit > item.price && (
-                              <span className="ml-2 line-through text-xs">{formatNaira(item.pricePerUnit)}</span>
-                            )}
-                          </p>
-                          {bulkActive ? (
-                            <p className="mt-1 inline-flex items-center gap-1 font-body text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              <Sparkles className="h-3 w-3" /> Bulk Discount Applied!
+
+                          {/* Price breakdown — always show both regular & bulk when offer exists */}
+                          <div className="mt-1 space-y-0.5">
+                            <p className="font-body text-sm">
+                              <span className={bulkActive ? "text-muted-foreground line-through" : "text-foreground font-medium"}>
+                                Regular: {formatNaira(item.pricePerUnit)}/{item.unit || "piece"}
+                              </span>
                             </p>
-                          ) : item.bulkMinQty && item.bulkPrice ? (
+                            {hasBulkOffer && (
+                              <p className="font-body text-sm">
+                                <span className={bulkActive ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground"}>
+                                  Bulk: {formatNaira(Number(item.bulkPrice))}/{item.unit || "piece"} (min {item.bulkMinQty})
+                                </span>
+                              </p>
+                            )}
+                          </div>
+
+                          {bulkActive ? (
+                            <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-body text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <Sparkles className="h-3 w-3" /> Bulk Discount Applied
+                            </p>
+                          ) : hasBulkOffer ? (
                             <p className="mt-1 font-body text-xs text-muted-foreground">
-                              Add {item.bulkMinQty - item.quantity} more to unlock {formatNaira(Number(item.bulkPrice))}/{item.unit}
+                              Add {item.bulkMinQty! - item.quantity} more to unlock bulk price
                             </p>
                           ) : null}
                         </div>
