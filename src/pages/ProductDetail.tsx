@@ -27,6 +27,7 @@ interface Product {
   in_stock: boolean;
   bulk_min_qty: number | null;
   bulk_price: number | null;
+  description?: string | null;
 }
 
 interface Review {
@@ -170,6 +171,18 @@ export default function ProductDetail() {
                 </Button>
               </div>
             </motion.div>
+          )}
+
+          {/* Description */}
+          {!loading && product && product.description && product.description.trim().length > 0 && (
+            <div className="mt-12">
+              <h2 className="font-display text-xl font-bold text-foreground mb-3">About this product</h2>
+              <Card className="border border-border">
+                <CardContent className="p-5">
+                  <p className="font-body text-sm leading-relaxed text-foreground whitespace-pre-wrap">{product.description}</p>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Reviews */}
