@@ -410,6 +410,7 @@ export type Database = {
           bulk_price: number | null
           category: string
           created_at: string
+          description: string
           id: string
           image_url: string | null
           in_stock: boolean
@@ -426,6 +427,7 @@ export type Database = {
           bulk_price?: number | null
           category?: string
           created_at?: string
+          description?: string
           id?: string
           image_url?: string | null
           in_stock?: boolean
@@ -442,6 +444,7 @@ export type Database = {
           bulk_price?: number | null
           category?: string
           created_at?: string
+          description?: string
           id?: string
           image_url?: string | null
           in_stock?: boolean
