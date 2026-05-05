@@ -37,9 +37,12 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
         </Link>
         <StarRating productId={product.id} />
         {product.description && product.description.trim().length > 0 && (
-          <p className="mt-1 font-body text-xs text-muted-foreground line-clamp-2">
+          <p className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground line-clamp-2">
             {product.description}{" "}
-            <Link to={`/shop/${product.id}`} className="text-primary hover:underline font-medium whitespace-nowrap">
+            <Link
+              to={`/shop/${product.id}`}
+              className="ml-0.5 inline-flex items-center font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm whitespace-nowrap"
+            >
               Read more
             </Link>
           </p>
