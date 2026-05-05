@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,6 +35,7 @@ const productSchema = z.object({
   price_per_unit: z.number({ invalid_type_error: "Price per unit must be a number" }).min(0, "Cannot be negative"),
   bulk_min_qty: z.number().int().min(2, "Minimum bulk qty must be at least 2").optional().nullable(),
   bulk_price: z.number().min(0).optional().nullable(),
+  description: z.string().max(2000, "Description must be 2000 characters or less").optional(),
 });
 
 export default function VendorProducts() {
@@ -44,7 +46,7 @@ export default function VendorProducts() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", bulk_min_qty: "", bulk_price: "" });
+  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", bulk_min_qty: "", bulk_price: "", description: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchProducts = async () => {
@@ -63,7 +65,7 @@ export default function VendorProducts() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", bulk_min_qty: "", bulk_price: "" });
+    setForm({ name: "", category: "Fresh Produce", price: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", bulk_min_qty: "", bulk_price: "", description: "" });
     setErrors({});
     setShowModal(true);
   };
@@ -80,6 +82,7 @@ export default function VendorProducts() {
       price_per_unit: String((p as any).price_per_unit || p.price),
       bulk_min_qty: (p as any).bulk_min_qty != null ? String((p as any).bulk_min_qty) : "",
       bulk_price: (p as any).bulk_price != null ? String((p as any).bulk_price) : "",
+      description: (p as any).description || "",
     });
     setErrors({});
     setShowModal(true);
@@ -105,6 +108,7 @@ export default function VendorProducts() {
       price_per_unit: Number(form.price_per_unit || form.price),
       bulk_min_qty: bulkMinQtyNum,
       bulk_price: bulkPriceNum,
+      description: form.description || undefined,
     });
 
     if (!parsed.success) {
@@ -128,6 +132,7 @@ export default function VendorProducts() {
       price_per_unit: parsed.data.price_per_unit,
       bulk_min_qty: parsed.data.bulk_min_qty ?? null,
       bulk_price: parsed.data.bulk_price ?? null,
+      description: parsed.data.description ?? "",
     } as any;
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
@@ -295,6 +300,23 @@ export default function VendorProducts() {
               </div>
               {errors.bulk_min_qty && <p className="text-xs text-destructive font-body">{errors.bulk_min_qty}</p>}
               {errors.bulk_price && <p className="text-xs text-destructive font-body">{errors.bulk_price}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-body">Description <span className="font-body text-[10px] font-normal text-muted-foreground">(optional — origin, freshness, storage tips, packaging…)</span></Label>
+              <Textarea
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                className="font-body min-h-[110px]"
+                placeholder="Tell buyers more about this product. e.g. Freshly harvested from our farm in Etche, hand-picked, sold per medium-sized basket. Best stored in a cool dry place."
+                maxLength={2000}
+              />
+              <div className="flex items-center justify-between">
+                {errors.description ? (
+                  <p className="text-xs text-destructive font-body">{errors.description}</p>
+                ) : <span />}
+                <span className="font-body text-[10px] text-muted-foreground tabular-nums">{form.description.length}/2000</span>
+              </div>
             </div>
 
             <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
