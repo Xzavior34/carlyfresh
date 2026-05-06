@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 
@@ -37,6 +38,7 @@ export default function AdminBlog() {
   const [editing, setEditing] = useState<Partial<Post> | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [broadcast, setBroadcast] = useState(true);
 
   const fetchPosts = async () => {
     const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
@@ -53,8 +55,8 @@ export default function AdminBlog() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  const openNew = () => setEditing({ title: "", slug: "", excerpt: "", body: "", status: "draft", cover_image_url: null });
-  const openEdit = (p: Post) => setEditing({ ...p });
+  const openNew = () => { setBroadcast(true); setEditing({ title: "", slug: "", excerpt: "", body: "", status: "draft", cover_image_url: null }); };
+  const openEdit = (p: Post) => { setBroadcast(false); setEditing({ ...p }); };
 
   const handleCoverUpload = async (file: File) => {
     if (!file) return;
@@ -95,8 +97,53 @@ export default function AdminBlog() {
       ({ error } = await supabase.from("blog_posts").insert({ ...payload, author_id: user.id }));
     }
 
-    if (error) toast.error(error.message);
-    else { toast.success(editing.id ? "Post updated" : "Post created"); setEditing(null); fetchPosts(); }
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(editing.id ? "Post updated" : "Post created");
+
+      // Fire broadcast + social webhook when published & toggle on
+      if (broadcast && payload.status === "published") {
+        const broadcastPayload = {
+          title: payload.title,
+          excerpt: payload.excerpt,
+          image_url: payload.cover_image_url,
+          slug: payload.slug,
+        };
+
+        // Email broadcast (fire and forget)
+        supabase.functions
+          .invoke("broadcast-blog", { body: broadcastPayload })
+          .then(({ error: bErr }) => {
+            if (bErr) toast.error("Email broadcast failed: " + bErr.message);
+            else toast.success("📧 Email broadcast queued");
+          });
+
+        // Social webhook (fire and forget)
+        const webhookUrl = import.meta.env.VITE_SOCIAL_WEBHOOK_URL;
+        if (webhookUrl) {
+          try {
+            fetch(webhookUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: payload.title,
+                excerpt: payload.excerpt,
+                image_url: payload.cover_image_url,
+                post_url: "https://carlyfresh.com/blog/" + payload.slug,
+                instagram_target: "https://www.instagram.com/carlyfresh5/",
+              }),
+            }).catch((e) => console.warn("Social webhook failed:", e));
+            toast.success("📱 Instagram webhook sent");
+          } catch (e) {
+            console.warn("Social webhook error:", e);
+          }
+        }
+      }
+
+      setEditing(null);
+      fetchPosts();
+    }
     setSaving(false);
   };
 
@@ -246,6 +293,17 @@ export default function AdminBlog() {
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
               </select>
+            </div>
+
+            {/* Broadcast toggle — only fires when publishing */}
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="space-y-1">
+                <p className="font-body font-semibold text-sm text-foreground">Broadcast to Email Subscribers & Instagram</p>
+                <p className="font-body text-xs text-muted-foreground">
+                  When this post is published, email all newsletter subscribers and trigger the Instagram social webhook automatically.
+                </p>
+              </div>
+              <Switch checked={broadcast} onCheckedChange={setBroadcast} />
             </div>
           </div>
           <DialogFooter>
