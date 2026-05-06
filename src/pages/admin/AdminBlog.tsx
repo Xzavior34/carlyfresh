@@ -97,8 +97,53 @@ export default function AdminBlog() {
       ({ error } = await supabase.from("blog_posts").insert({ ...payload, author_id: user.id }));
     }
 
-    if (error) toast.error(error.message);
-    else { toast.success(editing.id ? "Post updated" : "Post created"); setEditing(null); fetchPosts(); }
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(editing.id ? "Post updated" : "Post created");
+
+      // Fire broadcast + social webhook when published & toggle on
+      if (broadcast && payload.status === "published") {
+        const broadcastPayload = {
+          title: payload.title,
+          excerpt: payload.excerpt,
+          image_url: payload.cover_image_url,
+          slug: payload.slug,
+        };
+
+        // Email broadcast (fire and forget)
+        supabase.functions
+          .invoke("broadcast-blog", { body: broadcastPayload })
+          .then(({ error: bErr }) => {
+            if (bErr) toast.error("Email broadcast failed: " + bErr.message);
+            else toast.success("📧 Email broadcast queued");
+          });
+
+        // Social webhook (fire and forget)
+        const webhookUrl = import.meta.env.VITE_SOCIAL_WEBHOOK_URL;
+        if (webhookUrl) {
+          try {
+            fetch(webhookUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: payload.title,
+                excerpt: payload.excerpt,
+                image_url: payload.cover_image_url,
+                post_url: "https://carlyfresh.com/blog/" + payload.slug,
+                instagram_target: "https://www.instagram.com/carlyfresh5/",
+              }),
+            }).catch((e) => console.warn("Social webhook failed:", e));
+            toast.success("📱 Instagram webhook sent");
+          } catch (e) {
+            console.warn("Social webhook error:", e);
+          }
+        }
+      }
+
+      setEditing(null);
+      fetchPosts();
+    }
     setSaving(false);
   };
 
