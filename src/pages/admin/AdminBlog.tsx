@@ -55,8 +55,8 @@ export default function AdminBlog() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  const openNew = () => setEditing({ title: "", slug: "", excerpt: "", body: "", status: "draft", cover_image_url: null });
-  const openEdit = (p: Post) => setEditing({ ...p });
+  const openNew = () => { setBroadcast(true); setEditing({ title: "", slug: "", excerpt: "", body: "", status: "draft", cover_image_url: null }); };
+  const openEdit = (p: Post) => { setBroadcast(false); setEditing({ ...p }); };
 
   const handleCoverUpload = async (file: File) => {
     if (!file) return;
