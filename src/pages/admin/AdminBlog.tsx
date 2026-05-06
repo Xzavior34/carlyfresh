@@ -38,6 +38,7 @@ export default function AdminBlog() {
   const [editing, setEditing] = useState<Partial<Post> | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [broadcast, setBroadcast] = useState(true);
 
   const fetchPosts = async () => {
     const { data } = await supabase.from("blog_posts").select("*").order("created_at", { ascending: false });
