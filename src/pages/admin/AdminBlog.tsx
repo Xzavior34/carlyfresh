@@ -294,6 +294,17 @@ export default function AdminBlog() {
                 <option value="published">Published</option>
               </select>
             </div>
+
+            {/* Broadcast toggle — only fires when publishing */}
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="space-y-1">
+                <p className="font-body font-semibold text-sm text-foreground">Broadcast to Email Subscribers & Instagram</p>
+                <p className="font-body text-xs text-muted-foreground">
+                  When this post is published, email all newsletter subscribers and trigger the Instagram social webhook automatically.
+                </p>
+              </div>
+              <Switch checked={broadcast} onCheckedChange={setBroadcast} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)} className="font-body">Cancel</Button>
