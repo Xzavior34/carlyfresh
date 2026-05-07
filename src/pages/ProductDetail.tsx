@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/context/CartContext";
+import { useB2B, getEffectiveUnitPrice } from "@/hooks/useB2B";
 import { formatNaira } from "@/lib/formatters";
 
 interface Product {
@@ -27,6 +28,7 @@ interface Product {
   in_stock: boolean;
   bulk_min_qty: number | null;
   bulk_price: number | null;
+  b2b_price: number | null;
   description?: string | null;
 }
 
@@ -55,6 +57,7 @@ function Stars({ rating, size = 4 }: { rating: number; size?: number }) {
 export default function ProductDetail() {
   const { productId } = useParams<{ productId: string }>();
   const { addItem } = useCart();
+  const { isB2B } = useB2B();
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,9 +143,12 @@ export default function ProductDetail() {
 
                 <div className="space-y-1">
                   <p>
-                    <span className="font-display text-3xl font-bold text-primary">{formatNaira(product.price_per_unit || product.price)}</span>
+                    <span className="font-display text-3xl font-bold text-primary">{formatNaira(getEffectiveUnitPrice(product, isB2B))}</span>
                     <span className="text-sm text-muted-foreground font-body ml-1">/ {product.unit_of_measurement}</span>
                   </p>
+                  {isB2B && product.b2b_price != null && (
+                    <p className="font-body text-xs font-semibold text-primary">B2B Customer Price Applied</p>
+                  )}
                   {hasBulk && (
                     <p className="font-body text-sm text-accent">
                       Buy {product.bulk_min_qty}+ → {formatNaira(Number(product.bulk_price))}/{product.unit_of_measurement}
@@ -154,18 +160,19 @@ export default function ProductDetail() {
                   size="lg"
                   className="font-body gap-2 w-full sm:w-auto"
                   disabled={!product.in_stock}
-                  onClick={() =>
+                  onClick={() => {
+                    const eff = getEffectiveUnitPrice(product, isB2B);
                     addItem(
                       product.id,
                       product.name,
-                      product.price_per_unit || product.price,
+                      eff,
                       product.vendor_id,
                       product.unit_of_measurement,
-                      product.price_per_unit || product.price,
+                      eff,
                       product.bulk_min_qty,
                       product.bulk_price,
-                    )
-                  }
+                    );
+                  }}
                 >
                   <Plus className="h-4 w-4" /> {product.in_stock ? "Add to Cart" : "Out of Stock"}
                 </Button>
