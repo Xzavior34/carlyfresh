@@ -81,18 +81,23 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
         )}
         <div className="mt-2 flex items-center justify-between">
           <div>
-            <span className="font-display text-lg font-bold text-primary">₦{(product.price_per_unit || product.price).toLocaleString("en-NG")}</span>
+            <span className="font-display text-lg font-bold text-primary">₦{effectivePrice.toLocaleString("en-NG")}</span>
             <span className="text-xs text-muted-foreground font-body">/{product.unit_of_measurement || "piece"}</span>
+            {hasB2BPrice && (
+              <span className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 font-body text-[9px] font-semibold text-primary">
+                <Briefcase className="h-2.5 w-2.5" /> B2B
+              </span>
+            )}
           </div>
           <motion.button
             onClick={() =>
               addItem(
                 product.id,
                 product.name,
-                product.price_per_unit || product.price,
+                effectivePrice,
                 product.vendor_id,
                 product.unit_of_measurement || "piece",
-                product.price_per_unit || product.price,
+                effectivePrice,
                 product.bulk_min_qty ?? null,
                 product.bulk_price ?? null,
               )
