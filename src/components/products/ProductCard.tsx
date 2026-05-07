@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
+import { useB2B, getEffectiveUnitPrice } from "@/hooks/useB2B";
 import type { DBProduct } from "./ProductGrid";
 import StarRating from "./StarRating";
 
 const ProductCard = ({ product }: { product: DBProduct }) => {
   const { addItem } = useCart();
+  const { isB2B } = useB2B();
   const hasBulk = Boolean(product.bulk_min_qty && product.bulk_price);
+  const hasB2BPrice = isB2B && product.b2b_price != null;
+  const effectivePrice = getEffectiveUnitPrice(product, isB2B);
   const [expanded, setExpanded] = useState(false);
   const description = product.description?.trim() || "";
   const isLong = description.length > 90;
