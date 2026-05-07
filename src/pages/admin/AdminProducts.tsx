@@ -31,6 +31,7 @@ const productSchema = z.object({
   image_url: z.string().max(500).optional(),
   unit_of_measurement: z.string().trim().min(1, "Unit is required"),
   price_per_unit: z.number({ invalid_type_error: "Price per unit must be a number" }).min(0, "Cannot be negative"),
+  b2b_price: z.number({ invalid_type_error: "B2B price must be a number" }).min(0, "Cannot be negative").optional(),
 });
 
 export default function AdminProducts() {
@@ -40,7 +41,7 @@ export default function AdminProducts() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", vendor_id: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "" });
+  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", vendor_id: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", b2b_price: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<{ user_id: string; full_name: string | null; business_name: string | null }[]>([]);
 
@@ -58,14 +59,14 @@ export default function AdminProducts() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", category: "Fresh Produce", price: "", vendor_id: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "" });
+    setForm({ name: "", category: "Fresh Produce", price: "", vendor_id: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", b2b_price: "" });
     setErrors({});
     setShowModal(true);
   };
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, category: p.category, price: String(p.price), vendor_id: p.vendor_id, image_url: p.image_url || "", stock_level: String(p.stock_level), unit_of_measurement: (p as any).unit_of_measurement || "piece", price_per_unit: String((p as any).price_per_unit || p.price) });
+    setForm({ name: p.name, category: p.category, price: String(p.price), vendor_id: p.vendor_id, image_url: p.image_url || "", stock_level: String(p.stock_level), unit_of_measurement: (p as any).unit_of_measurement || "piece", price_per_unit: String((p as any).price_per_unit || p.price), b2b_price: (p as any).b2b_price != null ? String((p as any).b2b_price) : "" });
     setErrors({});
     setShowModal(true);
   };
@@ -80,6 +81,7 @@ export default function AdminProducts() {
       image_url: form.image_url || undefined,
       unit_of_measurement: form.unit_of_measurement,
       price_per_unit: Number(form.price_per_unit || form.price),
+      b2b_price: form.b2b_price === "" ? undefined : Number(form.b2b_price),
     });
 
     if (!parsed.success) {
@@ -91,7 +93,7 @@ export default function AdminProducts() {
     setErrors({});
     setSaving(true);
 
-    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: parsed.data.vendor_id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0, unit_of_measurement: parsed.data.unit_of_measurement, price_per_unit: parsed.data.price_per_unit } as any;
+    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: parsed.data.vendor_id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0, unit_of_measurement: parsed.data.unit_of_measurement, price_per_unit: parsed.data.price_per_unit, b2b_price: parsed.data.b2b_price ?? null } as any;
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
@@ -223,6 +225,12 @@ export default function AdminProducts() {
                 <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body" placeholder={form.price || "0"} />
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-body">B2B Wholesale Price (₦) <span className="text-muted-foreground font-normal">— optional</span></Label>
+              <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body" placeholder="Leave blank to use regular price" />
+              <p className="text-[11px] text-muted-foreground font-body">Shown only to flagged B2B customers.</p>
+              {errors.b2b_price && <p className="text-xs text-destructive font-body">{errors.b2b_price}</p>}
             </div>
             <div className="space-y-2">
               <Label className="font-body">Vendor *</Label>

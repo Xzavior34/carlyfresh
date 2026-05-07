@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "./ProductCard";
 import CategoryFilter from "./CategoryFilter";
@@ -17,15 +18,19 @@ export interface DBProduct {
   price_per_unit: number;
   bulk_min_qty?: number | null;
   bulk_price?: number | null;
+  b2b_price?: number | null;
   description?: string | null;
 }
 
 const ProductGrid = () => {
+  const [searchParams] = useSearchParams();
   const [category, setCategory] = useState("All");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [products, setProducts] = useState<DBProduct[]>([]);
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => { setSearch(searchParams.get("q") || ""); }, [searchParams]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -46,7 +51,8 @@ const ProductGrid = () => {
 
   const filtered = products.filter((p) => {
     const matchCat = category === "All" || p.category === category;
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase().trim();
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q);
     return matchCat && matchSearch;
   });
 

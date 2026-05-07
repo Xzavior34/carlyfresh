@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNaira } from "@/lib/formatters";
 import { Users, Store } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
+import { toast } from "@/hooks/use-toast";
 
 type Profile = Tables<"profiles">;
 
@@ -141,6 +143,7 @@ export default function AdminUsers() {
                   <TableHead className="font-body text-xs uppercase tracking-wider">Role</TableHead>
                   <TableHead className="font-body text-xs uppercase tracking-wider">Business</TableHead>
                   <TableHead className="font-body text-xs uppercase tracking-wider">Phone</TableHead>
+                  <TableHead className="font-body text-xs uppercase tracking-wider text-center">B2B Customer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -150,11 +153,28 @@ export default function AdminUsers() {
                     <TableCell><Badge variant="secondary" className="font-body text-[11px] capitalize">{u.role}</Badge></TableCell>
                     <TableCell className="font-body text-sm text-muted-foreground">{u.business_name || "—"}</TableCell>
                     <TableCell className="font-body text-sm text-muted-foreground">{u.phone || "—"}</TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={Boolean((u as any).is_b2b_customer)}
+                        onCheckedChange={async (val) => {
+                          const { error } = await supabase
+                            .from("profiles")
+                            .update({ is_b2b_customer: val } as any)
+                            .eq("user_id", u.user_id);
+                          if (error) {
+                            toast({ title: "Failed", description: error.message, variant: "destructive" });
+                          } else {
+                            toast({ title: val ? "Marked as B2B customer" : "B2B status removed" });
+                            setUsers((prev) => prev.map((x) => x.user_id === u.user_id ? { ...x, is_b2b_customer: val } as any : x));
+                          }
+                        }}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12">
+                    <TableCell colSpan={5} className="text-center py-12">
                       <div className="flex flex-col items-center">
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
                           <Users className="h-7 w-7 text-primary" />

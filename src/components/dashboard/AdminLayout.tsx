@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Banknote, Bike, FileText } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import AdminGlobalSearch from "@/components/dashboard/AdminGlobalSearch";
 
 const navItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
@@ -69,9 +70,11 @@ export default function AdminLayout() {
           </SidebarFooter>
         </Sidebar>
         <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-background/95 backdrop-blur-sm px-4 md:px-6">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 backdrop-blur-sm px-4 md:px-6">
             <SidebarTrigger />
-            <div className="flex-1" />
+            <div className="flex-1 flex justify-center md:justify-start">
+              <AdminGlobalSearch />
+            </div>
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-xs font-semibold text-primary font-body">AD</span>
             </div>

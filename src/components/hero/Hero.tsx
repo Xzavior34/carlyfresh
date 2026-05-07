@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
+import HomeSearchBar from "@/components/HomeSearchBar";
 
 const Hero = () => {
   return (
@@ -37,6 +38,9 @@ const Hero = () => {
               Affordable and fast delivery. Direct from the farm to your door.
               Experience freshness like never before.
             </p>
+            <div className="mb-6 max-w-xl">
+              <HomeSearchBar />
+            </div>
             <Link to="/shop">
               <motion.span
                 whileHover={{ scale: 1.05, y: -2 }}

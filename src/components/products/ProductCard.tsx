@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
+import { useB2B, getEffectiveUnitPrice } from "@/hooks/useB2B";
 import type { DBProduct } from "./ProductGrid";
 import StarRating from "./StarRating";
 
 const ProductCard = ({ product }: { product: DBProduct }) => {
   const { addItem } = useCart();
+  const { isB2B } = useB2B();
   const hasBulk = Boolean(product.bulk_min_qty && product.bulk_price);
+  const hasB2BPrice = isB2B && product.b2b_price != null;
+  const effectivePrice = getEffectiveUnitPrice(product, isB2B);
   const [expanded, setExpanded] = useState(false);
   const description = product.description?.trim() || "";
   const isLong = description.length > 90;
@@ -77,18 +81,23 @@ const ProductCard = ({ product }: { product: DBProduct }) => {
         )}
         <div className="mt-2 flex items-center justify-between">
           <div>
-            <span className="font-display text-lg font-bold text-primary">₦{(product.price_per_unit || product.price).toLocaleString("en-NG")}</span>
+            <span className="font-display text-lg font-bold text-primary">₦{effectivePrice.toLocaleString("en-NG")}</span>
             <span className="text-xs text-muted-foreground font-body">/{product.unit_of_measurement || "piece"}</span>
+            {hasB2BPrice && (
+              <span className="ml-1 inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 font-body text-[9px] font-semibold text-primary">
+                <Briefcase className="h-2.5 w-2.5" /> B2B
+              </span>
+            )}
           </div>
           <motion.button
             onClick={() =>
               addItem(
                 product.id,
                 product.name,
-                product.price_per_unit || product.price,
+                effectivePrice,
                 product.vendor_id,
                 product.unit_of_measurement || "piece",
-                product.price_per_unit || product.price,
+                effectivePrice,
                 product.bulk_min_qty ?? null,
                 product.bulk_price ?? null,
               )

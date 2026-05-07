@@ -424,6 +424,7 @@ export type Database = {
       }
       products: {
         Row: {
+          b2b_price: number | null
           bulk_min_qty: number | null
           bulk_price: number | null
           category: string
@@ -441,6 +442,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          b2b_price?: number | null
           bulk_min_qty?: number | null
           bulk_price?: number | null
           category?: string
@@ -458,6 +460,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          b2b_price?: number | null
           bulk_min_qty?: number | null
           bulk_price?: number | null
           category?: string
@@ -491,6 +494,7 @@ export type Database = {
           driver_rating: number
           full_name: string | null
           id: string
+          is_b2b_customer: boolean
           phone: string | null
           updated_at: string
           user_id: string
@@ -501,6 +505,7 @@ export type Database = {
           driver_rating?: number
           full_name?: string | null
           id?: string
+          is_b2b_customer?: boolean
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -511,6 +516,7 @@ export type Database = {
           driver_rating?: number
           full_name?: string | null
           id?: string
+          is_b2b_customer?: boolean
           phone?: string | null
           updated_at?: string
           user_id?: string
