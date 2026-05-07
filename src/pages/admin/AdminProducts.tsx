@@ -227,6 +227,12 @@ export default function AdminProducts() {
               </div>
             </div>
             <div className="space-y-2">
+              <Label className="font-body">B2B Wholesale Price (₦) <span className="text-muted-foreground font-normal">— optional</span></Label>
+              <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body" placeholder="Leave blank to use regular price" />
+              <p className="text-[11px] text-muted-foreground font-body">Shown only to flagged B2B customers.</p>
+              {errors.b2b_price && <p className="text-xs text-destructive font-body">{errors.b2b_price}</p>}
+            </div>
+            <div className="space-y-2">
               <Label className="font-body">Vendor *</Label>
               <Select value={form.vendor_id} onValueChange={(v) => setForm((p) => ({ ...p, vendor_id: v }))}>
                 <SelectTrigger className="font-body"><SelectValue placeholder="Select vendor" /></SelectTrigger>
