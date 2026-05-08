@@ -2,3 +2,9 @@ project_id = "thldkqfacwfievhziepc"
 
 [functions.notify-vendor-new-order]
 verify_jwt = false
+
+[functions.notify-order-status]
+verify_jwt = false
+
+[functions.generate-user-recommendations]
+verify_jwt = false
