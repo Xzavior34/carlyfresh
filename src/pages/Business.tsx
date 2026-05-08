@@ -148,33 +148,39 @@ const Business = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-[hsl(149_60%_18%)] pt-32 pb-24">
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--primary-foreground)) 1px, transparent 0)", backgroundSize: "24px 24px" }}
-          aria-hidden
-        />
-        <div className="container relative mx-auto px-6 lg:px-12">
+      {/* HERO SECTION WITH IMAGE BACKGROUND */}
+      <section className="relative overflow-hidden pt-32 pb-24">
+        {/* Background Image & Dark Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/images/business-hero.jpg" 
+            alt="Fresh food supply for businesses" 
+            className="w-full h-full object-cover"
+          />
+          {/* Black overlay at 60% opacity so text is readable */}
+          <div className="absolute inset-0 bg-black/60"></div>
+        </div>
+
+        <div className="container relative z-10 mx-auto px-6 lg:px-12">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-4xl">
-            <h1 className="font-display text-4xl font-bold leading-[1.05] text-primary-foreground sm:text-5xl md:text-6xl">
+            <h1 className="font-display text-4xl font-bold leading-[1.05] text-white sm:text-5xl md:text-6xl">
               Fresh Food Supply made for serious Food Businesses
             </h1>
-            <p className="mt-6 max-w-3xl font-body text-base text-primary-foreground/80 sm:text-lg">
+            <p className="mt-6 max-w-3xl font-body text-base text-white/90 sm:text-lg">
               Source premium seafood, fresh produce, and kitchen essentials through a streamlined procurement platform designed for forward-thinking restaurants, caterers, hotels, cafés, retailers, and modern food brands.
             </p>
-            <p className="mt-4 max-w-3xl font-body text-base text-primary-foreground/80 sm:text-lg">
+            <p className="mt-4 max-w-3xl font-body text-base text-white/90 sm:text-lg">
               Reduce sourcing stress, improve consistency, and simplify day-to-day food operations with our smarter supply coordination and reliable fulfillment.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/20">
                 <a href="#inquiry">Open Business Account</a>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10">
+              <Button asChild size="lg" variant="outline" className="border-white/40 bg-black/20 backdrop-blur-sm text-white hover:bg-white/20">
                 <Link to="/contact">Request Supply Consultation</Link>
               </Button>
             </div>
-            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 font-body text-sm text-primary-foreground/70">
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 font-body text-sm text-white/80">
               <span className="flex items-center gap-2"><Check className="h-4 w-4 text-accent" /> Premium seafood supply</span>
               <span className="flex items-center gap-2"><Check className="h-4 w-4 text-accent" /> Bulk ordering support</span>
               <span className="flex items-center gap-2"><Check className="h-4 w-4 text-accent" /> Scheduled deliveries</span>
@@ -350,6 +356,7 @@ const Business = () => {
       <section className="py-20">
         <div className="container mx-auto px-6 lg:px-12 space-y-20">
           
+          {/* SEAFOOD WITH REAL IMAGE */}
           <div className="flex flex-col lg:flex-row items-center gap-12 bg-primary/5 rounded-3xl p-8 lg:p-12 border border-primary/10">
             <div className="flex-1">
               <div className="flex items-center gap-2 text-primary mb-4"><Fish className="h-6 w-6" /><h3 className="font-display text-xl font-bold">Premium Seafood Section</h3></div>
@@ -366,11 +373,12 @@ const Business = () => {
                 <Link to="/shop?category=Seafood">Explore Premium food <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
-            <div className="flex-1 w-full aspect-video bg-card rounded-2xl border border-border flex items-center justify-center overflow-hidden">
-               <div className="text-muted-foreground/50 flex flex-col items-center gap-2"><Fish className="h-12 w-12" /><span>Seafood Image Placeholder</span></div>
+            <div className="flex-1 w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-border bg-card">
+               <img src="/images/premium-seafood.jpg" alt="Premium Seafood" className="w-full h-full object-cover" />
             </div>
           </div>
 
+          {/* SUPPLIER WITH REAL IMAGE */}
           <div className="flex flex-col lg:flex-row-reverse items-center gap-12 bg-secondary/30 rounded-3xl p-8 lg:p-12 border border-border">
             <div className="flex-1">
               <div className="flex items-center gap-2 text-foreground mb-4"><ShieldCheck className="h-6 w-6" /><h3 className="font-display text-xl font-bold">Verified Supplier Network</h3></div>
@@ -387,8 +395,8 @@ const Business = () => {
                 <Link to="/about">Learn About Our Supply Network <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
-            <div className="flex-1 w-full aspect-video bg-card rounded-2xl border border-border flex items-center justify-center overflow-hidden">
-               <div className="text-muted-foreground/50 flex flex-col items-center gap-2"><ShieldCheck className="h-12 w-12" /><span>Supplier Network Image Placeholder</span></div>
+            <div className="flex-1 w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-border bg-card">
+               <img src="/images/verified-supplier.jpg" alt="Verified Supplier Network" className="w-full h-full object-cover" />
             </div>
           </div>
 
