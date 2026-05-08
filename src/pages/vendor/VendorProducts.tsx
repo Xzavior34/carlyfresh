@@ -160,23 +160,23 @@ export default function VendorProducts() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">My Products</h1>
-          <p className="text-muted-foreground font-body text-sm">{products.length} products</p>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">My Products</h1>
+          <p className="text-muted-foreground font-body text-xs sm:text-sm">{products.length} products</p>
         </div>
         <Button size="sm" className="font-body gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> Add Product</Button>
       </div>
 
       {products.length === 0 ? (
         <Card className="border border-border">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              <PackageOpen className="h-8 w-8 text-primary" />
+          <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
+            <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <PackageOpen className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
-            <h3 className="font-display text-lg font-semibold text-foreground mb-1">No products yet</h3>
-            <p className="font-body text-sm text-muted-foreground max-w-sm mb-6">
+            <h3 className="font-display text-base sm:text-lg font-semibold text-foreground mb-1">No products yet</h3>
+            <p className="font-body text-xs sm:text-sm text-muted-foreground max-w-sm mb-6">
               Add your first harvest to start selling on CarlyFresh. Your products will appear here once created.
             </p>
             <Button size="sm" className="font-body gap-1" onClick={openAdd}>
@@ -206,8 +206,8 @@ export default function VendorProducts() {
                       className="hover:bg-muted/20 transition-colors cursor-pointer"
                       onClick={() => openEdit(item)}
                     >
-                      <TableCell className="font-medium font-body text-foreground">{item?.name || "N/A"}</TableCell>
-                      <TableCell><Badge variant="secondary" className="font-body text-[11px]">{item?.category || "N/A"}</Badge></TableCell>
+                      <TableCell className="font-medium font-body text-foreground whitespace-nowrap">{item?.name || "N/A"}</TableCell>
+                      <TableCell><Badge variant="secondary" className="font-body text-[10px] sm:text-[11px] whitespace-nowrap">{item?.category || "N/A"}</Badge></TableCell>
                       <TableCell className="text-right font-body tabular-nums">{formatNaira(Number(item?.price ?? 0))}</TableCell>
                       <TableCell className="text-center font-body tabular-nums">{item?.stock_level ?? 0}</TableCell>
                       <TableCell className="text-center">
@@ -235,95 +235,106 @@ export default function VendorProducts() {
         </Card>
       )}
 
+      {/* MODAL / DIALOG UPDATES START HERE */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label className="font-body">Product Name *</Label>
-              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="font-body" />
+        <DialogContent className="w-[95vw] max-w-md rounded-xl sm:rounded-lg p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="font-display">{editing ? "Edit Product" : "Add New Product"}</DialogTitle>
+          </DialogHeader>
+          
+          {/* Scrollable container with reduced spacing for mobile */}
+          <div className="space-y-3 sm:space-y-4 py-1 max-h-[65vh] overflow-y-auto px-1">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">Product Name *</Label>
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="font-body h-9 sm:h-10" />
               {errors.name && <p className="text-xs text-destructive font-body">{errors.name}</p>}
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Category *</Label>
+            
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">Category *</Label>
               <Select value={form.category} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
-                <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>{["Fresh Produce", "Oils & Spices", "Fruits", "Vegetables", "Bundles"].map((c) => (<SelectItem key={c} value={c} className="font-body">{c}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-body">Price (₦) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body" />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Price (₦) *</Label>
+                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body h-9 sm:h-10" />
                 {errors.price && <p className="text-xs text-destructive font-body">{errors.price}</p>}
               </div>
-              <div className="space-y-2">
-                <Label className="font-body">Stock Level *</Label>
-                <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body" />
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Stock Level *</Label>
+                <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body h-9 sm:h-10" />
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-body">Unit of Measurement *</Label>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Unit of Measurement *</Label>
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen"].map((u) => (
+                    {/* ADDED "s" and "l" HERE */}
+                    {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen", "s", "l"].map((u) => (
                       <SelectItem key={u} value={u} className="font-body capitalize">{u}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {errors.unit_of_measurement && <p className="text-xs text-destructive font-body">{errors.unit_of_measurement}</p>}
               </div>
-              <div className="space-y-2">
-                <Label className="font-body">Price per {form.unit_of_measurement} (₦) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body" placeholder={form.price || "0"} />
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Price per {form.unit_of_measurement} (₦) *</Label>
+                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body h-9 sm:h-10" placeholder={form.price || "0"} />
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
             </div>
+            
             {/* Wholesale / Bulk Pricing */}
-            <div className="rounded-lg border border-dashed border-accent/40 bg-accent/[0.04] p-3 space-y-3">
+            <div className="rounded-lg border border-dashed border-accent/40 bg-accent/[0.04] p-2.5 sm:p-3 space-y-2.5 sm:space-y-3">
               <div>
-                <p className="font-display text-sm font-semibold text-foreground">Wholesale / Bulk Pricing <span className="font-body text-[10px] font-normal text-muted-foreground">(optional)</span></p>
-                <p className="font-body text-[11px] text-muted-foreground">Buyers automatically get the bulk price when they order at or above the minimum quantity.</p>
+                <p className="font-display text-xs sm:text-sm font-semibold text-foreground">Wholesale / Bulk Pricing <span className="font-body text-[10px] font-normal text-muted-foreground">(optional)</span></p>
+                <p className="font-body text-[10px] sm:text-[11px] text-muted-foreground leading-tight">Buyers automatically get the bulk price when they order at or above the minimum quantity.</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="font-body text-xs">Minimum Quantity</Label>
-                  <Input type="number" min="2" step="1" value={form.bulk_min_qty} onChange={(e) => setForm((p) => ({ ...p, bulk_min_qty: e.target.value }))} className="font-body" placeholder="e.g. 5" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div className="space-y-1 sm:space-y-1.5">
+                  <Label className="font-body text-[11px] sm:text-xs">Minimum Quantity</Label>
+                  <Input type="number" min="2" step="1" value={form.bulk_min_qty} onChange={(e) => setForm((p) => ({ ...p, bulk_min_qty: e.target.value }))} className="font-body h-8 sm:h-9" placeholder="e.g. 5" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="font-body text-xs">Bulk Price / {form.unit_of_measurement} (₦)</Label>
-                  <Input type="number" min="0" step="0.01" value={form.bulk_price} onChange={(e) => setForm((p) => ({ ...p, bulk_price: e.target.value }))} className="font-body" placeholder="e.g. 850" />
+                <div className="space-y-1 sm:space-y-1.5">
+                  <Label className="font-body text-[11px] sm:text-xs">Bulk Price / {form.unit_of_measurement} (₦)</Label>
+                  <Input type="number" min="0" step="0.01" value={form.bulk_price} onChange={(e) => setForm((p) => ({ ...p, bulk_price: e.target.value }))} className="font-body h-8 sm:h-9" placeholder="e.g. 850" />
                 </div>
               </div>
               {errors.bulk_min_qty && <p className="text-xs text-destructive font-body">{errors.bulk_min_qty}</p>}
               {errors.bulk_price && <p className="text-xs text-destructive font-body">{errors.bulk_price}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label className="font-body">Description <span className="font-body text-[10px] font-normal text-muted-foreground">(optional — origin, freshness, storage tips, packaging…)</span></Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">Description <span className="font-body text-[10px] font-normal text-muted-foreground">(optional)</span></Label>
               <Textarea
                 value={form.description}
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                className="font-body min-h-[110px]"
-                placeholder="Tell buyers more about this product. e.g. Freshly harvested from our farm in Etche, hand-picked, sold per medium-sized basket. Best stored in a cool dry place."
+                className="font-body min-h-[70px] sm:min-h-[110px] text-sm"
+                placeholder="Tell buyers more about this product..."
                 maxLength={2000}
               />
-              <div className="flex items-center justify-between">
-                {errors.description ? (
-                  <p className="text-xs text-destructive font-body">{errors.description}</p>
-                ) : <span />}
+              <div className="flex items-center justify-end">
+                {errors.description && <p className="text-xs text-destructive font-body mr-auto">{errors.description}</p>}
                 <span className="font-body text-[10px] text-muted-foreground tabular-nums">{form.description.length}/2000</span>
               </div>
             </div>
 
-            <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
+            <div className="py-1">
+               <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowModal(false)} className="font-body" disabled={saving}>Cancel</Button>
-            <Button onClick={save} className="font-body gap-2" disabled={saving}>
+          
+          <DialogFooter className="pt-2 sm:pt-0">
+            <Button variant="outline" onClick={() => setShowModal(false)} className="font-body w-full sm:w-auto h-9 sm:h-10 mb-2 sm:mb-0" disabled={saving}>Cancel</Button>
+            <Button onClick={save} className="font-body gap-2 w-full sm:w-auto h-9 sm:h-10" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? "Save Changes" : "Add Product"}
             </Button>
