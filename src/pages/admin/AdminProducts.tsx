@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, PackageOpen } from "lucide-react";
 import ImageUploadInput from "@/components/products/ImageUploadInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,11 +120,11 @@ export default function AdminProducts() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">All Products</h1>
-          <p className="text-muted-foreground font-body text-sm">{products.length} products across all vendors</p>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">All Products</h1>
+          <p className="text-muted-foreground font-body text-xs sm:text-sm">{products.length} products across all vendors</p>
         </div>
         <Button size="sm" className="font-body gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> Add Product</Button>
       </div>
@@ -146,8 +146,8 @@ export default function AdminProducts() {
               <TableBody>
                 {products?.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="font-medium font-body text-foreground">{item?.name || "N/A"}</TableCell>
-                    <TableCell><Badge variant="secondary" className="font-body text-[11px]">{item?.category || "N/A"}</Badge></TableCell>
+                    <TableCell className="font-medium font-body text-foreground whitespace-nowrap">{item?.name || "N/A"}</TableCell>
+                    <TableCell><Badge variant="secondary" className="font-body text-[10px] sm:text-[11px] whitespace-nowrap">{item?.category || "N/A"}</Badge></TableCell>
                     <TableCell className="text-right font-body tabular-nums">{formatNaira(Number(item?.price ?? 0))}</TableCell>
                     <TableCell className="text-center font-body tabular-nums">{item?.stock_level ?? 0}</TableCell>
                     <TableCell className="text-center">
@@ -166,7 +166,16 @@ export default function AdminProducts() {
                   </TableRow>
                 ))}
                 {products.length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground font-body">No products yet.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 sm:py-16">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                          <PackageOpen className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                        </div>
+                        <p className="text-muted-foreground font-body text-sm">No products yet.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -175,19 +184,21 @@ export default function AdminProducts() {
       </Card>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        {/* ADDED SCROLLING FIX HERE */}
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-md rounded-xl sm:rounded-lg p-4 sm:p-6">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label className="font-body">Product Name *</Label>
-              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="font-body" />
+          
+          {/* INNER SCROLL CONTAINER for mobile stickiness */}
+          <div className="space-y-3 sm:space-y-4 py-1 max-h-[65vh] overflow-y-auto px-1">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">Product Name *</Label>
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="font-body h-9 sm:h-10" />
               {errors.name && <p className="text-xs text-destructive font-body">{errors.name}</p>}
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Category *</Label>
+            
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">Category *</Label>
               <Select value={form.category} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
-                <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["Fresh Produce", "Oils & Spices", "Livestock", "Bulk/Wholesale", "Fruits", "Vegetables", "Bundles"].map((c) => (
                     <SelectItem key={c} value={c} className="font-body">{c}</SelectItem>
@@ -197,28 +208,25 @@ export default function AdminProducts() {
               {errors.category && <p className="text-xs text-destructive font-body">{errors.category}</p>}
             </div>
             
-            {/* ADDED MOBILE GRID FIX HERE */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-body">Price (₦) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Price (₦) *</Label>
+                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body h-9 sm:h-10" />
                 {errors.price && <p className="text-xs text-destructive font-body">{errors.price}</p>}
               </div>
-              <div className="space-y-2">
-                <Label className="font-body">Stock Level *</Label>
-                <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body" />
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Stock Level *</Label>
+                <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body h-9 sm:h-10" />
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
               </div>
             </div>
             
-            {/* ADDED MOBILE GRID FIX HERE */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-body">Unit of Measurement *</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Unit of Measurement *</Label>
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {/* ADDED "s" and "l" HERE */}
                     {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen", "s", "l"].map((u) => (
                       <SelectItem key={u} value={u} className="font-body capitalize">{u}</SelectItem>
                     ))}
@@ -226,23 +234,24 @@ export default function AdminProducts() {
                 </Select>
                 {errors.unit_of_measurement && <p className="text-xs text-destructive font-body">{errors.unit_of_measurement}</p>}
               </div>
-              <div className="space-y-2">
-                <Label className="font-body">Price per {form.unit_of_measurement} (₦) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body" placeholder={form.price || "0"} />
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label className="font-body text-sm">Price per {form.unit_of_measurement} (₦) *</Label>
+                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body h-9 sm:h-10" placeholder={form.price || "0"} />
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
             </div>
             
-            <div className="space-y-2">
-              <Label className="font-body">B2B Wholesale Price (₦) <span className="text-muted-foreground font-normal">— optional</span></Label>
-              <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body" placeholder="Leave blank to use regular price" />
-              <p className="text-[11px] text-muted-foreground font-body">Shown only to flagged B2B customers.</p>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">B2B Wholesale Price (₦) <span className="text-muted-foreground font-normal">— optional</span></Label>
+              <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body h-9 sm:h-10" placeholder="Leave blank to use regular price" />
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-body">Shown only to flagged B2B customers.</p>
               {errors.b2b_price && <p className="text-xs text-destructive font-body">{errors.b2b_price}</p>}
             </div>
-            <div className="space-y-2">
-              <Label className="font-body">Vendor *</Label>
+            
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="font-body text-sm">Vendor *</Label>
               <Select value={form.vendor_id} onValueChange={(v) => setForm((p) => ({ ...p, vendor_id: v }))}>
-                <SelectTrigger className="font-body"><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue placeholder="Select vendor" /></SelectTrigger>
                 <SelectContent>
                   {vendors?.map((s) => (
                     <SelectItem key={s.user_id} value={s.user_id} className="font-body">{s.full_name || s.business_name || s.user_id.slice(0, 8)}</SelectItem>
@@ -251,11 +260,15 @@ export default function AdminProducts() {
               </Select>
               {errors.vendor_id && <p className="text-xs text-destructive font-body">{errors.vendor_id}</p>}
             </div>
-            <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
+            
+            <div className="py-1">
+              <ImageUploadInput value={form.image_url} onChange={(v) => setForm((p) => ({ ...p, image_url: v }))} />
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowModal(false)} className="font-body" disabled={saving}>Cancel</Button>
-            <Button onClick={save} className="font-body gap-2" disabled={saving}>
+          
+          <DialogFooter className="pt-2 sm:pt-0">
+            <Button variant="outline" onClick={() => setShowModal(false)} className="font-body w-full sm:w-auto h-9 sm:h-10 mb-2 sm:mb-0" disabled={saving}>Cancel</Button>
+            <Button onClick={save} className="font-body gap-2 w-full sm:w-auto h-9 sm:h-10" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? "Save Changes" : "Add Product"}
             </Button>
