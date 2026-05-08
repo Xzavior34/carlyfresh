@@ -184,21 +184,21 @@ export default function AdminProducts() {
       </Card>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="w-[95vw] max-w-md rounded-xl sm:rounded-lg p-4 sm:p-6">
+        <DialogContent className="w-[95vw] sm:max-w-md md:max-w-[550px] rounded-xl sm:rounded-lg p-4 sm:p-6">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
           
-          {/* INNER SCROLL CONTAINER for mobile stickiness */}
-          <div className="space-y-3 sm:space-y-4 py-1 max-h-[65vh] overflow-y-auto px-1">
-            <div className="space-y-1.5 sm:space-y-2">
+          {/* INNER SCROLL CONTAINER - Allows inside to scroll, keeps buttons sticky */}
+          <div className="space-y-4 py-2 max-h-[65vh] overflow-y-auto px-1 pr-2">
+            <div className="space-y-2">
               <Label className="font-body text-sm">Product Name *</Label>
-              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="font-body h-9 sm:h-10" />
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="font-body" />
               {errors.name && <p className="text-xs text-destructive font-body">{errors.name}</p>}
             </div>
             
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-2">
               <Label className="font-body text-sm">Category *</Label>
               <Select value={form.category} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
-                <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["Fresh Produce", "Oils & Spices", "Livestock", "Bulk/Wholesale", "Fruits", "Vegetables", "Bundles"].map((c) => (
                     <SelectItem key={c} value={c} className="font-body">{c}</SelectItem>
@@ -208,25 +208,27 @@ export default function AdminProducts() {
               {errors.category && <p className="text-xs text-destructive font-body">{errors.category}</p>}
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-1.5 sm:space-y-2">
+            {/* STACKS VERTICALLY ON MOBILE (grid-cols-1), SIDE-BY-SIDE ON DESKTOP (sm:grid-cols-2) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="font-body text-sm">Price (₦) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body h-9 sm:h-10" />
+                <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body" />
                 {errors.price && <p className="text-xs text-destructive font-body">{errors.price}</p>}
               </div>
-              <div className="space-y-1.5 sm:space-y-2">
+              <div className="space-y-2">
                 <Label className="font-body text-sm">Stock Level *</Label>
-                <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body h-9 sm:h-10" />
+                <Input type="number" min="0" step="1" value={form.stock_level} onChange={(e) => setForm((p) => ({ ...p, stock_level: e.target.value }))} className="font-body" />
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
               </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-1.5 sm:space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="font-body text-sm">Unit of Measurement *</Label>
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
-                  <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    {/* ADDED "s" and "l" HERE */}
                     {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen", "s", "l"].map((u) => (
                       <SelectItem key={u} value={u} className="font-body capitalize">{u}</SelectItem>
                     ))}
@@ -234,24 +236,24 @@ export default function AdminProducts() {
                 </Select>
                 {errors.unit_of_measurement && <p className="text-xs text-destructive font-body">{errors.unit_of_measurement}</p>}
               </div>
-              <div className="space-y-1.5 sm:space-y-2">
+              <div className="space-y-2">
                 <Label className="font-body text-sm">Price per {form.unit_of_measurement} (₦) *</Label>
-                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body h-9 sm:h-10" placeholder={form.price || "0"} />
+                <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body" placeholder={form.price || "0"} />
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
             </div>
             
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-2">
               <Label className="font-body text-sm">B2B Wholesale Price (₦) <span className="text-muted-foreground font-normal">— optional</span></Label>
-              <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body h-9 sm:h-10" placeholder="Leave blank to use regular price" />
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-body">Shown only to flagged B2B customers.</p>
+              <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body" placeholder="Leave blank to use regular price" />
+              <p className="text-[11px] text-muted-foreground font-body">Shown only to flagged B2B customers.</p>
               {errors.b2b_price && <p className="text-xs text-destructive font-body">{errors.b2b_price}</p>}
             </div>
             
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-2">
               <Label className="font-body text-sm">Vendor *</Label>
               <Select value={form.vendor_id} onValueChange={(v) => setForm((p) => ({ ...p, vendor_id: v }))}>
-                <SelectTrigger className="font-body h-9 sm:h-10"><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                <SelectTrigger className="font-body"><SelectValue placeholder="Select vendor" /></SelectTrigger>
                 <SelectContent>
                   {vendors?.map((s) => (
                     <SelectItem key={s.user_id} value={s.user_id} className="font-body">{s.full_name || s.business_name || s.user_id.slice(0, 8)}</SelectItem>
@@ -266,9 +268,9 @@ export default function AdminProducts() {
             </div>
           </div>
           
-          <DialogFooter className="pt-2 sm:pt-0">
-            <Button variant="outline" onClick={() => setShowModal(false)} className="font-body w-full sm:w-auto h-9 sm:h-10 mb-2 sm:mb-0" disabled={saving}>Cancel</Button>
-            <Button onClick={save} className="font-body gap-2 w-full sm:w-auto h-9 sm:h-10" disabled={saving}>
+          <DialogFooter className="pt-4 sm:pt-2">
+            <Button variant="outline" onClick={() => setShowModal(false)} className="font-body w-full sm:w-auto mb-2 sm:mb-0" disabled={saving}>Cancel</Button>
+            <Button onClick={save} className="font-body gap-2 w-full sm:w-auto" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? "Save Changes" : "Add Product"}
             </Button>
