@@ -251,7 +251,7 @@ export default function VendorProducts() {
                 <SelectContent>{["Fresh Produce", "Oils & Spices", "Fruits", "Vegetables", "Bundles"].map((c) => (<SelectItem key={c} value={c} className="font-body">{c}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="font-body">Price (₦) *</Label>
                 <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body" />
@@ -263,7 +263,7 @@ export default function VendorProducts() {
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="font-body">Unit of Measurement *</Label>
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
@@ -288,7 +288,7 @@ export default function VendorProducts() {
                 <p className="font-display text-sm font-semibold text-foreground">Wholesale / Bulk Pricing <span className="font-body text-[10px] font-normal text-muted-foreground">(optional)</span></p>
                 <p className="font-body text-[11px] text-muted-foreground">Buyers automatically get the bulk price when they order at or above the minimum quantity.</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="font-body text-xs">Minimum Quantity</Label>
                   <Input type="number" min="2" step="1" value={form.bulk_min_qty} onChange={(e) => setForm((p) => ({ ...p, bulk_min_qty: e.target.value }))} className="font-body" placeholder="e.g. 5" />
