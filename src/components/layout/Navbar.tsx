@@ -4,6 +4,7 @@ import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import NotificationPopover from "@/components/notifications/NotificationPopover";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -102,6 +103,7 @@ const Navbar = () => {
                 Login
               </Link>
             )}
+            {user && <NotificationPopover className={`${textClass} ${hoverClass}`} />}
             <Link to="/cart" className={`relative p-2 transition-colors ${textClass} ${hoverClass}`}>
               <ShoppingCart size={22} />
               {itemCount > 0 && (

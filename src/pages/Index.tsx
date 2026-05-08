@@ -2,6 +2,7 @@ import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/hero/Hero";
 import FeaturesSection from "@/components/products/FeaturesSection";
 import FeaturedProducts from "@/components/products/BundleGrid";
+import RecommendedCarousel from "@/components/products/RecommendedCarousel";
 import HowItWorks from "@/components/products/HowItWorks";
 import ReviewCarousel from "@/components/products/ReviewCarousel";
 import Pricing from "@/components/products/Pricing";
@@ -16,6 +17,7 @@ const Index = () => {
       <Hero />
       <FeaturesSection />
       <FeaturedProducts />
+      <RecommendedCarousel />
       <HowItWorks />
       <ReviewCarousel />
       <Pricing />
