@@ -175,7 +175,8 @@ export default function AdminProducts() {
       </Card>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-md">
+        {/* ADDED SCROLLING FIX HERE */}
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -195,7 +196,9 @@ export default function AdminProducts() {
               </Select>
               {errors.category && <p className="text-xs text-destructive font-body">{errors.category}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            
+            {/* ADDED MOBILE GRID FIX HERE */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="font-body">Price (₦) *</Label>
                 <Input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} className="font-body" />
@@ -207,13 +210,16 @@ export default function AdminProducts() {
                 {errors.stock_level && <p className="text-xs text-destructive font-body">{errors.stock_level}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            
+            {/* ADDED MOBILE GRID FIX HERE */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="font-body">Unit of Measurement *</Label>
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
                   <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen"].map((u) => (
+                    {/* ADDED "s" and "l" HERE */}
+                    {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen", "s", "l"].map((u) => (
                       <SelectItem key={u} value={u} className="font-body capitalize">{u}</SelectItem>
                     ))}
                   </SelectContent>
@@ -226,6 +232,7 @@ export default function AdminProducts() {
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
             </div>
+            
             <div className="space-y-2">
               <Label className="font-body">B2B Wholesale Price (₦) <span className="text-muted-foreground font-normal">— optional</span></Label>
               <Input type="number" min="0" step="0.01" value={form.b2b_price} onChange={(e) => setForm((p) => ({ ...p, b2b_price: e.target.value }))} className="font-body" placeholder="Leave blank to use regular price" />
