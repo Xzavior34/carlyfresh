@@ -174,7 +174,7 @@ const Business = () => {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/20">
-                <a href="#inquiry">Open Business Account</a>
+                <a href="/signup">Open Business Account</a>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-white/40 bg-black/20 backdrop-blur-sm text-white hover:bg-white/20">
                 <Link to="/contact">Request Supply Consultation</Link>
