@@ -1,5 +1,5 @@
 /**
- * Admin Products — Full CRUD with Zod validation & loading states
+ * Admin Products — Full CRUD with Zod validation, sizing tiers & CMS Framework logic
  */
 
 import { useState, useEffect } from "react";
@@ -32,7 +32,29 @@ const productSchema = z.object({
   unit_of_measurement: z.string().trim().min(1, "Unit is required"),
   price_per_unit: z.number({ invalid_type_error: "Price per unit must be a number" }).min(0, "Cannot be negative"),
   b2b_price: z.number({ invalid_type_error: "B2B price must be a number" }).min(0, "Cannot be negative").optional(),
+  // Dynamic Framework placement columns
+  is_featured: z.boolean().optional(),
+  is_buyer_favourite: z.boolean().optional(),
+  is_bundle: z.boolean().optional(),
 });
+
+const unitOptions = [
+  { value: "piece", label: "piece (Standard)" },
+  { value: "kg", label: "kg" },
+  { value: "g", label: "g" },
+  { value: "l", label: "liter" },
+  { value: "ml", label: "ml" },
+  { value: "basket", label: "basket" },
+  { value: "bunch", label: "bunch" },
+  { value: "pack", label: "pack" },
+  // Explicit Client Custom Sizing Tiers
+  { value: "Piece (L)", label: "Piece (L) - Large" },
+  { value: "Piece (M)", label: "Piece (M) - Medium" },
+  { value: "Piece (S)", label: "Piece (S) - Small" },
+  { value: "Basket (L)", label: "Basket (L) - Large" },
+  { value: "Basket (M)", label: "Basket (M) - Medium" },
+  { value: "Basket (S)", label: "Basket (S) - Small" },
+];
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -41,7 +63,22 @@ export default function AdminProducts() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: "", category: "Fresh Produce", price: "", vendor_id: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", b2b_price: "" });
+  
+  const [form, setForm] = useState({
+    name: "",
+    category: "Fresh Produce",
+    price: "",
+    vendor_id: "",
+    image_url: "",
+    stock_level: "0",
+    unit_of_measurement: "piece",
+    price_per_unit: "",
+    b2b_price: "",
+    is_featured: false,
+    is_buyer_favourite: false,
+    is_bundle: false,
+  });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<{ user_id: string; full_name: string | null; business_name: string | null }[]>([]);
 
@@ -59,14 +96,40 @@ export default function AdminProducts() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", category: "Fresh Produce", price: "", vendor_id: "", image_url: "", stock_level: "0", unit_of_measurement: "piece", price_per_unit: "", b2b_price: "" });
+    setForm({
+      name: "",
+      category: "Fresh Produce",
+      price: "",
+      vendor_id: "",
+      image_url: "",
+      stock_level: "0",
+      unit_of_measurement: "piece",
+      price_per_unit: "",
+      b2b_price: "",
+      is_featured: false,
+      is_buyer_favourite: false,
+      is_bundle: false,
+    });
     setErrors({});
     setShowModal(true);
   };
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, category: p.category, price: String(p.price), vendor_id: p.vendor_id, image_url: p.image_url || "", stock_level: String(p.stock_level), unit_of_measurement: (p as any).unit_of_measurement || "piece", price_per_unit: String((p as any).price_per_unit || p.price), b2b_price: (p as any).b2b_price != null ? String((p as any).b2b_price) : "" });
+    setForm({
+      name: p.name,
+      category: p.category,
+      price: String(p.price),
+      vendor_id: p.vendor_id,
+      image_url: p.image_url || "",
+      stock_level: String(p.stock_level),
+      unit_of_measurement: (p as any).unit_of_measurement || "piece",
+      price_per_unit: String((p as any).price_per_unit || p.price),
+      b2b_price: (p as any).b2b_price != null ? String((p as any).b2b_price) : "",
+      is_featured: Boolean((p as any).is_featured),
+      is_buyer_favourite: Boolean((p as any).is_buyer_favourite),
+      is_bundle: Boolean((p as any).is_bundle),
+    });
     setErrors({});
     setShowModal(true);
   };
@@ -82,6 +145,9 @@ export default function AdminProducts() {
       unit_of_measurement: form.unit_of_measurement,
       price_per_unit: Number(form.price_per_unit || form.price),
       b2b_price: form.b2b_price === "" ? undefined : Number(form.b2b_price),
+      is_featured: form.is_featured,
+      is_buyer_favourite: form.is_buyer_favourite,
+      is_bundle: form.is_bundle,
     });
 
     if (!parsed.success) {
@@ -93,7 +159,22 @@ export default function AdminProducts() {
     setErrors({});
     setSaving(true);
 
-    const payload = { name: parsed.data.name, category: parsed.data.category, price: parsed.data.price, stock_level: parsed.data.stock_level, vendor_id: parsed.data.vendor_id, image_url: form.image_url || null, in_stock: parsed.data.stock_level > 0, unit_of_measurement: parsed.data.unit_of_measurement, price_per_unit: parsed.data.price_per_unit, b2b_price: parsed.data.b2b_price ?? null } as any;
+    const payload = {
+      name: parsed.data.name,
+      category: parsed.data.category,
+      price: parsed.data.price,
+      stock_level: parsed.data.stock_level,
+      vendor_id: parsed.data.vendor_id,
+      image_url: form.image_url || null,
+      in_stock: parsed.data.stock_level > 0,
+      unit_of_measurement: parsed.data.unit_of_measurement,
+      price_per_unit: parsed.data.price_per_unit,
+      b2b_price: parsed.data.b2b_price ?? null,
+      is_featured: parsed.data.is_featured ?? false,
+      is_buyer_favourite: parsed.data.is_buyer_favourite ?? false,
+      is_bundle: parsed.data.is_bundle ?? false,
+    } as any;
+
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
@@ -146,7 +227,28 @@ export default function AdminProducts() {
               <TableBody>
                 {products?.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="font-medium font-body text-foreground whitespace-nowrap">{item?.name || "N/A"}</TableCell>
+                    <TableCell className="font-medium font-body text-foreground whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span>{item?.name || "N/A"}</span>
+                        
+                        {/* Dynamic Badging based on custom Framework columns */}
+                        {(item as any)?.is_bundle && (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-0 text-[10px] px-2 py-0 font-semibold">
+                            Bundle
+                          </Badge>
+                        )}
+                        {(item as any)?.is_featured && (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-0 text-[10px] px-2 py-0 font-semibold">
+                            ★ Featured
+                          </Badge>
+                        )}
+                        {(item as any)?.is_buyer_favourite && (
+                          <Badge variant="outline" className="bg-rose-500/10 text-rose-600 border-0 text-[10px] px-2 py-0 font-semibold">
+                            ❤️ Loved
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell><Badge variant="secondary" className="font-body text-[10px] sm:text-[11px] whitespace-nowrap">{item?.category || "N/A"}</Badge></TableCell>
                     <TableCell className="text-right font-body tabular-nums">{formatNaira(Number(item?.price ?? 0))}</TableCell>
                     <TableCell className="text-center font-body tabular-nums">{item?.stock_level ?? 0}</TableCell>
@@ -187,7 +289,6 @@ export default function AdminProducts() {
         <DialogContent className="w-[95vw] sm:max-w-md md:max-w-[550px] rounded-xl sm:rounded-lg p-4 sm:p-6">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
           
-          {/* INNER SCROLL CONTAINER - Allows inside to scroll, keeps buttons sticky */}
           <div className="space-y-4 py-2 max-h-[65vh] overflow-y-auto px-1 pr-2">
             <div className="space-y-2">
               <Label className="font-body text-sm">Product Name *</Label>
@@ -208,7 +309,6 @@ export default function AdminProducts() {
               {errors.category && <p className="text-xs text-destructive font-body">{errors.category}</p>}
             </div>
             
-            {/* STACKS VERTICALLY ON MOBILE (grid-cols-1), SIDE-BY-SIDE ON DESKTOP (sm:grid-cols-2) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="font-body text-sm">Price (₦) *</Label>
@@ -228,16 +328,18 @@ export default function AdminProducts() {
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
                   <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {/* ADDED "s" and "l" HERE */}
-                    {["piece", "kg", "basket", "bunch", "litre", "bag", "crate", "dozen", "s", "l"].map((u) => (
-                      <SelectItem key={u} value={u} className="font-body capitalize">{u}</SelectItem>
+                    {/* Maps over explicit sizing categories safely */}
+                    {unitOptions.map((u) => (
+                      <SelectItem key={u.value} value={u.value} className="font-body">
+                        {u.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {errors.unit_of_measurement && <p className="text-xs text-destructive font-body">{errors.unit_of_measurement}</p>}
               </div>
               <div className="space-y-2">
-                <Label className="font-body text-sm">Price per {form.unit_of_measurement} (₦) *</Label>
+                <Label className="font-body text-sm">Price per {form.unit_of_measurement || "unit"} (₦) *</Label>
                 <Input type="number" min="0" step="0.01" value={form.price_per_unit} onChange={(e) => setForm((p) => ({ ...p, price_per_unit: e.target.value }))} className="font-body" placeholder={form.price || "0"} />
                 {errors.price_per_unit && <p className="text-xs text-destructive font-body">{errors.price_per_unit}</p>}
               </div>
@@ -261,6 +363,55 @@ export default function AdminProducts() {
                 </SelectContent>
               </Select>
               {errors.vendor_id && <p className="text-xs text-destructive font-body">{errors.vendor_id}</p>}
+            </div>
+
+            {/* CMS CONTROLS FOR DYNAMIC PLACEMENT */}
+            <div className="mt-6 rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
+              <p className="font-display text-sm font-semibold text-foreground">
+                🏷️ Dynamic Storefront Placement (CMS Controls)
+              </p>
+              
+              {/* FEATURED TOGGLE */}
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_featured}
+                  onChange={(e) => setForm(prev => ({ ...prev, is_featured: e.target.checked }))}
+                  className="h-4 w-4 rounded border-input text-accent focus:ring-accent"
+                />
+                <div>
+                  <span className="font-body text-sm font-medium text-foreground">Display in "Featured Products"</span>
+                  <p className="font-body text-xs text-muted-foreground">Pushes this item to the main homepage featured section.</p>
+                </div>
+              </label>
+
+              {/* BUYERS LOVE TOGGLE */}
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_buyer_favourite}
+                  onChange={(e) => setForm(prev => ({ ...prev, is_buyer_favourite: e.target.checked }))}
+                  className="h-4 w-4 rounded border-input text-accent focus:ring-accent"
+                />
+                <div>
+                  <span className="font-body text-sm font-medium text-foreground">Display in "What Buyers Love"</span>
+                  <p className="font-body text-xs text-muted-foreground">Shows this item in the popular customer favorites strip.</p>
+                </div>
+              </label>
+
+              {/* BUNDLE PACK TOGGLE */}
+              <label className="flex items-center gap-3 cursor-pointer border-t border-border/50 pt-3">
+                <input
+                  type="checkbox"
+                  checked={form.is_bundle}
+                  onChange={(e) => setForm(prev => ({ ...prev, is_bundle: e.target.checked }))}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <div>
+                  <span className="font-body text-sm font-bold text-primary">📦 Mark as Multi-Item Bundle Pack</span>
+                  <p className="font-body text-xs text-muted-foreground">Flags this product as a combined combo basket (e.g., Veggies + Chicken combo).</p>
+                </div>
+              </label>
             </div>
             
             <div className="py-1">
