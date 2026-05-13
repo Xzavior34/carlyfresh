@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
-import AdminProducts from "@/pages/admin/AdminProducts"; // Update import path if AdminProducts is located elsewhere
+import AdminProducts from "@/pages/admin/AdminProducts";
 
 type Order = Tables<"orders">;
 type Profile = Tables<"profiles">;
@@ -72,7 +72,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchGlobalMetrics();
 
-    // Maintain global WebSockets listeners for operational metrics
     const ordersChannel = supabase
       .channel("admin-orders-metrics")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchGlobalMetrics(); })
@@ -89,11 +88,9 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  // System overview metrics calculations
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const activeDeliveries = jobs.filter((j) => j.status === "available" || j.status === "accepted").length;
   const sellersCount = users.filter((u) => u.role === "seller").length;
-  const driversCount = users.filter((u) => u.role === "driver").length;
 
   const metricCards = [
     { label: "Gross Platform Volume", value: formatNaira(totalRevenue), icon: TrendingUp, accent: "text-emerald-500", bg: "bg-emerald-500/10" },
@@ -106,7 +103,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
-      {/* Root Platform Overview Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-xs font-semibold py-0.5 px-2.5">
@@ -122,7 +118,6 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Dynamic Scannable Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metricCards.map((metric, i) => (
           <motion.div key={metric.label} custom={i} initial="hidden" animate="visible" variants={fadeUp}>
@@ -143,7 +138,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Tony's Explicit Five-Layer Control Tabs */}
       <Tabs value={activeLayer} onValueChange={setActiveLayer} className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1.5 bg-secondary/40 gap-1.5 rounded-xl">
           <TabsTrigger value="commerce" className="font-body text-xs sm:text-sm py-2.5 gap-2 font-medium">
@@ -168,7 +162,6 @@ export default function AdminDashboard() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ================= LAYER 1: COMMERCE LAYER ================= */}
         <TabsContent value="commerce" className="mt-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="border-border bg-card">
@@ -205,13 +198,11 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Seamless embedded inclusion of your existing full Zod CRUD implementation */}
           <div className="pt-2">
             <AdminProducts />
           </div>
         </TabsContent>
 
-        {/* ================= LAYER 2: SUPPLY LAYER ================= */}
         <TabsContent value="supply" className="mt-6">
           <Card className="border-border bg-card">
             <CardHeader>
@@ -247,7 +238,6 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        {/* ================= LAYER 3: OPS LAYER ================= */}
         <TabsContent value="ops" className="mt-6">
           <Card className="border-border bg-card">
             <CardHeader>
@@ -259,7 +249,6 @@ export default function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Process map representing backend progression logic */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-secondary/20 text-center font-body">
                 <div className="p-3 border rounded-lg bg-background">
                   <span className="text-xs text-muted-foreground font-semibold block">Stage 1</span>
@@ -287,7 +276,6 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        {/* ================= LAYER 4: GROWTH LAYER ================= */}
         <TabsContent value="growth" className="mt-6">
           <Card className="border-border bg-card">
             <CardHeader>
@@ -313,7 +301,6 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
 
-        {/* ================= LAYER 5: ANALYTICS LAYER ================= */}
         <TabsContent value="analytics" className="mt-6">
           <Card className="border-border bg-card">
             <CardHeader>
