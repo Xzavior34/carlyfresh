@@ -11,22 +11,26 @@ import {
   ShoppingCart,
   Truck,
   ShoppingBag,
-  Layers,
-  BarChart3,
-  Package,
   ShieldCheck,
-  Clock,
-  CheckCircle2,
-  Sparkles,
+  BarChart3,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
+
+// ==========================================
+// DECOUPLED FUNCTIONAL LAYER IMPORTS
+// Renders live Supabase logic from standalone sub-modules
+// ==========================================
 import AdminProducts from "@/pages/admin/AdminProducts";
+import SupplyLayer from "@/components/admin/SupplyLayer";
+import OpsLayer from "@/components/admin/OpsLayer";
+import GrowthLayer from "@/components/admin/GrowthLayer";
+import AnalyticsLayer from "@/components/admin/AnalyticsLayer";
 
 type Order = Tables<"orders">;
 type Profile = Tables<"profiles">;
@@ -72,6 +76,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchGlobalMetrics();
 
+    // Maintain global WebSockets listeners for operational metrics summary counters
     const ordersChannel = supabase
       .channel("admin-orders-metrics")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchGlobalMetrics(); })
@@ -88,6 +93,7 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  // System overview calculations
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const activeDeliveries = jobs.filter((j) => j.status === "available" || j.status === "accepted").length;
   const sellersCount = users.filter((u) => u.role === "seller").length;
@@ -103,6 +109,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      {/* Root Platform Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary text-xs font-semibold py-0.5 px-2.5">
@@ -118,6 +125,7 @@ export default function AdminDashboard() {
         </p>
       </div>
 
+      {/* Dynamic Summary Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metricCards.map((metric, i) => (
           <motion.div key={metric.label} custom={i} initial="hidden" animate="visible" variants={fadeUp}>
@@ -138,6 +146,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* Five-Layer Operational Tab Controllers */}
       <Tabs value={activeLayer} onValueChange={setActiveLayer} className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto p-1.5 bg-secondary/40 gap-1.5 rounded-xl">
           <TabsTrigger value="commerce" className="font-body text-xs sm:text-sm py-2.5 gap-2 font-medium">
@@ -162,167 +171,28 @@ export default function AdminDashboard() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="commerce" className="mt-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="border-border bg-card">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dynamic Catalog</CardTitle>
-                <Package className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold font-display">Products & Pricing</div>
-                <p className="text-xs text-muted-foreground mt-1 font-body">Integrated explicit unit sizing configurations</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Combo Subsystem</CardTitle>
-                <Layers className="h-4 w-4 text-accent" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold font-display">Curated Bundles</div>
-                <p className="text-xs text-muted-foreground mt-1 font-body">Autonomous routing mapping straight to Storefront</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">B2B Wholesale</CardTitle>
-                <ShoppingBag className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold font-display">Procurement Logic</div>
-                <p className="text-xs text-muted-foreground mt-1 font-body">Configurable Minimum Order Quantities (MOQ)</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="pt-2">
-            <AdminProducts />
-          </div>
+        {/* ========================================== */}
+        // DYNAMIC CONTENT ROUTING ENGINES
+        // Calls standalone logic rather than static HTML strings
+        {/* ========================================== */}
+        <TabsContent value="commerce" className="mt-6">
+          <AdminProducts />
         </TabsContent>
 
         <TabsContent value="supply" className="mt-6">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="font-display text-lg text-emerald-600 flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5" /> Verified Supplier Governance & Batch Quality Audits
-              </CardTitle>
-              <CardDescription className="font-body text-sm">
-                Active multi-vendor monitoring tracking cold-chain logistics, regional supplier health scores, and item freshness profiles.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-xl border border-border divide-y divide-border text-sm font-body bg-secondary/10">
-                <div className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                  <div>
-                    <p className="font-semibold text-foreground">GreenValley Farm Co. (Port Harcourt)</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Rating: 4.95 ★ • Cold-Chain Certification Current</p>
-                  </div>
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-0 w-max font-semibold">
-                    Verified Cold-Chain Provider
-                  </Badge>
-                </div>
-                <div className="p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                  <div>
-                    <p className="font-semibold text-foreground">Rumuokoro Distribution Partners</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Rating: 4.80 ★ • Primary Supply Routing Active</p>
-                  </div>
-                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-0 w-max font-semibold">
-                    Standard Dispatch Priority
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <SupplyLayer />
         </TabsContent>
 
         <TabsContent value="ops" className="mt-6">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="font-display text-lg text-amber-600 flex items-center gap-2">
-                <Truck className="h-5 w-5" /> Live Marketplace Routing & Fulfillment Pipelines
-              </CardTitle>
-              <CardDescription className="font-body text-sm">
-                Granular lifecycle overview map routing customer transactions from processing to deployment.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-secondary/20 text-center font-body">
-                <div className="p-3 border rounded-lg bg-background">
-                  <span className="text-xs text-muted-foreground font-semibold block">Stage 1</span>
-                  <span className="text-xs font-bold block mt-1">Pending Prep</span>
-                </div>
-                <div className="p-3 border rounded-lg bg-background">
-                  <span className="text-xs text-muted-foreground font-semibold block">Stage 2</span>
-                  <span className="text-xs font-bold block mt-1">Packaging Active</span>
-                </div>
-                <div className="p-3 border rounded-lg bg-background">
-                  <span className="text-xs text-muted-foreground font-semibold block">Stage 3</span>
-                  <span className="text-xs font-bold block mt-1 text-primary">Driver Assigned</span>
-                </div>
-                <div className="p-3 border rounded-lg bg-background border-amber-500/30 bg-amber-500/5">
-                  <span className="text-xs text-amber-600 font-semibold block">Stage 4</span>
-                  <span className="text-xs font-bold block mt-1 text-amber-600">On The Way</span>
-                </div>
-              </div>
-
-              <div className="p-6 text-center border rounded-xl bg-secondary/10">
-                <Clock className="h-6 w-6 mx-auto text-amber-500 animate-spin mb-2" />
-                <p className="font-body text-sm text-muted-foreground">Fulfillment state engines currently synchronizing live dispatch pipelines...</p>
-              </div>
-            </CardContent>
-          </Card>
+          <OpsLayer />
         </TabsContent>
 
         <TabsContent value="growth" className="mt-6">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="font-display text-lg text-rose-600 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" /> Automation Hooks & Campaign Mechanics
-              </CardTitle>
-              <CardDescription className="font-body text-sm">
-                Ecosystem state map governing promotional broadcasting arrays and integrated review workflows.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 font-body">
-              <div className="p-4 border rounded-xl bg-secondary/10 space-y-3 text-sm">
-                <div className="flex items-center gap-2 text-foreground font-medium">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>Resend Marketing Core API Webhook Authenticated (Blog delivery triggers active)</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>Instagram Graph API Auth Status: Conversion rules verification pending manual mobile app business Page handoff.</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <GrowthLayer />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="font-display text-lg text-indigo-600 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" /> Predictive Arrays & Recommendation Subsystems
-              </CardTitle>
-              <CardDescription className="font-body text-sm">
-                Data pipeline status overview managing machine-driven consumer personalization matrices.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="font-body">
-              <div className="p-4 border rounded-xl bg-secondary/10 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
-                  <Sparkles className="h-5 w-5 text-indigo-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Real-time Recommendation Routing Engine Active</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Continuously harvesting structural engagement profiles to feed the home Recommended Carousel views.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <AnalyticsLayer />
         </TabsContent>
       </Tabs>
     </div>
