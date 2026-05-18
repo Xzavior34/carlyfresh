@@ -1,11 +1,12 @@
 /**
  * Order Tracking Page — Real-time order status updates
- * Shows pending → processing → packaged → in-transit → delivered
+ * Milestones: pending → confirmed → preparing → driver_assigned → in-transit → delivered
+ * Includes: Driver profile card, delivery_jobs joined with profiles
  */
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
   Package,
@@ -15,6 +16,11 @@ import {
   ShoppingBag,
   Loader2,
   Share2,
+  User,
+  MapPin,
+  Star,
+  Navigation,
+  UserCheck,
 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -27,31 +33,263 @@ import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Order = Tables<"orders">;
+type DeliveryJob = Tables<"delivery_jobs">;
+type Profile = Tables<"profiles">;
 
+interface DeliveryInfo {
+  job: DeliveryJob;
+  driver: Profile | null;
+  driverLocation: { latitude: number; longitude: number; updated_at: string } | null;
+}
+
+// ─── Tracking steps with the full canonical pipeline ────────────────────────
 const trackingSteps = [
-  { key: "pending", label: "Order Confirmed", desc: "Your order has been placed", icon: CheckCircle2 },
-  { key: "processing", label: "Preparing", desc: "Vendor is preparing your order", icon: Clock },
-  { key: "packaged", label: "Packaged", desc: "Your order is ready for pickup", icon: Package },
-  { key: "in-transit", label: "Out for Delivery", desc: "Driver is on the way", icon: Truck },
-  { key: "delivered", label: "Delivered", desc: "Order has been delivered!", icon: CheckCircle2 },
+  {
+    key: "pending",
+    label: "Order Placed",
+    desc: "Your order has been received",
+    icon: ShoppingBag,
+  },
+  {
+    key: "confirmed",
+    label: "Order Confirmed",
+    desc: "Payment confirmed, awaiting vendor",
+    icon: CheckCircle2,
+  },
+  {
+    key: "preparing",
+    label: "Preparing",
+    desc: "Vendor is preparing your order",
+    icon: Package,
+  },
+  {
+    key: "driver_assigned",
+    label: "Driver Assigned",
+    desc: "A driver has picked up your order",
+    icon: UserCheck,
+  },
+  {
+    key: "in-transit",
+    label: "Out for Delivery",
+    desc: "Driver is on the way to you",
+    icon: Truck,
+  },
+  {
+    key: "delivered",
+    label: "Delivered",
+    desc: "Order has been delivered!",
+    icon: CheckCircle2,
+  },
 ];
 
 function getStepIndex(status: string): number {
   const map: Record<string, number> = {
     pending: 0,
-    processing: 1,
-    packaged: 2,
-    "in-transit": 3,
-    delivered: 4,
+    confirmed: 1,
+    processing: 1, // legacy mapping
+    preparing: 2,
+    packaged: 2,   // legacy mapping
+    driver_assigned: 3,
+    "in-transit": 4,
+    delivered: 5,
   };
   return map[status] ?? 0;
 }
 
+// ─── Driver Card ──────────────────────────────────────────────────────────────
+function DriverCard({ info }: { info: DeliveryInfo }) {
+  const { driver, driverLocation } = info;
+
+  if (!driver) {
+    return (
+      <Card className="border border-border">
+        <CardContent className="p-5 flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0 animate-pulse">
+            <Truck className="h-6 w-6 text-primary/50" />
+          </div>
+          <div>
+            <p className="font-body text-sm font-semibold text-foreground">Searching for nearby drivers…</p>
+            <p className="font-body text-xs text-muted-foreground mt-0.5">
+              A driver will be assigned shortly
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const lastSeen = driverLocation?.updated_at
+    ? new Date(driverLocation.updated_at).toLocaleTimeString("en-NG", { timeStyle: "short" })
+    : null;
+
+  return (
+    <Card className="border border-border bg-gradient-to-br from-background to-primary/3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-display flex items-center gap-2">
+          <Truck className="h-4 w-4 text-primary" />
+          Your Driver
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Driver profile row */}
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
+            <User className="h-7 w-7 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-foreground text-base leading-snug truncate">
+              {driver.full_name || "Driver"}
+            </p>
+            {driver.phone && (
+              <p className="font-body text-xs text-muted-foreground mt-0.5">{driver.phone}</p>
+            )}
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              <span className="font-body text-xs text-muted-foreground">
+                {driver.driver_rating?.toFixed(1) || "N/A"} rating
+              </span>
+            </div>
+          </div>
+          <Badge variant="secondary" className="font-body text-[10px] bg-emerald-100 text-emerald-800 shrink-0">
+            Active
+          </Badge>
+        </div>
+
+        {/* Vehicle info */}
+        {driver.vehicle_info && (
+          <div className="flex items-center gap-2 text-sm font-body text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+            <Truck className="h-4 w-4 text-primary shrink-0" />
+            <span>{driver.vehicle_info}</span>
+          </div>
+        )}
+
+        {/* Real-time location */}
+        {driverLocation ? (
+          <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+                <p className="font-body text-xs font-semibold text-foreground">Live Location</p>
+              </div>
+              {lastSeen && (
+                <p className="font-body text-[10px] text-muted-foreground">Updated {lastSeen}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1.5">
+                <Navigation className="h-3 w-3 text-muted-foreground" />
+                <span className="font-body text-xs text-muted-foreground tabular-nums">
+                  {driverLocation.latitude.toFixed(5)}°N
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3 w-3 text-muted-foreground" />
+                <span className="font-body text-xs text-muted-foreground tabular-nums">
+                  {driverLocation.longitude.toFixed(5)}°E
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs font-body text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>Location tracking not available</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Searching for Driver Indicator ──────────────────────────────────────────
+function SearchingDriverCard() {
+  return (
+    <Card className="border border-dashed border-primary/30 bg-primary/3">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-2 border-primary/30 border-dashed flex items-center justify-center shrink-0">
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          </div>
+          <div>
+            <p className="font-body text-sm font-semibold text-foreground">
+              Searching for nearby drivers…
+            </p>
+            <p className="font-body text-xs text-muted-foreground mt-0.5">
+              This usually takes 2–5 minutes
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function OrderTracking() {
   const { orderId } = useParams<{ orderId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  useEffect(() => {
+    if (order?.status === "delivered") {
+      setShowCelebration(true);
+    }
+  }, [order?.status]);
+
+  const handleConfirmReceipt = () => {
+    setShowCelebration(false);
+    navigate("/");
+  };
+
+  const fetchDeliveryInfo = async (currentOrder: Order) => {
+    if (!currentOrder) return;
+    setDeliveryLoading(true);
+
+    // Fetch delivery job for this order
+    const { data: jobData } = await supabase
+      .from("delivery_jobs")
+      .select("*")
+      .eq("order_id", currentOrder.id)
+      .maybeSingle();
+
+    if (!jobData) {
+      setDeliveryInfo(null);
+      setDeliveryLoading(false);
+      return;
+    }
+
+    // Fetch driver profile if assigned
+    let driver: Profile | null = null;
+    let driverLocation: { latitude: number; longitude: number; updated_at: string } | null = null;
+
+    if (jobData.driver_id) {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", jobData.driver_id)
+        .maybeSingle();
+      driver = profileData ?? null;
+
+      // Fetch latest driver location
+      const { data: locData } = await supabase
+        .from("driver_locations")
+        .select("latitude, longitude, updated_at")
+        .eq("driver_id", jobData.driver_id)
+        .maybeSingle();
+      driverLocation = locData ?? null;
+    }
+
+    setDeliveryInfo({ job: jobData, driver, driverLocation });
+    setDeliveryLoading(false);
+  };
 
   useEffect(() => {
     if (!user || !orderId) return;
@@ -63,36 +301,64 @@ export default function OrderTracking() {
         .eq("id", orderId)
         .eq("buyer_id", user.id)
         .maybeSingle();
-      if (data) setOrder(data);
+      if (data) {
+        setOrder(data);
+        fetchDeliveryInfo(data);
+      }
       setLoading(false);
     };
     fetchOrder();
 
-    // Real-time subscription for this specific order
-    const channel = supabase
+    // Real-time: order status changes
+    const orderChannel = supabase
       .channel(`order-track-${orderId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
         (payload) => {
-          setOrder(payload.new as Order);
+          const updated = payload.new as Order;
+          setOrder(updated);
+          fetchDeliveryInfo(updated);
+        }
+      )
+      .subscribe();
+
+    // Real-time: delivery job changes
+    const deliveryChannel = supabase
+      .channel(`delivery-track-${orderId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "delivery_jobs", filter: `order_id=eq.${orderId}` },
+        () => {
+          if (order) fetchDeliveryInfo(order);
+          else fetchOrder();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(orderChannel);
+      supabase.removeChannel(deliveryChannel);
     };
   }, [user, orderId]);
 
   const currentStep = order ? getStepIndex(order.status) : 0;
+
+  // Determine when to show driver-related UI
+  const showDriverSearch =
+    order &&
+    ["confirmed", "preparing", "driver_assigned", "in-transit"].includes(order.status) &&
+    !deliveryLoading;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <section className="pt-28 pb-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-12 max-w-2xl">
-          <Link to="/orders" className="inline-flex items-center gap-2 text-sm font-body text-muted-foreground hover:text-foreground mb-6">
+          <Link
+            to="/orders"
+            className="inline-flex items-center gap-2 text-sm font-body text-muted-foreground hover:text-foreground mb-6"
+          >
             <ArrowLeft className="h-4 w-4" /> Back to Orders
           </Link>
 
@@ -122,13 +388,13 @@ export default function OrderTracking() {
                       Order #{order.order_number}
                     </CardTitle>
                     <Badge className={`font-body text-xs ${getStatusColor(order.status)}`}>
-                      {order.status}
+                      {order.status.replace("_", " ")}
                     </Badge>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="font-body gap-2 text-xs"
+                    className="font-body gap-2 text-xs w-fit"
                     onClick={() => {
                       const msg = encodeURIComponent(
                         `Track my CarlyFresh grocery order #${order.order_number} here: ${window.location.href}`
@@ -139,7 +405,8 @@ export default function OrderTracking() {
                     <Share2 className="h-3.5 w-3.5" /> Share via WhatsApp
                   </Button>
                   <p className="font-body text-sm text-muted-foreground">
-                    Placed on {new Date(order.created_at).toLocaleDateString("en-NG", { dateStyle: "long" })}
+                    Placed on{" "}
+                    {new Date(order.created_at).toLocaleDateString("en-NG", { dateStyle: "long" })}
                   </p>
                 </CardHeader>
               </Card>
@@ -159,13 +426,15 @@ export default function OrderTracking() {
 
                       return (
                         <div key={step.key} className="flex gap-4">
-                          {/* Icon + line */}
+                          {/* Icon + connector line */}
                           <div className="flex flex-col items-center">
                             <motion.div
                               initial={false}
                               animate={{
                                 scale: isCurrent ? 1.15 : 1,
-                                backgroundColor: isComplete ? "hsl(var(--primary))" : "hsl(var(--muted))",
+                                backgroundColor: isComplete
+                                  ? "hsl(var(--primary))"
+                                  : "hsl(var(--muted))",
                               }}
                               transition={{ duration: 0.3 }}
                               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
@@ -177,16 +446,22 @@ export default function OrderTracking() {
                               <StepIcon className="h-4 w-4" />
                             </motion.div>
                             {!isLast && (
-                              <div
-                                className={`w-0.5 h-10 transition-colors duration-500 ${
-                                  i < currentStep ? "bg-primary" : "bg-border"
-                                }`}
+                              <motion.div
+                                initial={false}
+                                animate={{
+                                  backgroundColor:
+                                    i < currentStep
+                                      ? "hsl(var(--primary))"
+                                      : "hsl(var(--border))",
+                                }}
+                                transition={{ duration: 0.5, delay: 0.1 }}
+                                className="w-0.5 h-10"
                               />
                             )}
                           </div>
 
                           {/* Text */}
-                          <div className={`pb-8 ${isLast ? "pb-0" : ""}`}>
+                          <div className={`pb-0 pt-1 ${!isLast ? "pb-4" : ""}`}>
                             <p
                               className={`font-body text-sm font-semibold ${
                                 isComplete ? "text-foreground" : "text-muted-foreground"
@@ -205,22 +480,42 @@ export default function OrderTracking() {
                 </CardContent>
               </Card>
 
+              {/* Driver / Delivery Card */}
+              {deliveryLoading ? (
+                <Card className="border border-border">
+                  <CardContent className="p-5 flex items-center gap-3">
+                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                    <p className="font-body text-sm text-muted-foreground">Loading driver info…</p>
+                  </CardContent>
+                </Card>
+              ) : deliveryInfo ? (
+                <DriverCard info={deliveryInfo} />
+              ) : showDriverSearch ? (
+                <SearchingDriverCard />
+              ) : null}
+
               {/* Order Items */}
               <Card className="border border-border">
                 <CardHeader>
                   <CardTitle className="text-lg font-display">Items</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {Array.isArray(order.items) ? (order.items as any[]).map((item: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between font-body text-sm">
-                      <span className="text-foreground">
-                        {item?.name || "Item"} ({item?.quantity || 1} {item?.unit || "piece"})
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {formatNaira((item?.price || 0) * (item?.quantity || 1))}
-                      </span>
-                    </div>
-                  )) : null}
+                  {Array.isArray(order.items)
+                    ? (order.items as any[]).map((item: any, i: number) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between font-body text-sm"
+                        >
+                          <span className="text-foreground">
+                            {item?.name || "Item"} ({item?.quantity || 1}{" "}
+                            {item?.unit || "piece"})
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {formatNaira((item?.price || 0) * (item?.quantity || 1))}
+                          </span>
+                        </div>
+                      ))
+                    : null}
                   <div className="pt-3 border-t border-border flex items-center justify-between">
                     <span className="font-display font-bold text-foreground">Total</span>
                     <span className="font-display text-xl font-bold text-primary">
@@ -234,6 +529,68 @@ export default function OrderTracking() {
         </div>
       </section>
       <Footer />
+
+      {/* Elegant full-screen celebration overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xl p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="w-full max-w-md bg-card border border-primary/20 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden"
+            >
+              {/* Luxury ambient light effects */}
+              <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+
+              <div className="relative space-y-6">
+                {/* Celebratory Icon */}
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary animate-bounce">
+                  <CheckCircle2 className="h-10 w-10 text-primary" />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-display font-extrabold tracking-tight text-foreground">
+                    Your Order Has Arrived! 🎉
+                  </h2>
+                  <p className="font-body text-sm text-muted-foreground">
+                    Confirm Product Received below to finish your order sequence. Thank you for choosing CarlyFresh!
+                  </p>
+                </div>
+
+                {/* Info Card */}
+                <div className="bg-muted/50 rounded-2xl p-4 border border-border/50 text-left space-y-2">
+                  <p className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wider">Summary</p>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-body text-foreground">Order ID</span>
+                    <span className="font-body font-bold text-foreground">#{order?.order_number}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-body text-foreground">Delivery Address</span>
+                    <span className="font-body text-foreground truncate max-w-[200px]">{order?.delivery_address}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    className="w-full font-body font-bold py-6 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-primary/20"
+                    onClick={handleConfirmReceipt}
+                  >
+                    Confirm Product Received
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

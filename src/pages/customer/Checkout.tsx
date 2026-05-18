@@ -36,6 +36,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
 
@@ -128,10 +129,28 @@ export default function Checkout() {
 
   
 
-  const onPaystackSuccess = () => {
+  const onPaystackSuccess = async () => {
     clearCart();
     toast({ title: "Payment Successful!", description: "Your order is being processed." });
-    navigate("/orders");
+
+    let currentOrderNumber = "";
+    if (placedOrderId) {
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('order_number')
+        .eq('id', placedOrderId)
+        .single();
+      if (orderData) {
+        currentOrderNumber = orderData.order_number;
+      }
+    }
+
+    await supabase
+      .from('orders')
+      .update({ status: 'confirmed' })
+      .eq('order_number', currentOrderNumber);
+
+    navigate(`/orders/${placedOrderId}`);
   };
 
   const handleSuccessClose = () => {
