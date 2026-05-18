@@ -5,8 +5,8 @@
  */
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
   Package,
@@ -231,10 +231,23 @@ function SearchingDriverCard() {
 export default function OrderTracking() {
   const { orderId } = useParams<{ orderId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  useEffect(() => {
+    if (order?.status === "delivered") {
+      setShowCelebration(true);
+    }
+  }, [order?.status]);
+
+  const handleConfirmReceipt = () => {
+    setShowCelebration(false);
+    navigate("/");
+  };
 
   const fetchDeliveryInfo = async (currentOrder: Order) => {
     if (!currentOrder) return;
@@ -516,6 +529,68 @@ export default function OrderTracking() {
         </div>
       </section>
       <Footer />
+
+      {/* Elegant full-screen celebration overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xl p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="w-full max-w-md bg-card border border-primary/20 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden"
+            >
+              {/* Luxury ambient light effects */}
+              <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 h-48 w-48 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+
+              <div className="relative space-y-6">
+                {/* Celebratory Icon */}
+                <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary animate-bounce">
+                  <CheckCircle2 className="h-10 w-10 text-primary" />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-display font-extrabold tracking-tight text-foreground">
+                    Your Order Has Arrived! 🎉
+                  </h2>
+                  <p className="font-body text-sm text-muted-foreground">
+                    Confirm Product Received below to finish your order sequence. Thank you for choosing CarlyFresh!
+                  </p>
+                </div>
+
+                {/* Info Card */}
+                <div className="bg-muted/50 rounded-2xl p-4 border border-border/50 text-left space-y-2">
+                  <p className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wider">Summary</p>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-body text-foreground">Order ID</span>
+                    <span className="font-body font-bold text-foreground">#{order?.order_number}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-body text-foreground">Delivery Address</span>
+                    <span className="font-body text-foreground truncate max-w-[200px]">{order?.delivery_address}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    className="w-full font-body font-bold py-6 text-sm bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg shadow-primary/20"
+                    onClick={handleConfirmReceipt}
+                  >
+                    Confirm Product Received
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
