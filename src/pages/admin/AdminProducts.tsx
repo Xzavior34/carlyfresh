@@ -176,9 +176,9 @@ export default function AdminProducts() {
       unit_of_measurement: parsed.data.unit_of_measurement,
       price_per_unit: parsed.data.price_per_unit,
       b2b_price: parsed.data.b2b_price ?? null,
-      is_featured: parsed.data.is_featured ?? false,
-      is_buyer_favourite: parsed.data.is_buyer_favourite ?? false,
-      is_bundle: parsed.data.is_bundle ?? false,
+      is_featured: form.is_featured,
+      is_buyer_favourite: form.is_buyer_favourite,
+      is_bundle: form.is_bundle,
     } as any;
 
     if (editing) {
@@ -367,7 +367,7 @@ export default function AdminProducts() {
                               });
                             } else {
                               toast({
-                                title: checked ? "Product set as Featured" : "Product removed from Featured",
+                                title: "Product featured status updated",
                               });
                               setProducts(prev => prev.map(p => p.id === item.id ? { ...p, is_featured: checked } as any : p));
                             }
@@ -499,7 +499,28 @@ export default function AdminProducts() {
                 <input
                   type="checkbox"
                   checked={form.is_featured}
-                  onChange={(e) => setForm(prev => ({ ...prev, is_featured: e.target.checked }))}
+                  onChange={async (e) => {
+                    const checked = e.target.checked;
+                    setForm(prev => ({ ...prev, is_featured: checked }));
+                    if (editing) {
+                      const { error } = await supabase
+                        .from('products')
+                        .update({ is_featured: checked } as any)
+                        .eq('id', editing.id);
+                      if (error) {
+                        toast({
+                          title: "Error updating featured status",
+                          description: error.message,
+                          variant: "destructive"
+                        });
+                      } else {
+                        toast({
+                          title: "Product featured status updated",
+                        });
+                        fetchData();
+                      }
+                    }
+                  }}
                   className="h-4 w-4 rounded border-input text-accent focus:ring-accent"
                 />
                 <div>

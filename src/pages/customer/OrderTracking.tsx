@@ -311,7 +311,7 @@ export default function OrderTracking() {
 
     // Real-time: order status changes
     const orderChannel = supabase
-      .channel(`order-track-${orderId}`)
+      .channel(`order-track-${orderId}-${Math.random().toString(36).substring(2, 9)}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
@@ -325,7 +325,7 @@ export default function OrderTracking() {
 
     // Real-time: delivery job changes
     const deliveryChannel = supabase
-      .channel(`delivery-track-${orderId}`)
+      .channel(`delivery-track-${orderId}-${Math.random().toString(36).substring(2, 9)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_jobs", filter: `order_id=eq.${orderId}` },
@@ -340,7 +340,7 @@ export default function OrderTracking() {
       supabase.removeChannel(orderChannel);
       supabase.removeChannel(deliveryChannel);
     };
-  }, [user, orderId]);
+  }, [user, orderId, order]);
 
   const currentStep = order ? getStepIndex(order.status) : 0;
 

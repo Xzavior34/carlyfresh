@@ -48,7 +48,7 @@ const MiniChat = ({ orderId, receiverId, triggerLabel = "Open chat" }: Props) =>
       });
 
     const channel = supabase
-      .channel(`chat:${orderId}`)
+      .channel(`chat:${orderId}-${Math.random().toString(36).substring(2, 9)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chats", filter: `order_id=eq.${orderId}` },

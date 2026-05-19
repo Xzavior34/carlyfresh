@@ -490,6 +490,9 @@ export type Database = {
           id: string
           image_url: string | null
           in_stock: boolean
+          is_buyer_favourite: boolean | null
+          is_bundle: boolean | null
+          is_featured: boolean | null
           name: string
           price: number
           price_per_unit: number
@@ -508,6 +511,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: boolean
+          is_buyer_favourite?: boolean | null
+          is_bundle?: boolean | null
+          is_featured?: boolean | null
           name: string
           price?: number
           price_per_unit?: number
@@ -526,6 +532,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           in_stock?: boolean
+          is_buyer_favourite?: boolean | null
+          is_bundle?: boolean | null
+          is_featured?: boolean | null
           name?: string
           price?: number
           price_per_unit?: number

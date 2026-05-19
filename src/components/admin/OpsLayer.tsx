@@ -28,7 +28,7 @@ export default function OpsLayer() {
     fetchFulfillmentPipelines();
 
     const sub = supabase
-      .channel("ops-layer-sync")
+      .channel(`ops-layer-sync-${Math.random().toString(36).substring(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
         fetchFulfillmentPipelines();
       })
