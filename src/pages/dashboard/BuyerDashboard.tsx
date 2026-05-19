@@ -15,6 +15,9 @@ import {
   Crown,
   CalendarDays,
   Wallet,
+  ShoppingBag,
+  Sparkles,
+  Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,10 +27,13 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 import LeaveReviewModal from "@/components/products/LeaveReviewModal";
+import ProductCard from "@/components/products/ProductCard";
+import { toast } from "@/hooks/use-toast";
 
 type Order = Tables<"orders">;
 
@@ -52,10 +58,13 @@ function getStepIndex(status: string): number {
 
 export default function BuyerDashboard() {
   const { user } = useAuth();
+  const { addItem } = useCart();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [curatedBaskets, setCuratedBaskets] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -82,6 +91,50 @@ export default function BuyerDashboard() {
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        const [prodRes, basketRes] = await Promise.all([
+          supabase
+            .from("products")
+            .select("*")
+            .eq("is_featured", true)
+            .eq("in_stock", true)
+            .limit(8),
+          supabase
+            .from("baskets" as any)
+            .select("*, basket_items(*, product:products(*))")
+            .limit(6),
+        ]);
+
+        if (prodRes.data) setFeaturedProducts(prodRes.data);
+        if (basketRes.data) setCuratedBaskets(basketRes.data);
+      } catch (err) {
+        console.error("Error fetching homepage features:", err);
+      }
+    };
+    fetchFeatures();
+  }, []);
+
+  const handleAddBasketToCart = (basket: any) => {
+    const firstProductVendorId = basket.basket_items?.[0]?.product?.vendor_id || user?.id;
+
+    addItem(
+      basket.id,
+      `${basket.name} (Basket)`,
+      Number(basket.price),
+      firstProductVendorId,
+      "basket",
+      Number(basket.price),
+      null,
+      null
+    );
+    toast({
+      title: "Basket added to cart!",
+      description: `${basket.name} combo pack is now in your cart.`,
+    });
+  };
 
   const activeOrders = orders.filter((o) => o.status !== "delivered");
   const deliveredOrders = orders.filter((o) => o.status === "delivered");
@@ -174,6 +227,91 @@ export default function BuyerDashboard() {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+
+      {/* Featured Products */}
+      {featuredProducts.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            <h2 className="text-xl font-display font-bold text-foreground">🌟 Featured Products</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Curated Baskets */}
+      {curatedBaskets.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-display font-bold text-foreground">🧺 Curated Baskets</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {curatedBaskets.map((basket) => (
+              <Card key={basket.id} className="overflow-hidden border border-border group flex flex-col justify-between hover:shadow-lg transition-all duration-300">
+                <div>
+                  <div className="h-44 w-full overflow-hidden bg-muted relative">
+                    {basket.image ? (
+                      <img
+                        src={basket.image}
+                        alt={basket.name}
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                        <ShoppingBag className="h-10 w-10 stroke-[1.2]" />
+                      </div>
+                    )}
+                    <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold text-foreground font-body shadow-sm">
+                      {basket.basket_items?.length || 0} items
+                    </div>
+                  </div>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <CardTitle className="text-base font-display font-bold group-hover:text-primary transition-colors">
+                        {basket.name}
+                      </CardTitle>
+                      <span className="font-body font-bold text-base text-primary tabular-nums">
+                        {formatNaira(basket.price)}
+                      </span>
+                    </div>
+                    <CardDescription className="font-body text-xs line-clamp-2 mt-1">
+                      {basket.description || "No description provided for this combo pack."}
+                    </CardDescription>
+                    
+                    {/* Basket items list */}
+                    {basket.basket_items && basket.basket_items.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border/50 space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contents:</p>
+                        <div className="space-y-1 max-h-[100px] overflow-y-auto pr-1">
+                          {basket.basket_items.map((item: any) => (
+                            <div key={item.id} className="flex justify-between items-center text-xs font-body text-foreground">
+                              <span className="truncate pr-2">• {item.product?.name || "Product"}</span>
+                              <span className="text-muted-foreground font-semibold shrink-0">x{item.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardHeader>
+                </div>
+                <div className="p-6 pt-0 mt-auto border-t border-border/40 pt-4">
+                  <Button
+                    className="w-full font-body text-xs gap-1.5"
+                    onClick={() => handleAddBasketToCart(basket)}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add Basket to Cart
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

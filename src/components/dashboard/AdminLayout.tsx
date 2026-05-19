@@ -4,13 +4,14 @@ import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Banknote, Bike, FileText } from "lucide-react";
+import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Banknote, Bike, FileText, ShoppingBag } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import AdminGlobalSearch from "@/components/dashboard/AdminGlobalSearch";
 
 const navItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard },
   { title: "Products", url: "/admin/products", icon: Package },
+  { title: "Baskets", url: "/admin/baskets", icon: ShoppingBag },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Deliveries", url: "/admin/deliveries", icon: Truck },

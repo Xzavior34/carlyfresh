@@ -553,8 +553,11 @@ export type Database = {
           id: string
           is_b2b_customer: boolean
           phone: string | null
+          push_token: string | null
           updated_at: string
           user_id: string
+          wallet_balance: number | null
+          vehicle_info: string | null
         }
         Insert: {
           business_name?: string | null
@@ -564,8 +567,11 @@ export type Database = {
           id?: string
           is_b2b_customer?: boolean
           phone?: string | null
+          push_token?: string | null
           updated_at?: string
           user_id: string
+          wallet_balance?: number | null
+          vehicle_info?: string | null
         }
         Update: {
           business_name?: string | null
@@ -575,8 +581,11 @@ export type Database = {
           id?: string
           is_b2b_customer?: boolean
           phone?: string | null
+          push_token?: string | null
           updated_at?: string
           user_id?: string
+          wallet_balance?: number | null
+          vehicle_info?: string | null
         }
         Relationships: []
       }
@@ -650,6 +659,7 @@ export type Database = {
       }
       withdrawal_requests: {
         Row: {
+          account_holder_name: string | null
           account_number: string
           admin_notes: string | null
           amount: number
@@ -661,6 +671,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          account_holder_name?: string | null
           account_number: string
           admin_notes?: string | null
           amount: number
@@ -672,6 +683,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          account_holder_name?: string | null
           account_number?: string
           admin_notes?: string | null
           amount?: number
@@ -700,6 +712,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_withdrawal_request: {
+        Args: {
+          vendor_id: string
+          amount: number
+          bank_info: {
+            bank_name: string
+            account_number: string
+            account_holder_name: string
+          }
+        }
+        Returns: { id: string; status: string } | null
+      }
     }
     Enums: {
       app_role: "buyer" | "seller" | "driver" | "admin"
@@ -713,10 +737,14 @@ export type Database = {
         | "supplier_missed"
       order_status:
         | "pending"
+        | "confirmed"
         | "processing"
+        | "preparing"
         | "packaged"
+        | "driver_assigned"
         | "in-transit"
         | "delivered"
+        | "cancelled"
       transaction_status: "completed" | "pending"
       transaction_type: "sale" | "commission" | "withdrawal"
       withdrawal_status: "pending" | "approved" | "rejected"

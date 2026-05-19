@@ -7,6 +7,10 @@ import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useEffect } from "react";
+import OneSignal from "react-onesignal";
+import { supabase } from "@/integrations/supabase/client";
+
 
 // Public pages
 import Index from "./pages/Index";
@@ -44,6 +48,7 @@ import DriverLayout from "./components/dashboard/DriverLayout";
 // Admin pages
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminBaskets from "./pages/admin/AdminBaskets";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
@@ -88,6 +93,98 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const OneSignalInitializer = () => {
+  const { user, role } = useAuth();
+
+  useEffect(() => {
+    const initOneSignal = async () => {
+      try {
+        await OneSignal.init({
+          appId: "e6446b40-1453-4ccd-929d-d8ccb8c7ff91",
+          allowLocalhostAsSecureOrigin: true,
+        });
+        console.log("OneSignal initialized successfully");
+      } catch (error) {
+        console.error("Error initializing OneSignal:", error);
+      }
+    };
+    initOneSignal();
+  }, []);
+
+  useEffect(() => {
+    if (!user || !role) return;
+    
+    // Ensure permission prompt only fires for Drivers (driver), Vendors (seller), and Customers (buyer)
+    const allowedRoles = ["buyer", "seller", "driver"];
+    if (!allowedRoles.includes(role)) return;
+
+    // Login user to OneSignal
+    OneSignal.login(user.id).catch((err) => {
+      console.error("Error logging in to OneSignal:", err);
+    });
+
+    const updateProfileToken = async (token: string) => {
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ push_token: token })
+          .eq("user_id", user.id);
+        
+        if (error) {
+          console.error("Error saving push token to Supabase profiles:", error);
+        } else {
+          console.log("OneSignal push token saved to profile:", token);
+        }
+      } catch (err) {
+        console.error("Exception when saving push token:", err);
+      }
+    };
+
+    // Handler for push subscription changes
+    const handleSubscriptionChange = (event: any) => {
+      const pushToken = event.current?.id;
+      if (pushToken) {
+        updateProfileToken(pushToken);
+      }
+    };
+
+    // Listen for changes
+    OneSignal.User.PushSubscription.addEventListener("change", handleSubscriptionChange);
+
+    // Initial check and request permission
+    const checkAndPrompt = async () => {
+      try {
+        if (typeof window !== "undefined" && "Notification" in window) {
+          if (Notification.permission === "granted") {
+            const pushToken = OneSignal.User.PushSubscription.id;
+            if (pushToken) {
+              await updateProfileToken(pushToken);
+            }
+          } else if (Notification.permission === "default") {
+            await OneSignal.Notifications.requestPermission();
+            if (Notification.permission === "granted") {
+              const pushToken = OneSignal.User.PushSubscription.id;
+              if (pushToken) {
+                await updateProfileToken(pushToken);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error checking or prompting push notification permission:", err);
+      }
+    };
+
+    checkAndPrompt();
+
+    return () => {
+      OneSignal.User.PushSubscription.removeEventListener("change", handleSubscriptionChange);
+    };
+  }, [user, role]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -98,6 +195,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <OneSignalInitializer />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
@@ -132,6 +230,7 @@ const App = () => (
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<AdminOverview />} />
                 <Route path="products" element={<AdminProducts />} />
+                <Route path="baskets" element={<AdminBaskets />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />

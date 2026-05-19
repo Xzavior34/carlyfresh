@@ -8,3 +8,7 @@ verify_jwt = false
 
 [functions.generate-user-recommendations]
 verify_jwt = false
+
+[functions.onesignal-dispatcher]
+verify_jwt = false
+

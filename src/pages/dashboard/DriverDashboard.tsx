@@ -20,7 +20,7 @@ type DeliveryJob = Tables<"delivery_jobs">;
 export default function DriverDashboard() {
   const { user } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
-  const [jobs, setJobs] = useState<DeliveryJob[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [myJobs, setMyJobs] = useState<DeliveryJob[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -28,34 +28,162 @@ export default function DriverDashboard() {
 
   const fetchAll = async () => {
     if (!user) return;
-    const [availRes, myRes, walletRes] = await Promise.all([
-      supabase.from("delivery_jobs").select("*, orders(delivery_window)").eq("status", "available").order("created_at", { ascending: false }),
-      supabase.from("delivery_jobs").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("driver_wallet").select("*").eq("driver_id", user.id).maybeSingle(),
-    ]);
-    if (availRes.data) setJobs(availRes.data as any);
-    if (myRes.data) setMyJobs(myRes.data);
-    if (walletRes.data) setWalletBalance(Number((walletRes.data as any)?.balance || 0));
-    setLoading(false);
+    try {
+      const [availRes, prepOrdersRes, myRes, walletRes] = await Promise.all([
+        supabase
+          .from("delivery_jobs")
+          .select("*, orders(order_number, delivery_window, delivery_address, total_amount, items)")
+          .eq("status", "available")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("orders")
+          .select("*, delivery_jobs(*)")
+          .eq("status", "preparing")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("delivery_jobs")
+          .select("*")
+          .eq("driver_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("driver_wallet")
+          .select("*")
+          .eq("driver_id", user.id)
+          .maybeSingle(),
+      ]);
+
+      const mergedJobs: any[] = [];
+      const seenOrderIds = new Set<string>();
+
+      // 1. Process explicit delivery_jobs that are available
+      if (availRes.data) {
+        availRes.data.forEach((job: any) => {
+          mergedJobs.push({
+            id: job.id,
+            order_id: job.order_id,
+            pickup_address: job.pickup_address || "Vendor Location",
+            dropoff_address: job.dropoff_address || job.orders?.delivery_address || "Customer Address",
+            payout_amount: Number(job.payout_amount || 1500),
+            status: "available",
+            created_at: job.created_at,
+            orders: job.orders,
+          });
+          seenOrderIds.add(job.order_id);
+        });
+      }
+
+      // 2. Process preparing orders that don't have an active/assigned job yet
+      if (prepOrdersRes.data) {
+        prepOrdersRes.data.forEach((order: any) => {
+          if (!seenOrderIds.has(order.id)) {
+            const job = order.delivery_jobs?.[0];
+            if (!job || job.status === "available" || !job.driver_id) {
+              mergedJobs.push({
+                id: job?.id || `temp-${order.id}`,
+                order_id: order.id,
+                pickup_address: job?.pickup_address || "Vendor Location",
+                dropoff_address: order.delivery_address || job?.dropoff_address || "Customer Address",
+                payout_amount: Number(job?.payout_amount || 1500),
+                status: "available",
+                created_at: order.created_at,
+                orders: order,
+              });
+              seenOrderIds.add(order.id);
+            }
+          }
+        });
+      }
+
+      setJobs(mergedJobs);
+      if (myRes.data) setMyJobs(myRes.data);
+      if (walletRes.data) setWalletBalance(Number((walletRes.data as any)?.balance || 0));
+    } catch (err: any) {
+      console.error("Error fetching driver dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     if (!user) return;
     fetchAll();
+
     const channel = supabase
-      .channel("driver-jobs-rt")
+      .channel("driver-jobs-rt-all")
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: "status=eq.preparing" }, () => fetchAll())
       .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const handleAcceptJob = async (jobId: string) => {
+  const handleAcceptJob = async (
+    jobId: string,
+    orderId: string,
+    pickupAddress: string,
+    dropoffAddress: string,
+    payoutAmount: number
+  ) => {
     if (!user || accepting) return;
     setAccepting(jobId);
-    const { error } = await supabase.from("delivery_jobs").update({ driver_id: user.id, status: "accepted" as any }).eq("id", jobId);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setAccepting(null); return; }
-    toast({ title: "Job accepted!" });
-    setAccepting(null);
+
+    try {
+      const isTempJob = jobId.startsWith("temp-");
+      let finalJobId = jobId;
+
+      if (isTempJob) {
+        // Insert a new delivery job mapping user ID as driver_id, status to accepted
+        const { data: newJob, error: createError } = await supabase
+          .from("delivery_jobs")
+          .insert({
+            order_id: orderId,
+            driver_id: user.id,
+            status: "accepted" as any,
+            pickup_address: pickupAddress || "Vendor Location",
+            dropoff_address: dropoffAddress || "Customer Address",
+            payout_amount: payoutAmount || 1500,
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        finalJobId = newJob.id;
+      } else {
+        // Update existing delivery job mapping user ID as driver_id, status to accepted
+        const { error: updateError } = await supabase
+          .from("delivery_jobs")
+          .update({
+            driver_id: user.id,
+            status: "accepted" as any,
+          })
+          .eq("id", jobId);
+
+        if (updateError) throw updateError;
+      }
+
+      // Update the corresponding order status directly to 'driver_assigned'
+      const { error: orderError } = await supabase
+        .from("orders")
+        .update({ status: "driver_assigned" as any })
+        .eq("id", orderId);
+
+      if (orderError) throw orderError;
+
+      toast({
+        title: "Job Accepted! 🚚",
+        description: "Delivery assigned successfully.",
+      });
+
+      fetchAll();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to accept job",
+        variant: "destructive",
+      });
+    } finally {
+      setAccepting(null);
+    }
   };
 
   const completedJobs = myJobs?.filter(j => j?.status === "completed") ?? [];
@@ -148,8 +276,13 @@ export default function DriverDashboard() {
                   <div className="flex items-center gap-1 text-xs font-body text-muted-foreground"><MapPin className="h-3 w-3" /> Delivery</div>
                   <div className="flex items-center gap-3">
                     <span className="font-display text-lg font-bold text-primary">{formatNaira(Number(job?.payout_amount ?? 0))}</span>
-                    <Button size="sm" className="font-body text-xs bg-primary hover:bg-primary/90 gap-1" onClick={() => handleAcceptJob(job.id)} disabled={!isOnline || accepting === job.id}>
-                      {accepting === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null} Accept Job
+                    <Button 
+                      size="sm" 
+                      className="font-body text-xs bg-primary hover:bg-primary/90 gap-1" 
+                      onClick={() => handleAcceptJob(job.id, job.order_id, job.pickup_address, job.dropoff_address, job.payout_amount)} 
+                      disabled={!isOnline || accepting === job.id}
+                    >
+                      {accepting === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null} Accept Delivery Job
                     </Button>
                   </div>
                 </div>

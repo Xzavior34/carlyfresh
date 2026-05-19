@@ -36,6 +36,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
 
@@ -58,7 +59,7 @@ type AddressFormValues = z.infer<typeof addressSchema>;
 function PaystackButton({
   email, amountKobo, orderId, onSuccess, disabled,
 }: {
-  email: string; amountKobo: number; orderId: string; onSuccess: () => void; disabled: boolean;
+  email: string; amountKobo: number; orderId: string; onSuccess: (response: any) => void; disabled: boolean;
 }) {
   const config = {
     reference: `carly_${orderId}_${Date.now()}`,
@@ -128,10 +129,36 @@ export default function Checkout() {
 
   
 
-  const onPaystackSuccess = () => {
+  const onPaystackSuccess = async (response: any) => {
     clearCart();
     toast({ title: "Payment Successful!", description: "Your order is being processed." });
-    navigate("/orders");
+
+    let currentOrderNumber = "";
+    if (placedOrderId) {
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('order_number')
+        .eq('id', placedOrderId)
+        .single();
+      if (orderData) {
+        currentOrderNumber = orderData.order_number;
+      }
+    }
+
+    const totalCartAmount = total;
+
+    const { data: rpcSuccess, error: rpcError } = await supabase.rpc('confirm_order_via_client', {
+      target_order_identifier: currentOrderNumber.toString(),
+      gateway_reference: response.reference,
+      amount_paid: totalCartAmount
+    });
+
+    if (rpcError) {
+      console.error("Fulfillment engine error:", rpcError);
+    } else {
+      // Seamlessly transition the user to their live tracking screen
+      navigate(`/orders/${placedOrderId}`);
+    }
   };
 
   const handleSuccessClose = () => {

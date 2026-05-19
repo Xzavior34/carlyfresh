@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2, PackageOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, PackageOpen, Upload } from "lucide-react";
 import ImageUploadInput from "@/components/products/ImageUploadInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNaira } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
+import Papa from "papaparse";
 
 type Product = Tables<"products">;
 
@@ -63,6 +65,10 @@ export default function AdminProducts() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkVendorId, setBulkVendorId] = useState("");
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
   
   const [form, setForm] = useState({
     name: "",
@@ -198,6 +204,91 @@ export default function AdminProducts() {
     setDeleting(null);
   };
 
+  const handleBulkUpload = async () => {
+    if (!bulkVendorId) {
+      toast({ title: "Error", description: "Please select a vendor first.", variant: "destructive" });
+      return;
+    }
+    if (!bulkFile) {
+      toast({ title: "Error", description: "Please select a CSV file to upload.", variant: "destructive" });
+      return;
+    }
+
+    setBulkLoading(true);
+    Papa.parse(bulkFile, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const parsedData = results.data as any[];
+        
+        if (parsedData.length === 0) {
+          toast({ title: "Error", description: "The CSV file is empty.", variant: "destructive" });
+          setBulkLoading(false);
+          return;
+        }
+
+        const firstRow = parsedData[0];
+        const hasRequiredColumns = 'name' in firstRow && 'price' in firstRow && 'stock' in firstRow;
+        
+        if (!hasRequiredColumns) {
+          toast({
+            title: "Error",
+            description: "CSV must contain columns: name, category, price, stock, description.",
+            variant: "destructive",
+          });
+          setBulkLoading(false);
+          return;
+        }
+
+        const productsToInsert = parsedData.map((row) => {
+          const priceVal = Number(row.price) || 0;
+          const stockVal = Number(row.stock) || 0;
+          return {
+            name: (row.name || "Unnamed Product").trim(),
+            category: (row.category || "Fresh Produce").trim(),
+            price: priceVal,
+            stock_level: stockVal,
+            description: (row.description || "").trim(),
+            vendor_id: bulkVendorId,
+            in_stock: stockVal > 0,
+            unit_of_measurement: "piece",
+            price_per_unit: priceVal,
+            is_featured: false,
+            is_buyer_favourite: false,
+            is_bundle: false,
+          };
+        });
+
+        const { error } = await supabase.from("products").insert(productsToInsert);
+
+        if (error) {
+          toast({
+            title: "Bulk upload failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: `Successfully uploaded ${productsToInsert.length} products!`,
+          });
+          setShowBulkModal(false);
+          setBulkFile(null);
+          fetchData();
+        }
+        setBulkLoading(false);
+      },
+      error: (err) => {
+        toast({
+          title: "CSV parsing error",
+          description: err.message,
+          variant: "destructive",
+        });
+        setBulkLoading(false);
+      }
+    });
+  };
+
   if (loading) return <DashboardSkeleton />;
 
   return (
@@ -207,7 +298,12 @@ export default function AdminProducts() {
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">All Products</h1>
           <p className="text-muted-foreground font-body text-xs sm:text-sm">{products.length} products across all vendors</p>
         </div>
-        <Button size="sm" className="font-body gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> Add Product</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="font-body gap-1" onClick={() => setShowBulkModal(true)}>
+            <Upload className="h-4 w-4" /> Bulk Upload CSV
+          </Button>
+          <Button size="sm" className="font-body gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> Add Product</Button>
+        </div>
       </div>
 
       <Card className="border border-border">
@@ -220,6 +316,7 @@ export default function AdminProducts() {
                   <TableHead className="font-body text-xs uppercase tracking-wider">Category</TableHead>
                   <TableHead className="font-body text-xs uppercase tracking-wider text-right">Price</TableHead>
                   <TableHead className="font-body text-xs uppercase tracking-wider text-center">Stock</TableHead>
+                  <TableHead className="font-body text-xs uppercase tracking-wider text-center">Featured</TableHead>
                   <TableHead className="font-body text-xs uppercase tracking-wider text-center">Status</TableHead>
                   <TableHead className="font-body text-xs uppercase tracking-wider text-center">Actions</TableHead>
                 </TableRow>
@@ -253,6 +350,32 @@ export default function AdminProducts() {
                     <TableCell className="text-right font-body tabular-nums">{formatNaira(Number(item?.price ?? 0))}</TableCell>
                     <TableCell className="text-center font-body tabular-nums">{item?.stock_level ?? 0}</TableCell>
                     <TableCell className="text-center">
+                      <div className="flex items-center justify-center">
+                        <Switch
+                          checked={Boolean((item as any).is_featured)}
+                          onCheckedChange={async (checked) => {
+                            const { error } = await supabase
+                              .from("products")
+                              .update({ is_featured: checked } as any)
+                              .eq("id", item.id);
+                            
+                            if (error) {
+                              toast({
+                                title: "Error updating featured status",
+                                description: error.message,
+                                variant: "destructive"
+                              });
+                            } else {
+                              toast({
+                                title: checked ? "Product set as Featured" : "Product removed from Featured",
+                              });
+                              setProducts(prev => prev.map(p => p.id === item.id ? { ...p, is_featured: checked } as any : p));
+                            }
+                          }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Badge variant="secondary" className={`text-[10px] font-body ${item?.in_stock ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
                         {item?.in_stock ? "In Stock" : "Out"}
                       </Badge>
@@ -269,7 +392,7 @@ export default function AdminProducts() {
                 ))}
                 {products.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 sm:py-16">
+                    <TableCell colSpan={7} className="text-center py-12 sm:py-16">
                       <div className="flex flex-col items-center justify-center">
                         <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                           <PackageOpen className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
@@ -424,6 +547,62 @@ export default function AdminProducts() {
             <Button onClick={save} className="font-body gap-2 w-full sm:w-auto" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? "Save Changes" : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkModal} onOpenChange={setShowBulkModal}>
+        <DialogContent className="w-[95vw] sm:max-w-md rounded-xl p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="font-display">Bulk Upload Products via CSV</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="font-body text-sm">Target Vendor *</Label>
+              <Select value={bulkVendorId} onValueChange={setBulkVendorId}>
+                <SelectTrigger className="font-body">
+                  <SelectValue placeholder="Select vendor for these products" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendors?.map((s) => (
+                    <SelectItem key={s.user_id} value={s.user_id} className="font-body">
+                      {s.full_name || s.business_name || s.user_id.slice(0, 8)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="font-body text-sm">Select CSV File *</Label>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                className="font-body"
+              />
+              <p className="text-[11px] text-muted-foreground font-body leading-relaxed">
+                CSV columns must include: <code className="bg-muted px-1 rounded font-semibold text-[10px]">name</code>, <code className="bg-muted px-1 rounded font-semibold text-[10px]">category</code>, <code className="bg-muted px-1 rounded font-semibold text-[10px]">price</code>, <code className="bg-muted px-1 rounded font-semibold text-[10px]">stock</code>, and <code className="bg-muted px-1 rounded font-semibold text-[10px]">description</code>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkModal(false)}
+              className="font-body w-full sm:w-auto mb-2 sm:mb-0"
+              disabled={bulkLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkUpload}
+              className="font-body gap-2 w-full sm:w-auto"
+              disabled={bulkLoading}
+            >
+              {bulkLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Upload Products
             </Button>
           </DialogFooter>
         </DialogContent>
