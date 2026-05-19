@@ -96,16 +96,28 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
 const OneSignalInitializer = () => {
   const { user, role } = useAuth();
 
+  const getOneSignal = () => {
+    if (typeof window !== "undefined" && (window as any).OneSignal) {
+      return (window as any).OneSignal;
+    }
+    return OneSignal;
+  };
+
   useEffect(() => {
     const initOneSignal = async () => {
       try {
-        await OneSignal.init({
-          appId: "e6446b40-1453-4ccd-929d-d8ccb8c7ff91",
-          allowLocalhostAsSecureOrigin: true,
-        });
-        console.log("OneSignal initialized successfully");
+        const os = getOneSignal();
+        if (os && typeof os.init === "function") {
+          await os.init({
+            appId: "e6446b40-1453-4ccd-929d-d8ccb8c7ff91",
+            allowLocalhostAsSecureOrigin: true,
+          });
+          console.log("OneSignal initialized successfully");
+        } else {
+          console.warn("OneSignal initialization bypassed: init function not found");
+        }
       } catch (error) {
-        console.error("Error initializing OneSignal:", error);
+        console.warn("OneSignal bypassed:", error);
       }
     };
     initOneSignal();
@@ -118,67 +130,101 @@ const OneSignalInitializer = () => {
     const allowedRoles = ["buyer", "seller", "driver"];
     if (!allowedRoles.includes(role)) return;
 
-    // Login user to OneSignal
-    OneSignal.login(user.id).catch((err) => {
-      console.error("Error logging in to OneSignal:", err);
-    });
+    let handleSubscriptionChange: ((event: any) => void) | null = null;
 
-    const updateProfileToken = async (token: string) => {
-      try {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ push_token: token })
-          .eq("user_id", user.id);
-        
-        if (error) {
-          console.error("Error saving push token to Supabase profiles:", error);
-        } else {
-          console.log("OneSignal push token saved to profile:", token);
+    try {
+      const os = getOneSignal();
+
+      // Login user to OneSignal
+      if (os && typeof os.login === "function") {
+        os.login(user.id).catch((err: any) => {
+          console.warn("OneSignal bypassed:", err);
+        });
+      } else {
+        console.warn("OneSignal login bypassed: login function not found");
+      }
+
+      const updateProfileToken = async (token: string) => {
+        try {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ push_token: token })
+            .eq("user_id", user.id);
+          
+          if (error) {
+            console.error("Error saving push token to Supabase profiles:", error);
+          } else {
+            console.log("OneSignal push token saved to profile:", token);
+          }
+        } catch (err) {
+          console.warn("OneSignal bypassed:", err);
         }
-      } catch (err) {
-        console.error("Exception when saving push token:", err);
+      };
+
+      // Handler for push subscription changes
+      handleSubscriptionChange = (event: any) => {
+        const pushToken = event.current?.id;
+        if (pushToken) {
+          updateProfileToken(pushToken);
+        }
+      };
+
+      // Listen for changes
+      if (
+        os &&
+        os.User &&
+        os.User.PushSubscription &&
+        typeof os.User.PushSubscription.addEventListener === "function"
+      ) {
+        os.User.PushSubscription.addEventListener("change", handleSubscriptionChange);
       }
-    };
 
-    // Handler for push subscription changes
-    const handleSubscriptionChange = (event: any) => {
-      const pushToken = event.current?.id;
-      if (pushToken) {
-        updateProfileToken(pushToken);
-      }
-    };
-
-    // Listen for changes
-    OneSignal.User.PushSubscription.addEventListener("change", handleSubscriptionChange);
-
-    // Initial check and request permission
-    const checkAndPrompt = async () => {
-      try {
-        if (typeof window !== "undefined" && "Notification" in window) {
-          if (Notification.permission === "granted") {
-            const pushToken = OneSignal.User.PushSubscription.id;
-            if (pushToken) {
-              await updateProfileToken(pushToken);
-            }
-          } else if (Notification.permission === "default") {
-            await OneSignal.Notifications.requestPermission();
+      // Initial check and request permission
+      const checkAndPrompt = async () => {
+        try {
+          if (typeof window !== "undefined" && "Notification" in window) {
             if (Notification.permission === "granted") {
-              const pushToken = OneSignal.User.PushSubscription.id;
+              const pushToken = os?.User?.PushSubscription?.id;
               if (pushToken) {
                 await updateProfileToken(pushToken);
               }
+            } else if (Notification.permission === "default") {
+              if (os && os.Notifications && typeof os.Notifications.requestPermission === "function") {
+                await os.Notifications.requestPermission();
+              }
+              if (Notification.permission === "granted") {
+                const pushToken = os?.User?.PushSubscription?.id;
+                if (pushToken) {
+                  await updateProfileToken(pushToken);
+                }
+              }
             }
           }
+        } catch (err) {
+          console.warn("OneSignal bypassed:", err);
         }
-      } catch (err) {
-        console.error("Error checking or prompting push notification permission:", err);
-      }
-    };
+      };
 
-    checkAndPrompt();
+      checkAndPrompt();
+    } catch (error) {
+      console.warn("OneSignal bypassed:", error);
+    }
 
     return () => {
-      OneSignal.User.PushSubscription.removeEventListener("change", handleSubscriptionChange);
+      try {
+        const os = getOneSignal();
+        if (
+          handleSubscriptionChange &&
+          os &&
+          os.User &&
+          os.User.PushSubscription &&
+          typeof os.User.PushSubscription.removeEventListener === "function"
+        ) {
+          os.User.PushSubscription.removeEventListener("change", handleSubscriptionChange);
+        }
+      } catch (err) {
+        console.warn("OneSignal bypassed:", err);
+      }
     };
   }, [user, role]);
 
