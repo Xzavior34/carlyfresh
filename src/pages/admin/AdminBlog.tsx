@@ -50,8 +50,8 @@ export default function AdminBlog() {
     fetchPosts();
     const ch = supabase
       .channel("admin-blog")
-      .on("postgres_changes", { event: "*", schema: "public", table: "blog_posts" }, fetchPosts)
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "blog_posts" }, fetchPosts);
+    ch.subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
 

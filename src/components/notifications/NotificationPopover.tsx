@@ -55,8 +55,8 @@ const NotificationPopover = ({ className }: Props) => {
           setItems((prev) => [n, ...prev].slice(0, 20));
           toast(n.message);
         },
-      )
-      .subscribe();
+      );
+    channel.subscribe();
 
     return () => {
       mounted = false;

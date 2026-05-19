@@ -28,17 +28,19 @@ export function useProductRating(productId: string): RatingInfo {
     };
     fetchRating();
 
-    const ch = supabase
-      .channel(`pr-rating-${productId}`)
+    const channel = supabase
+      .channel(`pr-rating-${productId}-${Math.random()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "product_reviews", filter: `product_id=eq.${productId}` },
         () => fetchRating()
-      )
-      .subscribe();
+      );
+
+    channel.subscribe();
+
     return () => {
       cancelled = true;
-      supabase.removeChannel(ch);
+      supabase.removeChannel(channel);
     };
   }, [productId]);
 

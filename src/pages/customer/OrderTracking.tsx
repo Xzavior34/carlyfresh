@@ -320,8 +320,8 @@ export default function OrderTracking() {
           setOrder(updated);
           fetchDeliveryInfo(updated);
         }
-      )
-      .subscribe();
+      );
+    orderChannel.subscribe();
 
     // Real-time: delivery job changes
     const deliveryChannel = supabase
@@ -333,8 +333,8 @@ export default function OrderTracking() {
           if (order) fetchDeliveryInfo(order);
           else fetchOrder();
         }
-      )
-      .subscribe();
+      );
+    deliveryChannel.subscribe();
 
     return () => {
       supabase.removeChannel(orderChannel);

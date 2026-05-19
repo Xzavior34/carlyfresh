@@ -1,7 +1,7 @@
 /**
  * Driver Dashboard — Real-time job feed with wallet metrics
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Navigation, Package, Wallet, CheckCircle2, TrendingUp, Zap, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,7 @@ export default function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState<string | null>(null);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     if (!user) return;
     try {
       const [availRes, prepOrdersRes, myRes, walletRes] = await Promise.all([
@@ -102,7 +102,7 @@ export default function DriverDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -111,11 +111,11 @@ export default function DriverDashboard() {
     const channel = supabase
       .channel("driver-jobs-rt-all")
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: "status=eq.preparing" }, () => fetchAll())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: "status=eq.preparing" }, () => fetchAll());
+    channel.subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, fetchAll]);
 
   const handleAcceptJob = async (
     jobId: string,

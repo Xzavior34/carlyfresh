@@ -74,8 +74,8 @@ export default function VendorReviews() {
         "postgres_changes",
         { event: "*", schema: "public", table: "product_reviews", filter: `vendor_id=eq.${user.id}` },
         () => fetchAll()
-      )
-      .subscribe();
+      );
+    ch.subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user]);
 

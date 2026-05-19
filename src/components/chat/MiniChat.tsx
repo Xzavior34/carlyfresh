@@ -55,8 +55,8 @@ const MiniChat = ({ orderId, receiverId, triggerLabel = "Open chat" }: Props) =>
         (payload) => {
           setMessages((prev) => [...prev, payload.new as ChatMessage]);
         },
-      )
-      .subscribe();
+      );
+    channel.subscribe();
 
     return () => {
       mounted = false;

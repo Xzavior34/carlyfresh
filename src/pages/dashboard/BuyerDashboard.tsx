@@ -86,8 +86,8 @@ export default function BuyerDashboard() {
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `buyer_id=eq.${user.id}` },
         () => { fetchOrders(); }
-      )
-      .subscribe();
+      );
+    channel.subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);

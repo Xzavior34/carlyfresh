@@ -86,8 +86,8 @@ export default function BlogPost() {
     const channel = supabase
       .channel(`blog-${post.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "blog_likes", filter: `post_id=eq.${post.id}` }, () => loadAll(post.id))
-      .on("postgres_changes", { event: "*", schema: "public", table: "blog_comments", filter: `post_id=eq.${post.id}` }, () => loadAll(post.id))
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "blog_comments", filter: `post_id=eq.${post.id}` }, () => loadAll(post.id));
+    channel.subscribe();
     return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.id]);

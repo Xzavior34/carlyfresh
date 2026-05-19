@@ -80,13 +80,13 @@ export default function AdminDashboard() {
     // Core telemetry listeners dynamically tracking staging summary variables
     const ordersChannel = supabase
       .channel("admin-orders-metrics")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchGlobalMetrics(); })
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => { fetchGlobalMetrics(); });
+    ordersChannel.subscribe();
 
     const jobsChannel = supabase
       .channel("admin-jobs-metrics")
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => { fetchGlobalMetrics(); })
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => { fetchGlobalMetrics(); });
+    jobsChannel.subscribe();
 
     return () => {
       supabase.removeChannel(ordersChannel);

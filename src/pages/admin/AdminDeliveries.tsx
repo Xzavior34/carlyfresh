@@ -28,8 +28,8 @@ export default function AdminDeliveries() {
   useEffect(() => {
     fetchJobs();
     const channel = supabase.channel("admin-deliveries")
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchJobs())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchJobs());
+    channel.subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 

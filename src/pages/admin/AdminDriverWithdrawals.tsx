@@ -49,8 +49,8 @@ export default function AdminDriverWithdrawals() {
     fetchData();
     const channel = supabase
       .channel("admin-driver-withdrawals")
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_withdrawals" }, fetchData)
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_withdrawals" }, fetchData);
+    channel.subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 

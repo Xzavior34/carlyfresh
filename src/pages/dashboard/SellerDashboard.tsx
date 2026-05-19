@@ -4,7 +4,7 @@
  * REAL-TIME: Supabase channel for orders (confirmed) + notifications
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
@@ -212,7 +212,7 @@ export default function SellerDashboard() {
   // Track already-seen order IDs so we don't re-trigger the modal on re-fetch
   const seenOrderIds = useRef<Set<string>>(new Set());
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     const [prodRes, ordRes] = await Promise.all([
       supabase.from("products").select("*").eq("vendor_id", user.id),
@@ -226,7 +226,7 @@ export default function SellerDashboard() {
     if (prodRes.data) setInventory(prodRes.data);
     if (ordRes.data) setOrders(ordRes.data);
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -273,8 +273,8 @@ export default function SellerDashboard() {
           }
           fetchData();
         }
-      )
-      .subscribe();
+      );
+    ordersChannel.subscribe();
 
     // Also watch the notifications table for new order notifications
     const notifChannel = supabase
@@ -296,14 +296,14 @@ export default function SellerDashboard() {
             });
           }
         }
-      )
-      .subscribe();
+      );
+    notifChannel.subscribe();
 
     return () => {
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(notifChannel);
     };
-  }, [user]);
+  }, [user, fetchData]);
 
   const handleAcceptOrder = async (order: Order) => {
     setAccepting(true);

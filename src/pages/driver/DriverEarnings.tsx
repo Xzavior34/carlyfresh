@@ -1,7 +1,7 @@
 /**
  * Driver Earnings & Wallet — Real-time with withdrawal requests
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +47,7 @@ export default function DriverEarnings() {
   const [submitting, setSubmitting] = useState(false);
   const [wForm, setWForm] = useState({ amount: "", bank_name: "", account_number: "" });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     const [txRes, wRes, walletRes] = await Promise.all([
       supabase.from("driver_transactions").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }),
@@ -58,7 +58,7 @@ export default function DriverEarnings() {
     if (wRes.data) setWithdrawals(wRes.data as any);
     if (walletRes.data) setWalletBalance(Number((walletRes.data as any).balance || 0));
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchData();
@@ -66,10 +66,10 @@ export default function DriverEarnings() {
     const ch = supabase
       .channel("driver-earnings")
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_transactions", filter: `driver_id=eq.${user.id}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_withdrawals", filter: `driver_id=eq.${user.id}` }, () => fetchData())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_withdrawals", filter: `driver_id=eq.${user.id}` }, () => fetchData());
+    ch.subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, [user, fetchData]);
 
   const pendingWithdrawals = withdrawals.filter(w => w.status === "pending" || w.status === "approved").reduce((s, w) => s + Number(w.amount), 0);
   const available = walletBalance - pendingWithdrawals;

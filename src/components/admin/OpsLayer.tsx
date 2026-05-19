@@ -31,8 +31,8 @@ export default function OpsLayer() {
       .channel(`ops-layer-sync-${Math.random().toString(36).substring(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
         fetchFulfillmentPipelines();
-      })
-      .subscribe();
+      });
+    sub.subscribe();
 
     return () => { supabase.removeChannel(sub); };
   }, []);

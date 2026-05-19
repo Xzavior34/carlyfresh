@@ -166,8 +166,8 @@ export default function VendorPayouts() {
             setWalletBalance(Number(updated.wallet_balance));
           }
         }
-      )
-      .subscribe();
+      );
+    profileChannel.subscribe();
 
     // Real-time: listen to withdrawal_requests changes
     const wdChannel = supabase
@@ -181,8 +181,8 @@ export default function VendorPayouts() {
           filter: `vendor_id=eq.${user.id}`,
         },
         () => fetchData()
-      )
-      .subscribe();
+      );
+    wdChannel.subscribe();
 
     return () => {
       supabase.removeChannel(profileChannel);

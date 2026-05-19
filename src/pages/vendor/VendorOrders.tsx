@@ -3,7 +3,7 @@
  * DATA SOURCE: Live Supabase — orders, delivery_jobs, profiles tables
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Package,
@@ -246,7 +246,7 @@ function OrderRow({ order }: OrderRowProps) {
     };
 
     fetch();
-  }, [expanded, order.id]);
+  }, [expanded, order.id, deliveryInfo]);
 
   const items = Array.isArray(order.items) ? (order.items as any[]) : [];
   const stepIdx = getMilestoneIndex(order.status);
@@ -362,7 +362,7 @@ export default function VendorOrders() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("orders")
@@ -371,7 +371,7 @@ export default function VendorOrders() {
       .order("created_at", { ascending: false });
     if (data) setOrders(data);
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchOrders();
@@ -382,12 +382,12 @@ export default function VendorOrders() {
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `vendor_id=eq.${user.id}` },
         () => fetchOrders()
-      )
-      .subscribe();
+      );
+    channel.subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchOrders]);
 
   const statusFilters = ["all", "confirmed", "preparing", "driver_assigned", "in-transit", "delivered"];
 

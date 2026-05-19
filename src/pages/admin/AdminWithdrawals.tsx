@@ -50,8 +50,8 @@ export default function AdminWithdrawals() {
       .channel("admin-withdrawals")
       .on("postgres_changes", { event: "*", schema: "public", table: "withdrawal_requests" }, () => {
         fetchData();
-      })
-      .subscribe();
+      });
+    channel.subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 

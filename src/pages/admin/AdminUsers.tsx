@@ -44,8 +44,8 @@ export default function AdminUsers() {
     const channel = supabase
       .channel("admin-users")
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchAll())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => fetchAll());
+    channel.subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 

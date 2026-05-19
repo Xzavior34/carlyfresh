@@ -1,7 +1,7 @@
 /**
  * Driver Active Route — shows accepted/in-transit jobs with status update buttons
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ export default function DriverActive() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("delivery_jobs")
@@ -65,17 +65,17 @@ export default function DriverActive() {
       setJobs(mapped);
     }
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
     fetchJobs();
     const ch = supabase
       .channel("driver-active-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs", filter: `driver_id=eq.${user.id}` }, () => fetchJobs())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs", filter: `driver_id=eq.${user.id}` }, () => fetchJobs());
+    ch.subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, [user, fetchJobs]);
 
   const handlePickUpOrder = async (jobId: string, orderId: string) => {
     setUpdating(jobId);

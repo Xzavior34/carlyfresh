@@ -85,8 +85,8 @@ export default function ProductDetail() {
 
     const ch = supabase
       .channel(`product-detail-${productId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "product_reviews", filter: `product_id=eq.${productId}` }, () => fetchAll())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "product_reviews", filter: `product_id=eq.${productId}` }, () => fetchAll());
+    ch.subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [productId]);
 
