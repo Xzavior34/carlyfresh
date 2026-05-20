@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
@@ -66,7 +66,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     price: effectiveUnitPrice(item, qty),
   });
 
-  const addItem = (
+  const addItem = async (
     id: string,
     name: string,
     price: number,
@@ -76,8 +76,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     bulkMinQty: number | null = null,
     bulkPrice: number | null = null,
   ) => {
-    if (user?.id) {
-      supabase.rpc('send_cart_notification', { p_user_id: user.id, p_message: `${name} has been added to your cart! 🛒` }).catch(console.error);
+    try {
+      if (user?.id) {
+        await supabase.rpc('send_cart_notification', { 
+          p_user_id: user.id, 
+          p_message: `${name} has been added to your cart! 🛒` 
+        });
+      }
+    } catch (rpcError) {
+      console.error('Cart push notification failed safely:', rpcError);
     }
 
     setItems((prev) => {
