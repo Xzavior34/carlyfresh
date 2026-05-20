@@ -1,20 +1,698 @@
-﻿/** * Seller Dashboard ΓÇö Vendor Portal Overview * DATA SOURCE: Live Supabase ΓÇö products, orders, notifications tables * REAL-TIME: Supabase channel for orders (confirmed) + notifications */import { useState, useEffect, useRef, useCallback } from "react";import { motion, AnimatePresence } from "framer-motion";import {  TrendingUp,  Package,  Clock,  Users,  CheckCircle2,  AlertCircle,  Truck,  Bell,  X,  ShoppingBag,  ChevronRight,} from "lucide-react";import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";import { Badge } from "@/components/ui/badge";import { Switch } from "@/components/ui/switch";import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} from "@/components/ui/table";import { supabase } from "@/integrations/supabase/client";import { useAuth } from "@/context/AuthContext";import { formatNaira, getStatusColor } from "@/lib/formatters";import type { Tables, Database } from "@/integrations/supabase/types";import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";import { toast } from "sonner";type Product = Tables<"products">;type Order = Tables<"orders">;const fadeUp = {  hidden: { opacity: 0, y: 20 },  visible: (i: number) => ({    opacity: 1,    y: 0,    transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" as const },  }),};const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {  pending: AlertCircle,  confirmed: Bell,  processing: Clock,  preparing: Package,  packaged: Package,  "in-transit": Truck,  delivered: CheckCircle2,};// ΓöÇΓöÇΓöÇ Incoming Order Modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇinterface IncomingOrderModalProps {  order: Order | null;  onAccept: (order: Order) => Promise<void>;  onDecline: (order: Order) => void;  accepting: boolean;}function IncomingOrderModal({ order, onAccept, onDecline, accepting }: IncomingOrderModalProps) {  if (!order) return null;  const items = Array.isArray(order.items) ? (order.items as any[]) : [];  return (    <AnimatePresence>      {order && (        <>          {/* Backdrop */}          <motion.div            key="backdrop"            initial={{ opacity: 0 }}            animate={{ opacity: 1 }}            exit={{ opacity: 0 }}            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"          />          {/* Modal */}          <motion.div            key="modal"            initial={{ opacity: 0, scale: 0.88, y: 40 }}            animate={{ opacity: 1, scale: 1, y: 0 }}            exit={{ opacity: 0, scale: 0.92, y: 20 }}            transition={{ type: "spring", stiffness: 300, damping: 24 }}            className="fixed inset-0 z-50 flex items-center justify-center p-4"          >            <div className="w-full max-w-md bg-background rounded-2xl shadow-2xl border border-border overflow-hidden">              {/* Pulsing accent stripe */}              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-green-500 to-emerald-400 animate-pulse" />              <div className="p-6">                {/* Header */}                <div className="flex items-start justify-between mb-5">                  <div>                    <div className="flex items-center gap-2 mb-1">                      <span className="relative flex h-3 w-3">                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />                        <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />                      </span>                      <p className="text-xs font-body text-primary font-semibold uppercase tracking-widest">                        New Incoming Order                      </p>                    </div>                    <h2 className="text-2xl font-display font-bold text-foreground">                      Order #{order.order_number}                    </h2>                    <p className="text-sm font-body text-muted-foreground mt-0.5">                      {new Date(order.created_at).toLocaleString("en-NG", {                        dateStyle: "medium",                        timeStyle: "short",                      })}                    </p>                  </div>                  <button                    onClick={() => onDecline(order)}                    className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"                  >                    <X className="h-4 w-4" />                  </button>                </div>                {/* Order items */}                <div className="rounded-xl border border-border bg-muted/30 p-4 mb-5 space-y-2">                  {items.length > 0 ? (                    items.map((item: any, i: number) => (                      <div key={i} className="flex items-center justify-between font-body text-sm">                        <span className="text-foreground">                          {item?.name || "Item"} ├ù {item?.quantity || 1}                        </span>                        <span className="tabular-nums text-muted-foreground">                          {formatNaira((item?.price || 0) * (item?.quantity || 1))}                        </span>                      </div>                    ))                  ) : (                    <p className="text-sm font-body text-muted-foreground text-center py-2">                      Order details loadingΓÇª                    </p>                  )}                  <div className="pt-2 border-t border-border flex items-center justify-between">                    <span className="font-body text-sm font-semibold text-foreground">Order Total</span>                    <span className="font-display text-lg font-bold text-primary tabular-nums">                      {formatNaira(Number(order.total_amount))}                    </span>                  </div>                </div>                {/* Delivery info */}                {order.delivery_address && (                  <div className="flex items-start gap-2 mb-5 text-sm font-body text-muted-foreground">                    <Truck className="h-4 w-4 mt-0.5 shrink-0 text-primary" />                    <span className="leading-snug">{order.delivery_address}</span>                  </div>                )}                {/* CTA */}                <div className="grid grid-cols-2 gap-3">                                    <button                    onClick={() => onAccept(order)}                    disabled={accepting}                    className="font-body gap-2 bg-primary hover:bg-primary/90"                  >                    {accepting ? (                      <>                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />                        AcceptingΓÇª                      </>                    ) : (                      <>                        <CheckCircle2 className="h-4 w-4" />                        Accept Order                      </>                    )}                  </button>                </div>              </div>            </div>          </motion.div>        </>      )}    </AnimatePresence>  );}// ΓöÇΓöÇΓöÇ Main Dashboard ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇexport default function SellerDashboard() {
+/**
+ * Seller Dashboard — Vendor Portal Overview
+ * DATA SOURCE: Live Supabase — products, orders, notifications tables
+ * REAL-TIME: Supabase channel for orders (confirmed) + notifications
+ */
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  TrendingUp,
+  Package,
+  Clock,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  Truck,
+  Bell,
+  X,
+  ShoppingBag,
+  ChevronRight,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { formatNaira, getStatusColor } from "@/lib/formatters";
+import type { Tables, Database } from "@/integrations/supabase/types";
+import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
+import { toast } from "sonner";
+
+type Product = Tables<"products">;
+type Order = Tables<"orders">;
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" as const },
+  }),
+};
+
+const statusIcons: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
+  pending: AlertCircle,
+  confirmed: Bell,
+  processing: Clock,
+  preparing: Package,
+  packaged: Package,
+  "in-transit": Truck,
+  delivered: CheckCircle2,
+};
+
+// ─── Incoming Order Modal ────────────────────────────────────────────────────
+interface IncomingOrderModalProps {
+  order: Order | null;
+  onAccept: (order: Order) => Promise<void>;
+  onDecline: (order: Order) => void;
+  accepting: boolean;
+}
+
+function IncomingOrderModal({
+  order,
+  onAccept,
+  onDecline,
+  accepting,
+}: IncomingOrderModalProps) {
+  if (!order) return null;
+  const items = Array.isArray(order.items) ? (order.items as any[]) : [];
+
+  return (
+    <AnimatePresence>
+      {order && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          />
+
+          {/* Modal */}
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0, scale: 0.88, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="w-full max-w-md bg-background rounded-2xl shadow-2xl border border-border overflow-hidden">
+              {/* Pulsing accent stripe */}
+              <div className="h-1.5 w-full bg-gradient-to-r from-primary via-green-500 to-emerald-400 animate-pulse" />
+
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-5">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+                      </span>
+                      <p className="text-xs font-body text-primary font-semibold uppercase tracking-widest">
+                        New Incoming Order
+                      </p>
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-foreground">
+                      Order #{order.order_number}
+                    </h2>
+                    <p className="text-sm font-body text-muted-foreground mt-0.5">
+                      {new Date(order.created_at).toLocaleString("en-NG", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onDecline(order)}
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Order items */}
+                <div className="rounded-xl border border-border bg-muted/30 p-4 mb-5 space-y-2">
+                  {items.length > 0 ? (
+                    items.map((item: any, i: number) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between font-body text-sm"
+                      >
+                        <span className="text-foreground">
+                          {item?.name || "Item"} × {item?.quantity || 1}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {formatNaira(
+                            (item?.price || 0) * (item?.quantity || 1),
+                          )}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-body text-muted-foreground text-center py-2">
+                      Order details loading…
+                    </p>
+                  )}
+                  <div className="pt-2 border-t border-border flex items-center justify-between">
+                    <span className="font-body text-sm font-semibold text-foreground">
+                      Order Total
+                    </span>
+                    <span className="font-display text-lg font-bold text-primary tabular-nums">
+                      {formatNaira(Number(order.total_amount))}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Delivery info */}
+                {order.delivery_address && (
+                  <div className="flex items-start gap-2 mb-5 text-sm font-body text-muted-foreground">
+                    <Truck className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                    <span className="leading-snug">
+                      {order.delivery_address}
+                    </span>
+                  </div>
+                )}
+
+                {/* CTA */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => onDecline(order)}
+                    disabled={accepting}
+                    className="font-body border-destructive/30 text-destructive hover:bg-destructive/10"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => onAccept(order)}
+                    disabled={accepting}
+                    className="font-body gap-2 bg-primary hover:bg-primary/90"
+                  >
+                    {accepting ? (
+                      <>
+                        <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Accepting…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Accept Order
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
+export default function SellerDashboard() {
+  const { user } = useAuth();
+  const [inventory, setInventory] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [incomingOrder, setIncomingOrder] = useState<Order | null>(null);
+  const [accepting, setAccepting] = useState(false);
+
+  // Track already-seen order IDs so we don't re-trigger the modal on re-fetch
+  const seenOrderIds = useRef<Set<string>>(new Set());
+
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    const [prodRes, ordRes] = await Promise.all([
+      supabase.from("products").select("*").eq("vendor_id", user.id),
+      supabase
+        .from("orders")
+        .select("*")
+        .eq("vendor_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(15),
+    ]);
+    if (prodRes.data) setInventory(prodRes.data);
+    if (ordRes.data) setOrders(ordRes.data);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchData();
+
+    // Real-time channel: watch orders INSERT/UPDATE for this vendor
+    const ordersChannel = supabase
+      .channel(`seller-orders-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+          filter: `vendor_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newOrder = payload.new as Order;
+          // Show modal for any new order with status 'confirmed'
+          if (
+            newOrder.status === "confirmed" &&
+            !seenOrderIds.current.has(newOrder.id)
+          ) {
+            seenOrderIds.current.add(newOrder.id);
+            setIncomingOrder(newOrder);
+          }
+          fetchData();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `vendor_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const updatedOrder = payload.new as Order;
+          // Catch status transitions to 'confirmed' (e.g., payment confirmation)
+          if (
+            updatedOrder.status === "confirmed" &&
+            !seenOrderIds.current.has(updatedOrder.id)
+          ) {
+            seenOrderIds.current.add(updatedOrder.id);
+            setIncomingOrder(updatedOrder);
+          }
+          fetchData();
+        },
+      );
+    ordersChannel.subscribe();
+
+    // Also watch the notifications table for new order notifications
+    const notifChannel = supabase.channel(`seller-notifs-${user.id}`).on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${user.id}`,
+      },
+      (payload) => {
+        const notif = payload.new as Tables<"notifications">;
+        if (notif.type === "new_order") {
+          toast.info(notif.message || "You have a new order!", {
+            description: "Check your orders panel",
+            icon: <Bell className="h-4 w-4" />,
+          });
+        }
+      },
+    );
+    notifChannel.subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(notifChannel);
+    };
+  }, [user, fetchData]);
+
+  const handleAcceptOrder = async (order: Order) => {
+    setAccepting(true);
+    const updatePayload = { status: "accepted" as const };
+    console.log("Payload being sent to Supabase:", updatePayload);
+    const { error } = await supabase
+      .from("orders")
+      .update(updatePayload)
+      .eq("id", order.id);
+    setAccepting(false);
+
+    if (error) {
+      toast.error("Failed to accept order. Please try again.");
+      return;
+    }
+
+    toast.success(`Order #${order.order_number} accepted — now Processing!`);
+    setIncomingOrder(null);
+    fetchData();
+  };
+
   const handleAdvanceOrder = async (orderId: string, currentStatus: string) => {
     if (currentStatus !== "processing") return;
-    const { error } = await supabase.from("orders").update({ status: "packaged" }).eq("id", orderId);
-    if (error) toast.error("Failed to update status");
-    else {
-      toast.success("Order marked as packaged!");
-      fetchData();
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "packaged" })
+      .eq("id", orderId);
+
+    if (error) {
+      toast.error("Failed to update order status. Please try again.");
+      return;
+    }
+
+    toast.success("Order marked as packaged!");
+    fetchData();
+  };
+
+  const handleDeclineOrder = (order: Order) => {
+    setIncomingOrder(null);
+    toast.warning(`Order #${order.order_number} was dismissed.`, {
+      description: "You can still manage it from the Orders page.",
+    });
+  };
+
+  const toggleStock = async (id: string, current: boolean) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ in_stock: !current })
+      .eq("id", id);
+    if (!error) {
+      setInventory((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, in_stock: !current } : item,
+        ),
+      );
     }
   };
-  const { user } = useAuth();  const [inventory, setInventory] = useState<Product[]>([]);  const [orders, setOrders] = useState<Order[]>([]);  const [loading, setLoading] = useState(true);  const [incomingOrder, setIncomingOrder] = useState<Order | null>(null);  const [accepting, setAccepting] = useState(false);  // Track already-seen order IDs so we don't re-trigger the modal on re-fetch  const seenOrderIds = useRef<Set<string>>(new Set());  const fetchData = useCallback(async () => {    if (!user) return;    const [prodRes, ordRes] = await Promise.all([      supabase.from("products").select("*").eq("vendor_id", user.id),      supabase        .from("orders")        .select("*")        .eq("vendor_id", user.id)        .order("created_at", { ascending: false })        .limit(15),    ]);    if (prodRes.data) setInventory(prodRes.data);    if (ordRes.data) setOrders(ordRes.data);    setLoading(false);  }, [user]);  useEffect(() => {    if (!user) return;    fetchData();    // Real-time channel: watch orders INSERT/UPDATE for this vendor    const ordersChannel = supabase      .channel(`seller-orders-${user.id}`)      .on(        "postgres_changes",        {          event: "INSERT",          schema: "public",          table: "orders",          filter: `vendor_id=eq.${user.id}`,        },        (payload) => {          const newOrder = payload.new as Order;          // Show modal for any new order with status 'confirmed'          if (newOrder.status === "confirmed" && !seenOrderIds.current.has(newOrder.id)) {            seenOrderIds.current.add(newOrder.id);            setIncomingOrder(newOrder);          }          fetchData();        }      )      .on(        "postgres_changes",        {          event: "UPDATE",          schema: "public",          table: "orders",          filter: `vendor_id=eq.${user.id}`,        },        (payload) => {          const updatedOrder = payload.new as Order;          // Catch status transitions to 'confirmed' (e.g., payment confirmation)          if (            updatedOrder.status === "confirmed" &&            !seenOrderIds.current.has(updatedOrder.id)          ) {            seenOrderIds.current.add(updatedOrder.id);            setIncomingOrder(updatedOrder);          }          fetchData();        }      );    ordersChannel.subscribe();    // Also watch the notifications table for new order notifications    const notifChannel = supabase      .channel(`seller-notifs-${user.id}`)      .on(        "postgres_changes",        {          event: "INSERT",          schema: "public",          table: "notifications",          filter: `user_id=eq.${user.id}`,        },        (payload) => {          const notif = payload.new as Tables<"notifications">;          if (notif.type === "new_order") {            toast.info(notif.message || "You have a new order!", {              description: "Check your orders panel",              icon: <Bell className="h-4 w-4" />,            });          }        }      );    notifChannel.subscribe();    return () => {      supabase.removeChannel(ordersChannel);      supabase.removeChannel(notifChannel);    };  }, [user, fetchData]);  const handleAcceptOrder = async (order: Order) => {    setAccepting(true);    const updatePayload = { status: 'processing' as const };    console.log('Payload being sent to Supabase:', updatePayload);    const { error } = await supabase      .from("orders")      .update(updatePayload)      .eq("id", order.id);    setAccepting(false);    if (error) {      toast.error("Failed to accept order. Please try again.");      return;    }    toast.success(`Order #${order.order_number} accepted ΓÇö now Preparing!`);    setIncomingOrder(null);    fetchData();  };  const handleDeclineOrder = (order: Order) => {    setIncomingOrder(null);    toast.warning(`Order #${order.order_number} was dismissed.`, {      description: "You can still manage it from the Orders page.",    });  };  const toggleStock = async (id: string, current: boolean) => {    const { error } = await supabase      .from("products")      .update({ in_stock: !current })      .eq("id", id);    if (!error) {      setInventory((prev) =>        prev.map((item) => (item.id === id ? { ...item, in_stock: !current } : item))      );    }  };  const activeProducts = inventory.filter((p) => p.in_stock).length;  const pendingOrders = orders.filter((o) => o.status === "pending" || o.status === "confirmed").length;  const totalSales = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);  const metricCards = [    { label: "Total Sales", value: formatNaira(totalSales), icon: TrendingUp, accent: "text-primary" },    { label: "Pending / Confirmed", value: pendingOrders.toString(), icon: Clock, accent: "text-accent" },    { label: "Active Products", value: activeProducts.toString(), icon: Package, accent: "text-primary" },    { label: "Total Orders", value: orders.length.toString(), icon: Users, accent: "text-accent" },  ];  if (loading) {    return <DashboardSkeleton />;  }  return (    <>      {/* ΓöÇΓöÇ Incoming Order Overlay ΓöÇΓöÇ */}      <IncomingOrderModal        order={incomingOrder}        onAccept={handleAcceptOrder}        onDecline={handleDeclineOrder}        accepting={accepting}      />      <div className="space-y-8 max-w-7xl">        {/* Page header */}        <div>          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">            Vendor Dashboard          </h1>          <p className="text-muted-foreground font-body mt-1">            Welcome back! Here's a live overview of your store performance.          </p>        </div>        {/* Metric cards */}        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">          {metricCards.map((metric, i) => (            <motion.div              key={metric.label}              custom={i}              initial="hidden"              animate="visible"              variants={fadeUp}            >              <Card className="border border-border hover:shadow-md transition-shadow">                <CardContent className="p-5">                  <div className="flex items-center justify-between">                    <div>                      <p className="text-xs font-medium text-muted-foreground font-body uppercase tracking-wide">                        {metric.label}                      </p>                      <p className="text-2xl font-bold font-display mt-1 text-foreground">                        {metric.value}                      </p>                    </div>                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10 ${metric.accent}`}>                      <metric.icon className="h-5 w-5" />                    </div>                  </div>                </CardContent>              </Card>            </motion.div>          ))}        </div>        {/* Two-column layout */}        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">          {/* Inventory Management */}          <motion.div            className="xl:col-span-2"            initial={{ opacity: 0, y: 20 }}            animate={{ opacity: 1, y: 0 }}            transition={{ delay: 0.4, duration: 0.4 }}          >            <Card className="border border-border">              <CardHeader className="pb-3">                <CardTitle className="text-lg font-display">Inventory Management</CardTitle>                <CardDescription className="font-body text-sm">                  Manage your product stock levels and availability.                </CardDescription>              </CardHeader>              <CardContent className="p-0">                <div className="overflow-x-auto">                  <Table>                    <TableHeader>                      <TableRow className="bg-muted/40">                        <TableHead className="font-body text-xs uppercase tracking-wider">Product</TableHead>                        <TableHead className="font-body text-xs uppercase tracking-wider">Category</TableHead>                        <TableHead className="font-body text-xs uppercase tracking-wider text-right">Price</TableHead>                        <TableHead className="font-body text-xs uppercase tracking-wider text-center">Stock</TableHead>                        <TableHead className="font-body text-xs uppercase tracking-wider text-center">Status</TableHead>                      </TableRow>                    </TableHeader>                    <TableBody>                      {inventory.map((item) => (                        <TableRow key={item.id} className="group hover:bg-muted/20 transition-colors">                          <TableCell className="font-medium font-body text-foreground">                            {item.name}                          </TableCell>                          <TableCell>                            <Badge variant="secondary" className="font-body text-[11px] font-normal">                              {item.category}                            </Badge>                          </TableCell>                          <TableCell className="text-right font-body tabular-nums">                            {formatNaira(Number(item.price))}                          </TableCell>                          <TableCell className="text-center">                            <span                              className={`font-body tabular-nums font-medium ${                                item.stock_level === 0                                  ? "text-destructive"                                  : item.stock_level < 15                                  ? "text-accent"                                  : "text-primary"                              }`}                            >                              {item.stock_level}                            </span>                          </TableCell>                          <TableCell className="text-center">                            <div className="flex items-center justify-center gap-2">                              <Switch                                checked={item.in_stock}                                onCheckedChange={() => toggleStock(item.id, item.in_stock)}                                className="data-[state=checked]:bg-primary"                              />                              <span className="text-xs font-body text-muted-foreground w-16">                                {item.in_stock ? "In Stock" : "Out"}                              </span>                            </div>                          </TableCell>                        </TableRow>                      ))}                      {inventory.length === 0 && (                        <TableRow>                          <TableCell colSpan={5} className="text-center py-12">                            <div className="flex flex-col items-center">                              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">                                <Package className="h-7 w-7 text-primary" />                              </div>                              <p className="font-display text-base font-semibold text-foreground mb-1">No products yet</p>                              <p className="font-body text-sm text-muted-foreground max-w-xs">                                Head to "My Products" to add your first item and start selling!                              </p>                            </div>                          </TableCell>                        </TableRow>                      )}                    </TableBody>                  </Table>                </div>              </CardContent>            </Card>          </motion.div>          {/* Recent Orders */}          <motion.div            initial={{ opacity: 0, y: 20 }}            animate={{ opacity: 1, y: 0 }}            transition={{ delay: 0.5, duration: 0.4 }}          >            <Card className="border border-border h-full">              <CardHeader className="pb-3">                <div className="flex items-center justify-between">                  <CardTitle className="text-lg font-display">Recent Orders</CardTitle>                  {orders.filter((o) => o.status === "confirmed").length > 0 && (                    <Badge className="bg-primary text-primary-foreground text-[10px] font-body gap-1">                      <span className="relative flex h-2 w-2">                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />                      </span>                      {orders.filter((o) => o.status === "confirmed").length} Incoming                    </Badge>                  )}                </div>                <CardDescription className="font-body text-sm">                  Live order feed for your store.                </CardDescription>              </CardHeader>              <CardContent className="space-y-2.5">                {orders.length === 0 && (                  <div className="flex flex-col items-center py-10">                    <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-3">                      <ShoppingBag className="h-7 w-7 text-accent" />                    </div>                    <p className="font-display text-base font-semibold text-foreground mb-1">No orders yet</p>                    <p className="font-body text-sm text-muted-foreground max-w-xs text-center">                      Once customers purchase your products, orders will appear here.                    </p>                  </div>                )}                {orders.slice(0, 8).map((order) => {                  const StatusIcon = statusIcons[order.status] || Clock;                  const isIncoming = order.status === "confirmed";
-                  const isProcessing = order.status === "processing";                  return (                    <div                      key={order.id}                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${                        isIncoming                          ? "border-primary/40 bg-primary/5 hover:bg-primary/10"                          : "border-border/50 hover:border-border hover:bg-muted/20"                      }`}                      onClick={() => { if (isIncoming) setIncomingOrder(order); }}                    >                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isIncoming ? "bg-primary/15" : isProcessing ? "bg-accent/15" : "bg-muted"}`}>                        <StatusIcon className={`h-4 w-4 ${isIncoming ? "text-primary" : isProcessing ? "text-accent" : "text-muted-foreground"}`} />                      </div>                      <div className="flex-1 min-w-0">                        <div className="flex items-center justify-between gap-2">                          <p className="text-sm font-medium font-body text-foreground truncate">                            #{order.order_number}                          </p>                          <Badge                            variant="secondary"                            className={`text-[10px] font-body shrink-0 ${getStatusColor(order.status as string)}`}                          >                            {order.status}                          </Badge>                        </div>                        <p className="text-sm font-semibold text-foreground font-body mt-0.5 tabular-nums">                          {formatNaira(Number(order.total_amount))}                        </p>                      </div>                      {isIncoming && <ChevronRight className="h-4 w-4 text-primary shrink-0" />}
+
+  const activeProducts = inventory.filter((p) => p.in_stock).length;
+  const pendingOrders = orders.filter(
+    (o) => o.status === "pending" || o.status === "confirmed",
+  ).length;
+  const totalSales = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+  const metricCards = [
+    {
+      label: "Total Sales",
+      value: formatNaira(totalSales),
+      icon: TrendingUp,
+      accent: "text-primary",
+    },
+    {
+      label: "Pending / Confirmed",
+      value: pendingOrders.toString(),
+      icon: Clock,
+      accent: "text-accent",
+    },
+    {
+      label: "Active Products",
+      value: activeProducts.toString(),
+      icon: Package,
+      accent: "text-primary",
+    },
+    {
+      label: "Total Orders",
+      value: orders.length.toString(),
+      icon: Users,
+      accent: "text-accent",
+    },
+  ];
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  return (
+    <>
+      {/* ── Incoming Order Overlay ── */}
+      <IncomingOrderModal
+        order={incomingOrder}
+        onAccept={handleAcceptOrder}
+        onDecline={handleDeclineOrder}
+        accepting={accepting}
+      />
+
+      <div className="space-y-8 max-w-7xl">
+        {/* Page header */}
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+            Vendor Dashboard
+          </h1>
+          <p className="text-muted-foreground font-body mt-1">
+            Welcome back! Here's a live overview of your store performance.
+          </p>
+        </div>
+
+        {/* Metric cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {metricCards.map((metric, i) => (
+            <motion.div
+              key={metric.label}
+              custom={i}
+              initial="hidden"
+              animate="visible"
+              variants={fadeUp}
+            >
+              <Card className="border border-border hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground font-body uppercase tracking-wide">
+                        {metric.label}
+                      </p>
+                      <p className="text-2xl font-bold font-display mt-1 text-foreground">
+                        {metric.value}
+                      </p>
+                    </div>
+                    <div
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10 ${metric.accent}`}
+                    >
+                      <metric.icon className="h-5 w-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Inventory Management */}
+          <motion.div
+            className="xl:col-span-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
+          >
+            <Card className="border border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-display">
+                  Inventory Management
+                </CardTitle>
+                <CardDescription className="font-body text-sm">
+                  Manage your product stock levels and availability.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="font-body text-xs uppercase tracking-wider">
+                          Product
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wider">
+                          Category
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wider text-right">
+                          Price
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wider text-center">
+                          Stock
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wider text-center">
+                          Status
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inventory.map((item) => (
+                        <TableRow
+                          key={item.id}
+                          className="group hover:bg-muted/20 transition-colors"
+                        >
+                          <TableCell className="font-medium font-body text-foreground">
+                            {item.name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className="font-body text-[11px] font-normal"
+                            >
+                              {item.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-body tabular-nums">
+                            {formatNaira(Number(item.price))}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span
+                              className={`font-body tabular-nums font-medium ${
+                                item.stock_level === 0
+                                  ? "text-destructive"
+                                  : item.stock_level < 15
+                                    ? "text-accent"
+                                    : "text-primary"
+                              }`}
+                            >
+                              {item.stock_level}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Switch
+                                checked={item.in_stock}
+                                onCheckedChange={() =>
+                                  toggleStock(item.id, item.in_stock)
+                                }
+                                className="data-[state=checked]:bg-primary"
+                              />
+                              <span className="text-xs font-body text-muted-foreground w-16">
+                                {item.in_stock ? "In Stock" : "Out"}
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {inventory.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-12">
+                            <div className="flex flex-col items-center">
+                              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                                <Package className="h-7 w-7 text-primary" />
+                              </div>
+                              <p className="font-display text-base font-semibold text-foreground mb-1">
+                                No products yet
+                              </p>
+                              <p className="font-body text-sm text-muted-foreground max-w-xs">
+                                Head to "My Products" to add your first item and
+                                start selling!
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Recent Orders */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+          >
+            <Card className="border border-border h-full">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-display">
+                    Recent Orders
+                  </CardTitle>
+                  {orders.filter((o) => o.status === "confirmed").length >
+                    0 && (
+                    <Badge className="bg-primary text-primary-foreground text-[10px] font-body gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                      </span>
+                      {orders.filter((o) => o.status === "confirmed").length}{" "}
+                      Incoming
+                    </Badge>
+                  )}
+                </div>
+                <CardDescription className="font-body text-sm">
+                  Live order feed for your store.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                {orders.length === 0 && (
+                  <div className="flex flex-col items-center py-10">
+                    <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-3">
+                      <ShoppingBag className="h-7 w-7 text-accent" />
+                    </div>
+                    <p className="font-display text-base font-semibold text-foreground mb-1">
+                      No orders yet
+                    </p>
+                    <p className="font-body text-sm text-muted-foreground max-w-xs text-center">
+                      Once customers purchase your products, orders will appear
+                      here.
+                    </p>
+                  </div>
+                )}
+                {orders.slice(0, 8).map((order) => {
+                  const StatusIcon = statusIcons[order.status] || Clock;
+                  const isIncoming = order.status === "confirmed";
+                  const isProcessing = order.status === "processing";
+                  return (
+                    <div
+                      key={order.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                        isIncoming
+                          ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                          : "border-border/50 hover:border-border hover:bg-muted/20"
+                      }`}
+                      onClick={() => isIncoming && setIncomingOrder(order)}
+                    >
+                      <div
+                        className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${isIncoming ? "bg-primary/15" : isProcessing ? "bg-accent/15" : "bg-muted"}`}
+                      >
+                        <StatusIcon
+                          className={`h-4 w-4 ${isIncoming ? "text-primary" : isProcessing ? "text-accent" : "text-muted-foreground"}`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium font-body text-foreground truncate">
+                            #{order.order_number}
+                          </p>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] font-body shrink-0 ${getStatusColor(order.status as string)}`}
+                          >
+                            {order.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-semibold text-foreground font-body mt-0.5 tabular-nums">
+                          {formatNaira(Number(order.total_amount))}
+                        </p>
+                      </div>
+
+                      {isIncoming && (
+                        <ChevronRight className="h-4 w-4 text-primary shrink-0" />
+                      )}
                       {isProcessing && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleAdvanceOrder(order.id, order.status); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdvanceOrder(order.id, order.status);
+                          }}
                           className="ml-auto shrink-0 h-7 text-[11px] font-body font-semibold px-2.5 rounded-lg bg-accent/15 text-accent hover:bg-accent/30 border border-accent/30 transition-colors"
                         >
                           Mark Packaged
                         </button>
-                      )}                    </div>                  );                })}              </CardContent>            </Card>          </motion.div>        </div>      </div>    </>  );}
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    </>
+  );
+}
