@@ -34,7 +34,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Database } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 import { toast } from "sonner";
 
@@ -309,7 +309,7 @@ export default function SellerDashboard() {
     setAccepting(true);
     const { error } = await supabase
       .from("orders")
-      .update({ status: "preparing" })
+      .update({ status: "preparing" as Database["public"]["Enums"]["order_status"] })
       .eq("id", order.id);
     setAccepting(false);
 
