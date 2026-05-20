@@ -21,22 +21,18 @@ Deno.serve(async (req) => {
 
     // The webhook payload contains `record` (the updated order row) or standard JSON if called directly
     const record = body.record ?? body;
-    if (!record && !body.action) {
-      return new Response(JSON.stringify({ error: "Missing record or action payload" }), {
+    if (!record) {
+      return new Response(JSON.stringify({ error: "Missing record payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const status = record?.status;
-    const action = body.action;
+    const status = record.status;
     let targetUserId: string | null = null;
     let pushMessage = "";
 
-    if (action === "cart_add") {
-      targetUserId = body.user_id;
-      pushMessage = body.message || "An item was added to your cart!";
-    } else if (status === "pending") {
+    if (status === "pending") {
       targetUserId = record.vendor_id;
       pushMessage = "New Order 🚨! Please confirm.";
     } else if (status === "driver_assigned") {
@@ -68,9 +64,9 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileError) {
-      console.error(`Error fetching profile for user_id ${targetUserId}:`, profileError);
+      console.log(`Error fetching profile for user_id ${targetUserId}:`, profileError);
       return new Response(JSON.stringify({ error: profileError.message }), {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -94,7 +90,7 @@ Deno.serve(async (req) => {
           ok: false,
           error: "OneSignal credentials missing from Deno environment variables",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -123,11 +119,11 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error in onesignal-dispatcher:", error);
+    console.log("Error in onesignal-dispatcher:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
