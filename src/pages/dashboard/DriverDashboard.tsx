@@ -38,7 +38,7 @@ export default function DriverDashboard() {
         supabase
           .from("orders")
           .select("*, delivery_jobs(*)")
-          .eq("status", "preparing")
+          .eq("status", "packaged")
           .order("created_at", { ascending: false }),
         supabase
           .from("delivery_jobs")
@@ -111,7 +111,7 @@ export default function DriverDashboard() {
     const channel = supabase
       .channel("driver-jobs-rt-all")
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: "status=eq.preparing" }, () => fetchAll());
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: "status=eq.packaged" }, () => fetchAll());
     channel.subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -164,7 +164,7 @@ export default function DriverDashboard() {
       // Update the corresponding order status directly to 'driver_assigned'
       const { error: orderError } = await supabase
         .from("orders")
-        .update({ status: "driver_assigned" as any })
+        .update({ status: "in-transit" as any })
         .eq("id", orderId);
 
       if (orderError) throw orderError;
