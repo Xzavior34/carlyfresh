@@ -309,7 +309,7 @@ export default function SellerDashboard() {
     setAccepting(true);
     const { error } = await supabase
       .from("orders")
-      .update({ status: "preparing" as Database["public"]["Enums"]["order_status"] })
+      .update({ status: 'preparing' as const })
       .eq("id", order.id);
     setAccepting(false);
 

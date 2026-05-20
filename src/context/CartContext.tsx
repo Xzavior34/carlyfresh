@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 interface CartItem {
   id: string;
@@ -52,6 +53,7 @@ export function isBulkActive(item: Pick<CartItem, "bulkMinQty" | "bulkPrice" | "
 }
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
@@ -74,6 +76,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     bulkMinQty: number | null = null,
     bulkPrice: number | null = null,
   ) => {
+    // Trigger push notification to the current user
+    if (user) {
+      supabase.functions.invoke('onesignal-dispatcher', {
+        body: {
+          action: 'cart_add',
+          user_id: user.id,
+          message: `${name} has been added to your cart! 🛒`
+        }
+      }).catch(err => console.warn("Push notification failed", err));
+    }
+
     setItems((prev) => {
       const existing = prev.find((item) => item.id === id);
       if (existing) {

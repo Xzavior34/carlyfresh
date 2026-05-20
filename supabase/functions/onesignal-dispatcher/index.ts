@@ -21,18 +21,22 @@ Deno.serve(async (req) => {
 
     // The webhook payload contains `record` (the updated order row) or standard JSON if called directly
     const record = body.record ?? body;
-    if (!record) {
-      return new Response(JSON.stringify({ error: "Missing record payload" }), {
+    if (!record && !body.action) {
+      return new Response(JSON.stringify({ error: "Missing record or action payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const status = record.status;
+    const status = record?.status;
+    const action = body.action;
     let targetUserId: string | null = null;
     let pushMessage = "";
 
-    if (status === "pending") {
+    if (action === "cart_add") {
+      targetUserId = body.user_id;
+      pushMessage = body.message || "An item was added to your cart!";
+    } else if (status === "pending") {
       targetUserId = record.vendor_id;
       pushMessage = "New Order 🚨! Please confirm.";
     } else if (status === "driver_assigned") {
