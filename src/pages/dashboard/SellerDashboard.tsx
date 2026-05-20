@@ -307,7 +307,7 @@ export default function SellerDashboard() {
 
   const handleAcceptOrder = async (order: Order) => {
     setAccepting(true);
-    const updatePayload = { status: 'preparing' as const };
+    const updatePayload = { status: 'accepted' as const };
     console.log('Payload being sent to Supabase:', updatePayload);
     const { error } = await supabase
       .from("orders")
