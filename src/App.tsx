@@ -167,7 +167,7 @@ const OneSignalInitializer = () => {
                 .update({ push_token: token })
                 .eq("user_id", user.id);  // profiles table uses user_id as the FK
               if (error) {
-                console.log("Error saving push token to Supabase:", error);
+                console.error("Error saving push token to Supabase:", error);
               } else {
                 console.log("OneSignal push token saved to profile:", token);
               }
@@ -312,3 +312,4 @@ const App = () => (
 );
 
 export default App;
+
