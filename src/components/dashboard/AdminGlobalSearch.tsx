@@ -51,8 +51,7 @@ export default function AdminGlobalSearch() {
     return () => clearTimeout(t);
   }, [q]);
 
-  // THE FIX: Do not use the ID in the path. Route to the main tables.
-  // We attach a "?search=" query string so your tables can optionally filter by it.
+  // COMPATIBILITY LAYER: Generates secure query string URLs to prevent 404 router breaks
   const linkFor = (r: Result) => {
     if (r.kind === "product") return `/admin/products?search=${encodeURIComponent(r.label)}`;
     if (r.kind === "order") {
@@ -77,12 +76,12 @@ export default function AdminGlobalSearch() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => q && setOpen(true)}
-          className="pl-9 font-body h-9 bg-muted/40"
+          className="pl-9 font-body h-9 bg-muted/40 transition-all focus-visible:ring-1 focus-visible:ring-primary"
         />
         {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
       </div>
       {open && q.trim() && (
-        <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
+        <div className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg border border-border bg-popover shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
           {results.length === 0 && !loading ? (
             <p className="py-6 text-center font-body text-sm text-muted-foreground">No matches found</p>
           ) : (
