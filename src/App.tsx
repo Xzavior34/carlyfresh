@@ -55,11 +55,6 @@ import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminDriverWithdrawals from "./pages/admin/AdminDriverWithdrawals";
 import AdminBlog from "./pages/admin/AdminBlog";
 
-// NEW: Detail Pages required for the Search Bar navigation
-import AdminProductDetail from "./pages/admin/AdminProductDetail";
-import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
-import AdminUserDetail from "./pages/admin/AdminUserDetail";
-
 // Vendor pages
 import VendorOverview from "./pages/vendor/VendorOverview";
 import VendorProducts from "./pages/vendor/VendorProducts";
@@ -106,7 +101,6 @@ const OneSignalInitializer = () => {
     return OneSignal;
   };
 
-  // ── Effect 1: SDK init (runs once on mount) ──────────────────────────────────
   useEffect(() => {
     const initOneSignal = async () => {
       try {
@@ -116,9 +110,6 @@ const OneSignalInitializer = () => {
             appId: "e6446b40-1453-4ccd-929d-d8ccb8c7ff91",
             allowLocalhostAsSecureOrigin: true,
           });
-          console.log("OneSignal initialized successfully");
-        } else {
-          console.warn("OneSignal initialization bypassed: init function not found");
         }
       } catch (error) {
         console.warn("OneSignal bypassed:", error);
@@ -127,11 +118,9 @@ const OneSignalInitializer = () => {
     initOneSignal();
   }, []);
 
-  // ── Effect 2: User binding + permission prompt + token sync ─────────────────
   useEffect(() => {
     if (!user || !role) return;
 
-    // Only prompt for buyers, sellers, and drivers
     const allowedRoles = ["buyer", "seller", "driver"];
     if (!allowedRoles.includes(role)) return;
 
@@ -142,24 +131,19 @@ const OneSignalInitializer = () => {
         const os = getOneSignal();
         if (!os) return;
 
-        // Step 1: Bind device to the authenticated user (v16+ alias API)
-        // Replaces the deprecated os.login() call
         if (os.User && typeof os.User.addAlias === "function") {
           await os.User.addAlias("external_id", user.id);
         }
 
-        // Step 2: Request push permission via the modern Slidedown API
         if (os.Slidedown && typeof os.Slidedown.promptPush === "function") {
           await os.Slidedown.promptPush();
         } else if (
           os.Notifications &&
           typeof os.Notifications.requestPermission === "function"
         ) {
-          // Fallback for environments where Slidedown isn't available
           await os.Notifications.requestPermission();
         }
 
-        // Step 3: Read token from PushSubscription and sync to Supabase
         const syncToken = async () => {
           try {
             const token: string | null | undefined =
@@ -168,11 +152,9 @@ const OneSignalInitializer = () => {
               const { error } = await supabase
                 .from("profiles")
                 .update({ push_token: token })
-                .eq("user_id", user.id);  // profiles table uses user_id as the FK
+                .eq("user_id", user.id);
               if (error) {
                 console.error("Error saving push token to Supabase:", error);
-              } else {
-                console.log("OneSignal push token saved to profile:", token);
               }
             }
           } catch (err) {
@@ -182,7 +164,6 @@ const OneSignalInitializer = () => {
 
         await syncToken();
 
-        // Step 4: Keep token fresh whenever the subscription changes
         handleSubscriptionChange = (_event: any) => {
           syncToken();
         };
@@ -197,7 +178,6 @@ const OneSignalInitializer = () => {
           );
         }
       } catch (error) {
-        // Fail silently — user may have denied push permission
         console.warn("OneSignal bypassed:", error);
       }
     };
@@ -266,21 +246,13 @@ const App = () => (
               <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
 
-              {/* Admin routes (UPDATED WITH DETAIL ROUTES FOR SEARCH) */}
+              {/* Admin routes (Cleaned of missing files) */}
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<AdminOverview />} />
-                
                 <Route path="products" element={<AdminProducts />} />
-                <Route path="products/:id" element={<AdminProductDetail />} />
-                
                 <Route path="baskets" element={<AdminBaskets />} />
-                
                 <Route path="users" element={<AdminUsers />} />
-                <Route path="users/:id" element={<AdminUserDetail />} />
-                
                 <Route path="orders" element={<AdminOrders />} />
-                <Route path="orders/:id" element={<AdminOrderDetail />} />
-                
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />
