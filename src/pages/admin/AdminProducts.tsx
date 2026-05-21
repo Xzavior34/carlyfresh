@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom"; // IMPORTED: For URL parameter handling
 import { Plus, Pencil, Trash2, Loader2, PackageOpen, Upload } from "lucide-react";
 import ImageUploadInput from "@/components/products/ImageUploadInput";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,6 +60,9 @@ const unitOptions = [
 ];
 
 export default function AdminProducts() {
+  const [searchParams] = useSearchParams(); // HOOK: Grab parameters from URL
+  const searchQuery = searchParams.get("search") || ""; // Pull out 'search' key
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,6 +91,12 @@ export default function AdminProducts() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<{ user_id: string; full_name: string | null; business_name: string | null }[]>([]);
+
+  // DYNAMIC CLIENT-SIDE FILTERING: Filters list reactively without heavy db fetches
+  const filteredProducts = products.filter((p) => {
+    if (!searchQuery.trim()) return true;
+    return p.name?.toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
 
   const fetchData = async () => {
     const [prodRes, profRes] = await Promise.all([
@@ -296,7 +306,11 @@ export default function AdminProducts() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">All Products</h1>
-          <p className="text-muted-foreground font-body text-xs sm:text-sm">{products.length} products across all vendors</p>
+          <p className="text-muted-foreground font-body text-xs sm:text-sm">
+            {searchQuery.trim() 
+              ? `${filteredProducts.length} found (filtered from ${products.length})` 
+              : `${products.length} products across all vendors`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="font-body gap-1" onClick={() => setShowBulkModal(true)}>
@@ -322,13 +336,13 @@ export default function AdminProducts() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products?.map((item) => (
+                {/* UPDATED: Maps over the reactively filtered products array */}
+                {filteredProducts?.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
                     <TableCell className="font-medium font-body text-foreground whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span>{item?.name || "N/A"}</span>
                         
-                        {/* Dynamic Badging based on custom Framework columns */}
                         {(item as any)?.is_bundle && (
                           <Badge variant="outline" className="bg-primary/10 text-primary border-0 text-[10px] px-2 py-0 font-semibold">
                             Bundle
@@ -390,14 +404,17 @@ export default function AdminProducts() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {products.length === 0 && (
+                {/* UPDATED: Check size of dynamic filtered array */}
+                {filteredProducts.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 sm:py-16">
                       <div className="flex flex-col items-center justify-center">
                         <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                           <PackageOpen className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                         </div>
-                        <p className="text-muted-foreground font-body text-sm">No products yet.</p>
+                        <p className="text-muted-foreground font-body text-sm">
+                          {searchQuery ? "No matching products found." : "No products yet."}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -451,7 +468,6 @@ export default function AdminProducts() {
                 <Select value={form.unit_of_measurement} onValueChange={(v) => setForm((p) => ({ ...p, unit_of_measurement: v }))}>
                   <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {/* Maps over explicit sizing categories safely */}
                     {unitOptions.map((u) => (
                       <SelectItem key={u.value} value={u.value} className="font-body">
                         {u.label}
@@ -488,13 +504,11 @@ export default function AdminProducts() {
               {errors.vendor_id && <p className="text-xs text-destructive font-body">{errors.vendor_id}</p>}
             </div>
 
-            {/* CMS CONTROLS FOR DYNAMIC PLACEMENT */}
             <div className="mt-6 rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
               <p className="font-display text-sm font-semibold text-foreground">
                 🏷️ Dynamic Storefront Placement (CMS Controls)
               </p>
               
-              {/* FEATURED TOGGLE */}
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -529,7 +543,6 @@ export default function AdminProducts() {
                 </div>
               </label>
 
-              {/* BUYERS LOVE TOGGLE */}
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -543,7 +556,6 @@ export default function AdminProducts() {
                 </div>
               </label>
 
-              {/* BUNDLE PACK TOGGLE */}
               <label className="flex items-center gap-3 cursor-pointer border-t border-border/50 pt-3">
                 <input
                   type="checkbox"
