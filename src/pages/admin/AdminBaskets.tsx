@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
+
 import {
   Plus,
   Pencil,
@@ -65,15 +66,20 @@ export default function AdminBaskets() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  // Rule Engine States
+  // Rules
   const [showRulesModal, setShowRulesModal] = useState(false);
 
   const [rules, setRules] = useState({
     mandatory_categories: "",
+    optional_categories: "",
+    audience_tags: "",
+    location_targeting: "",
     substitution_logic: "closest_price",
+    dynamic_pricing: "fixed",
+    prep_requirements: "",
   });
 
-  // Create / Edit Modal States
+  // Create / Edit
   const [showModal, setShowModal] = useState(false);
   const [editingBasket, setEditingBasket] = useState<any | null>(null);
 
@@ -102,7 +108,9 @@ export default function AdminBaskets() {
     try {
       const { data, error } = await supabase
         .from("baskets" as any)
-        .select("*, basket_items(*, product:products(*))")
+        .select(
+          "*, basket_items(*, product:products(*)), composition_rules"
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -233,8 +241,24 @@ export default function AdminBaskets() {
     setRules({
       mandatory_categories:
         r.mandatory_categories?.join(", ") || "",
+
+      optional_categories:
+        r.optional_categories?.join(", ") || "",
+
+      audience_tags:
+        r.audience_tags?.join(", ") || "",
+
+      location_targeting:
+        r.location_targeting || "",
+
       substitution_logic:
         r.substitution_logic || "closest_price",
+
+      dynamic_pricing:
+        r.dynamic_pricing || "fixed",
+
+      prep_requirements:
+        r.prep_requirements || "",
     });
 
     setShowRulesModal(true);
@@ -254,7 +278,27 @@ export default function AdminBaskets() {
               .map((c) => c.trim())
               .filter(Boolean),
 
-            substitution_logic: rules.substitution_logic,
+            optional_categories: rules.optional_categories
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean),
+
+            audience_tags: rules.audience_tags
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean),
+
+            location_targeting:
+              rules.location_targeting,
+
+            substitution_logic:
+              rules.substitution_logic,
+
+            dynamic_pricing:
+              rules.dynamic_pricing,
+
+            prep_requirements:
+              rules.prep_requirements,
           },
         })
         .eq("id", selectedBasket.id);
@@ -390,8 +434,7 @@ export default function AdminBaskets() {
     if (existing) {
       toast({
         title: "Info",
-        description:
-          "Product already exists in basket",
+        description: "Product already exists in basket",
       });
 
       return;
@@ -425,7 +468,7 @@ export default function AdminBaskets() {
     }
   };
 
-  // Update qty
+  // Update Qty
   const handleUpdateQty = async (
     itemId: string,
     newQty: number
@@ -496,252 +539,16 @@ export default function AdminBaskets() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">
-            Hybrid Basket Engine
-          </h1>
-
-          <p className="text-muted-foreground font-body text-xs sm:text-sm">
-            Static SKU baskets + intelligent rule-based composition
-          </p>
-        </div>
-
-        <Button
-          size="sm"
-          className="font-body gap-1"
-          onClick={openAdd}
-        >
-          <Plus className="h-4 w-4" />
-          Create Basket
-        </Button>
-      </div>
-
-      {/* Basket Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {baskets.map((basket) => (
-          <Card
-            key={basket.id}
-            className="overflow-hidden border border-border group flex flex-col justify-between hover:shadow-lg transition-all duration-300"
-          >
-            <div>
-              {/* Image */}
-              <div className="h-48 w-full overflow-hidden bg-muted relative">
-                {basket.image ? (
-                  <img
-                    src={basket.image}
-                    alt={basket.name}
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                    <ShoppingBag className="h-12 w-12 stroke-[1.2]" />
-                  </div>
-                )}
-
-                <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold">
-                  {basket.basket_items?.length || 0} items
-                </div>
-              </div>
-
-              {/* Info */}
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-lg font-display font-bold">
-                    {basket.name}
-                  </CardTitle>
-
-                  <span className="font-body font-bold text-lg text-primary">
-                    {formatNaira(basket.price)}
-                  </span>
-                </div>
-
-                <CardDescription className="font-body text-sm line-clamp-2 mt-1">
-                  {basket.description ||
-                    "No description available"}
-                </CardDescription>
-              </CardHeader>
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 pt-0 flex flex-wrap gap-2 mt-auto border-t border-border/40">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openManageItems(basket)}
-              >
-                <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
-                Items
-              </Button>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => openRules(basket)}
-              >
-                <Settings className="h-3.5 w-3.5 mr-1.5" />
-                Rules
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openEdit(basket)}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                disabled={deleting === basket.id}
-                onClick={() => deleteBasket(basket.id)}
-              >
-                {deleting === basket.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </div>
-          </Card>
-        ))}
-
-        {baskets.length === 0 && (
-          <div className="col-span-full py-16 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl bg-card">
-            <div className="h-16 w-16 bg-primary/10 text-primary flex items-center justify-center rounded-2xl mb-4">
-              <ShoppingBag className="h-8 w-8" />
-            </div>
-
-            <h3 className="font-display font-bold text-lg text-foreground mb-1">
-              No baskets yet
-            </h3>
-
-            <p className="font-body text-sm text-muted-foreground text-center max-w-sm mb-6">
-              Create smart curated combo baskets for users.
-            </p>
-
-            <Button onClick={openAdd}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add First Basket
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* CREATE / EDIT */}
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="w-[95vw] sm:max-w-md rounded-xl p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>
-              {editingBasket
-                ? "Edit Basket"
-                : "Create Basket"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Basket Name *</Label>
-
-              <Input
-                value={form.name}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    name: e.target.value,
-                  }))
-                }
-              />
-
-              {formErrors.name && (
-                <p className="text-xs text-destructive">
-                  {formErrors.name}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-
-              <Input
-                value={form.description}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Price *</Label>
-
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    price: e.target.value,
-                  }))
-                }
-              />
-
-              {formErrors.price && (
-                <p className="text-xs text-destructive">
-                  {formErrors.price}
-                </p>
-              )}
-            </div>
-
-            <ImageUploadInput
-              value={form.image}
-              onChange={(url) =>
-                setForm((prev) => ({
-                  ...prev,
-                  image: url,
-                }))
-              }
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowModal(false)}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              onClick={saveBasket}
-              disabled={saving}
-            >
-              {saving && (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              )}
-
-              {editingBasket
-                ? "Save Changes"
-                : "Create Basket"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <div>
+      {/* KEEP YOUR EXISTING JSX */}
 
       {/* RULES DIALOG */}
+
       <Dialog
         open={showRulesModal}
         onOpenChange={setShowRulesModal}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               Configure Composition Engine
@@ -749,6 +556,7 @@ export default function AdminBaskets() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Mandatory */}
             <div className="space-y-2">
               <Label>
                 Mandatory Categories
@@ -767,6 +575,64 @@ export default function AdminBaskets() {
               />
             </div>
 
+            {/* Optional */}
+            <div className="space-y-2">
+              <Label>
+                Optional Categories
+              </Label>
+
+              <Input
+                placeholder="Snacks, Drinks"
+                value={rules.optional_categories}
+                onChange={(e) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    optional_categories:
+                      e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Audience */}
+            <div className="space-y-2">
+              <Label>
+                Audience Tags
+              </Label>
+
+              <Input
+                placeholder="Family, Keto, Students"
+                value={rules.audience_tags}
+                onChange={(e) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    audience_tags:
+                      e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Location */}
+            <div className="space-y-2">
+              <Label>
+                Location Targeting
+              </Label>
+
+              <Input
+                placeholder="Lagos Mainland"
+                value={rules.location_targeting}
+                onChange={(e) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    location_targeting:
+                      e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            {/* Substitution */}
             <div className="space-y-2">
               <Label>
                 Substitution Logic
@@ -796,6 +662,60 @@ export default function AdminBaskets() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Dynamic Pricing */}
+            <div className="space-y-2">
+              <Label>
+                Dynamic Pricing
+              </Label>
+
+              <Select
+                value={rules.dynamic_pricing}
+                onValueChange={(v) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    dynamic_pricing: v,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="fixed">
+                    Fixed Pricing
+                  </SelectItem>
+
+                  <SelectItem value="market_rate">
+                    Market Rate
+                  </SelectItem>
+
+                  <SelectItem value="surge">
+                    Surge Pricing
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Prep */}
+            <div className="space-y-2">
+              <Label>
+                Prep Requirements
+              </Label>
+
+              <Input
+                placeholder="Wash vegetables before dispatch"
+                value={rules.prep_requirements}
+                onChange={(e) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    prep_requirements:
+                      e.target.value,
+                  }))
+                }
+              />
+            </div>
           </div>
 
           <DialogFooter>
@@ -805,200 +725,6 @@ export default function AdminBaskets() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* MANAGE ITEMS */}
-      <Dialog
-        open={showItemsModal}
-        onOpenChange={setShowItemsModal}
-      >
-        <DialogContent className="w-[95vw] sm:max-w-3xl rounded-xl p-4 sm:p-6 overflow-hidden flex flex-col max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-
-              Manage Items in "
-              {selectedBasket?.name}"
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto space-y-6 my-4">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              {/* Search */}
-              <div className="md:col-span-5 space-y-4">
-                <h3 className="font-bold text-sm uppercase">
-                  Find Products
-                </h3>
-
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-
-                  <Input
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) =>
-                      setSearchQuery(e.target.value)
-                    }
-                    className="pl-9"
-                  />
-                </div>
-
-                <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                  {searchLoading ? (
-                    <div className="flex items-center justify-center py-6">
-                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                      Searching...
-                    </div>
-                  ) : searchResults.length > 0 ? (
-                    searchResults.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-2.5 rounded-lg border"
-                      >
-                        <div>
-                          <p className="text-xs font-semibold">
-                            {product.name}
-                          </p>
-
-                          <p className="text-[10px] text-muted-foreground">
-                            {formatNaira(product.price)}
-                          </p>
-                        </div>
-
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            handleAddItem(product)
-                          }
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-6">
-                      Search products to add them
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Basket Items */}
-              <div className="md:col-span-7 space-y-4">
-                <h3 className="font-bold text-sm uppercase">
-                  Basket Contents
-                </h3>
-
-                <div className="border rounded-xl overflow-hidden bg-card">
-                  {itemsLoading ? (
-                    <div className="flex flex-col items-center justify-center py-16">
-                      <Loader2 className="h-6 w-6 animate-spin mb-2" />
-                      Loading...
-                    </div>
-                  ) : basketItems.length > 0 ? (
-                    <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>
-                              Product
-                            </TableHead>
-
-                            <TableHead className="text-center">
-                              Qty
-                            </TableHead>
-
-                            <TableHead className="text-right">
-                              Actions
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-
-                        <TableBody>
-                          {basketItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell className="text-xs font-semibold">
-                                {item.product?.name}
-                              </TableCell>
-
-                              <TableCell className="text-center">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() =>
-                                      handleUpdateQty(
-                                        item.id,
-                                        item.quantity - 1
-                                      )
-                                    }
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-
-                                  <span className="text-xs font-semibold">
-                                    {item.quantity}
-                                  </span>
-
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() =>
-                                      handleUpdateQty(
-                                        item.id,
-                                        item.quantity + 1
-                                      )
-                                    }
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-
-                              <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive"
-                                  onClick={() =>
-                                    handleRemoveItem(item.id)
-                                  }
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-16">
-                      <ShoppingBag className="h-10 w-10 text-muted-foreground mb-2" />
-
-                      <p className="text-xs text-muted-foreground text-center">
-                        This basket has no items yet.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              onClick={() =>
-                setShowItemsModal(false)
-              }
-            >
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
-}
+            }
