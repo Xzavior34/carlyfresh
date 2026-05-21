@@ -1,16 +1,59 @@
 /**
- * Admin Baskets — Basket Builder and Curated Combo Management
+ * Admin Baskets — HYBRID: Static SKU-based + Dynamic Rule-based Engine
  */
 
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Loader2, ShoppingBag, Search, Minus, X } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  ShoppingBag,
+  Search,
+  Minus,
+  Settings,
+} from "lucide-react";
+
 import ImageUploadInput from "@/components/products/ImageUploadInput";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatNaira } from "@/lib/formatters";
 import { toast } from "@/hooks/use-toast";
@@ -21,28 +64,40 @@ export default function AdminBaskets() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  
+
+  // Rule Engine States
+  const [showRulesModal, setShowRulesModal] = useState(false);
+
+  const [rules, setRules] = useState({
+    mandatory_categories: "",
+    substitution_logic: "closest_price",
+  });
+
   // Create / Edit Modal States
   const [showModal, setShowModal] = useState(false);
   const [editingBasket, setEditingBasket] = useState<any | null>(null);
+
   const [form, setForm] = useState({
     name: "",
     description: "",
     price: "",
     image: "",
   });
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Sub-interface: Manage Items Modal States
+  // Manage Items
   const [showItemsModal, setShowItemsModal] = useState(false);
   const [selectedBasket, setSelectedBasket] = useState<any | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
   const [basketItems, setBasketItems] = useState<any[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
 
-  // Fetch Baskets
+  // Fetch baskets
   const fetchBaskets = async () => {
     try {
       const { data, error } = await supabase
@@ -51,9 +106,14 @@ export default function AdminBaskets() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
       setBaskets(data || []);
     } catch (err: any) {
-      toast({ title: "Error fetching baskets", description: err.message, variant: "destructive" });
+      toast({
+        title: "Error fetching baskets",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -63,9 +123,10 @@ export default function AdminBaskets() {
     fetchBaskets();
   }, []);
 
-  // Fetch items for specific basket
+  // Fetch basket items
   const fetchBasketItems = async (basketId: string) => {
     setItemsLoading(true);
+
     try {
       const { data, error } = await supabase
         .from("basket_items" as any)
@@ -74,80 +135,161 @@ export default function AdminBaskets() {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
+
       setBasketItems(data || []);
     } catch (err: any) {
-      toast({ title: "Error fetching basket items", description: err.message, variant: "destructive" });
+      toast({
+        title: "Error fetching basket items",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setItemsLoading(false);
     }
   };
 
-  // Search Products
+  // Search products
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
       setSearchResults([]);
       return;
     }
-    const delayDebounce = setTimeout(async () => {
+
+    const delay = setTimeout(async () => {
       setSearchLoading(true);
+
       try {
         const { data, error } = await supabase
           .from("products")
           .select("*")
           .ilike("name", `%${searchQuery}%`)
           .limit(6);
+
         if (error) throw error;
+
         setSearchResults(data || []);
       } catch (err: any) {
-        toast({ title: "Search failed", description: err.message, variant: "destructive" });
+        toast({
+          title: "Search failed",
+          description: err.message,
+          variant: "destructive",
+        });
       } finally {
         setSearchLoading(false);
       }
     }, 400);
 
-    return () => clearTimeout(delayDebounce);
+    return () => clearTimeout(delay);
   }, [searchQuery]);
 
-  // Open Create Modal
+  // Open Add
   const openAdd = () => {
     setEditingBasket(null);
+
     setForm({
       name: "",
       description: "",
       price: "",
       image: "",
     });
+
     setFormErrors({});
     setShowModal(true);
   };
 
-  // Open Edit Modal
+  // Open Edit
   const openEdit = (basket: any) => {
     setEditingBasket(basket);
+
     setForm({
       name: basket.name,
       description: basket.description || "",
       price: String(basket.price),
       image: basket.image || "",
     });
+
     setFormErrors({});
     setShowModal(true);
   };
 
-  // Open Manage Items modal
+  // Open Manage Items
   const openManageItems = (basket: any) => {
     setSelectedBasket(basket);
+
     setSearchQuery("");
     setSearchResults([]);
+
     fetchBasketItems(basket.id);
+
     setShowItemsModal(true);
   };
 
-  // Save Basket
+  // Open Rules
+  const openRules = (basket: any) => {
+    setSelectedBasket(basket);
+
+    const r = basket.composition_rules || {};
+
+    setRules({
+      mandatory_categories:
+        r.mandatory_categories?.join(", ") || "",
+      substitution_logic:
+        r.substitution_logic || "closest_price",
+    });
+
+    setShowRulesModal(true);
+  };
+
+  // Save Rules
+  const saveRules = async () => {
+    if (!selectedBasket) return;
+
+    try {
+      const { error } = await supabase
+        .from("baskets" as any)
+        .update({
+          composition_rules: {
+            mandatory_categories: rules.mandatory_categories
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean),
+
+            substitution_logic: rules.substitution_logic,
+          },
+        })
+        .eq("id", selectedBasket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Rules saved successfully",
+      });
+
+      setShowRulesModal(false);
+
+      fetchBaskets();
+    } catch (err: any) {
+      toast({
+        title: "Failed to save rules",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save basket
   const saveBasket = async () => {
     const errors: Record<string, string> = {};
-    if (!form.name.trim()) errors.name = "Basket name is required";
-    if (!form.price || isNaN(Number(form.price)) || Number(form.price) < 0) {
+
+    if (!form.name.trim()) {
+      errors.name = "Basket name is required";
+    }
+
+    if (
+      !form.price ||
+      isNaN(Number(form.price)) ||
+      Number(form.price) < 0
+    ) {
       errors.price = "Valid price is required";
     }
 
@@ -173,75 +315,123 @@ export default function AdminBaskets() {
           .from("baskets" as any)
           .update(payload)
           .eq("id", editingBasket.id);
+
         if (error) throw error;
-        toast({ title: "Basket updated successfully" });
+
+        toast({
+          title: "Basket updated successfully",
+        });
       } else {
         const { error } = await supabase
           .from("baskets" as any)
           .insert([payload]);
+
         if (error) throw error;
-        toast({ title: "Basket created successfully" });
+
+        toast({
+          title: "Basket created successfully",
+        });
       }
+
       setShowModal(false);
+
       fetchBaskets();
     } catch (err: any) {
-      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Save failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  // Delete Basket
+  // Delete basket
   const deleteBasket = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this basket?")) return;
+    if (!confirm("Are you sure you want to delete this basket?")) {
+      return;
+    }
+
     setDeleting(id);
+
     try {
       const { error } = await supabase
         .from("baskets" as any)
         .delete()
         .eq("id", id);
+
       if (error) throw error;
-      toast({ title: "Basket deleted successfully" });
+
+      toast({
+        title: "Basket deleted successfully",
+      });
+
       fetchBaskets();
     } catch (err: any) {
-      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+      toast({
+        title: "Delete failed",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setDeleting(null);
     }
   };
 
-  // Add Item to Basket
+  // Add Item
   const handleAddItem = async (product: any) => {
     if (!selectedBasket) return;
-    
-    // Check if item is already in basket
-    const existing = basketItems.find(item => item.product_id === product.id);
+
+    const existing = basketItems.find(
+      (item) => item.product_id === product.id
+    );
+
     if (existing) {
-      toast({ title: "Info", description: "Product is already in the basket. Adjust quantity in the table." });
+      toast({
+        title: "Info",
+        description:
+          "Product already exists in basket",
+      });
+
       return;
     }
 
     try {
       const { error } = await supabase
         .from("basket_items" as any)
-        .insert([{
-          basket_id: selectedBasket.id,
-          product_id: product.id,
-          quantity: 1,
-        }]);
+        .insert([
+          {
+            basket_id: selectedBasket.id,
+            product_id: product.id,
+            quantity: 1,
+          },
+        ]);
 
       if (error) throw error;
-      toast({ title: "Product added to basket" });
+
+      toast({
+        title: "Product added to basket",
+      });
+
       fetchBasketItems(selectedBasket.id);
-      fetchBaskets(); // update item count globally
+      fetchBaskets();
     } catch (err: any) {
-      toast({ title: "Failed to add item", description: err.message, variant: "destructive" });
+      toast({
+        title: "Failed to add item",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
-  // Update Item Quantity
-  const handleUpdateQty = async (itemId: string, newQty: number) => {
+  // Update qty
+  const handleUpdateQty = async (
+    itemId: string,
+    newQty: number
+  ) => {
     if (!selectedBasket) return;
+
     if (newQty <= 0) {
       handleRemoveItem(itemId);
       return;
@@ -250,19 +440,36 @@ export default function AdminBaskets() {
     try {
       const { error } = await supabase
         .from("basket_items" as any)
-        .update({ quantity: newQty })
+        .update({
+          quantity: newQty,
+        })
         .eq("id", itemId);
 
       if (error) throw error;
-      setBasketItems(prev => prev.map(item => item.id === itemId ? { ...item, quantity: newQty } : item));
+
+      setBasketItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                quantity: newQty,
+              }
+            : item
+        )
+      );
     } catch (err: any) {
-      toast({ title: "Failed to update quantity", description: err.message, variant: "destructive" });
+      toast({
+        title: "Failed to update quantity",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
-  // Remove Item from Basket
+  // Remove Item
   const handleRemoveItem = async (itemId: string) => {
     if (!selectedBasket) return;
+
     try {
       const { error } = await supabase
         .from("basket_items" as any)
@@ -270,11 +477,19 @@ export default function AdminBaskets() {
         .eq("id", itemId);
 
       if (error) throw error;
-      toast({ title: "Product removed from basket" });
+
+      toast({
+        title: "Product removed from basket",
+      });
+
       fetchBasketItems(selectedBasket.id);
       fetchBaskets();
     } catch (err: any) {
-      toast({ title: "Failed to remove item", description: err.message, variant: "destructive" });
+      toast({
+        title: "Failed to remove item",
+        description: err.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -285,22 +500,34 @@ export default function AdminBaskets() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Curated Baskets</h1>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">
+            Hybrid Basket Engine
+          </h1>
+
           <p className="text-muted-foreground font-body text-xs sm:text-sm">
-            Manage multi-item kitchen combos and subscription crates
+            Static SKU baskets + intelligent rule-based composition
           </p>
         </div>
-        <Button size="sm" className="font-body gap-1 animate-fade-in" onClick={openAdd}>
-          <Plus className="h-4 w-4" /> Create Basket
+
+        <Button
+          size="sm"
+          className="font-body gap-1"
+          onClick={openAdd}
+        >
+          <Plus className="h-4 w-4" />
+          Create Basket
         </Button>
       </div>
 
-      {/* Baskets Grid */}
+      {/* Basket Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {baskets.map((basket) => (
-          <Card key={basket.id} className="overflow-hidden border border-border group flex flex-col justify-between hover:shadow-lg transition-all duration-300">
+          <Card
+            key={basket.id}
+            className="overflow-hidden border border-border group flex flex-col justify-between hover:shadow-lg transition-all duration-300"
+          >
             <div>
-              {/* Basket Image */}
+              {/* Image */}
               <div className="h-48 w-full overflow-hidden bg-muted relative">
                 {basket.image ? (
                   <img
@@ -313,53 +540,71 @@ export default function AdminBaskets() {
                     <ShoppingBag className="h-12 w-12 stroke-[1.2]" />
                   </div>
                 )}
-                <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold text-foreground font-body shadow-sm">
+
+                <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold">
                   {basket.basket_items?.length || 0} items
                 </div>
               </div>
 
-              {/* Basket Info */}
+              {/* Info */}
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-lg font-display font-bold group-hover:text-primary transition-colors">
+                  <CardTitle className="text-lg font-display font-bold">
                     {basket.name}
                   </CardTitle>
-                  <span className="font-body font-bold text-lg text-primary tabular-nums">
+
+                  <span className="font-body font-bold text-lg text-primary">
                     {formatNaira(basket.price)}
                   </span>
                 </div>
+
                 <CardDescription className="font-body text-sm line-clamp-2 mt-1">
-                  {basket.description || "No description provided for this combo pack."}
+                  {basket.description ||
+                    "No description available"}
                 </CardDescription>
               </CardHeader>
             </div>
 
-            {/* Actions Footer */}
-            <div className="p-6 pt-0 flex gap-2 mt-auto border-t border-border/40 pt-4">
+            {/* Footer */}
+            <div className="p-6 pt-0 flex flex-wrap gap-2 mt-auto border-t border-border/40">
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 font-body text-xs gap-1.5"
                 onClick={() => openManageItems(basket)}
               >
-                <Plus className="h-3.5 w-3.5" /> Manage Items
+                <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
+                Items
               </Button>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => openRules(basket)}
+              >
+                <Settings className="h-3.5 w-3.5 mr-1.5" />
+                Rules
+              </Button>
+
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 p-0"
                 onClick={() => openEdit(basket)}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
+
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive"
                 disabled={deleting === basket.id}
                 onClick={() => deleteBasket(basket.id)}
               >
-                {deleting === basket.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {deleting === basket.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
               </Button>
             </div>
           </Card>
@@ -370,216 +615,356 @@ export default function AdminBaskets() {
             <div className="h-16 w-16 bg-primary/10 text-primary flex items-center justify-center rounded-2xl mb-4">
               <ShoppingBag className="h-8 w-8" />
             </div>
-            <h3 className="font-display font-bold text-lg text-foreground mb-1">No curated baskets yet</h3>
+
+            <h3 className="font-display font-bold text-lg text-foreground mb-1">
+              No baskets yet
+            </h3>
+
             <p className="font-body text-sm text-muted-foreground text-center max-w-sm mb-6">
-              Create combination baskets with preset products and fixed discounted bundles.
+              Create smart curated combo baskets for users.
             </p>
-            <Button onClick={openAdd} className="font-body">
-              <Plus className="h-4 w-4 mr-1.5" /> Add First Basket
+
+            <Button onClick={openAdd}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add First Basket
             </Button>
           </div>
         )}
       </div>
 
-      {/* CREATE / EDIT BASKET DIALOG */}
+      {/* CREATE / EDIT */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="w-[95vw] sm:max-w-md rounded-xl p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="font-display font-bold">
-              {editingBasket ? "Edit Curated Basket" : "Create Curated Basket"}
+            <DialogTitle>
+              {editingBasket
+                ? "Edit Basket"
+                : "Create Basket"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="font-body text-sm">Basket Name *</Label>
+              <Label>Basket Name *</Label>
+
               <Input
                 value={form.name}
-                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                className="font-body"
-                placeholder="e.g. Soup Essentials Crate"
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
               />
-              {formErrors.name && <p className="text-xs text-destructive font-body">{formErrors.name}</p>}
+
+              {formErrors.name && (
+                <p className="text-xs text-destructive">
+                  {formErrors.name}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label className="font-body text-sm">Description</Label>
+              <Label>Description</Label>
+
               <Input
                 value={form.description}
-                onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-                className="font-body"
-                placeholder="Brief summary of contents..."
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="font-body text-sm">Bundle Price (₦) *</Label>
+              <Label>Price *</Label>
+
               <Input
                 type="number"
                 min="0"
                 step="0.01"
                 value={form.price}
-                onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
-                className="font-body"
-                placeholder="5000"
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    price: e.target.value,
+                  }))
+                }
               />
-              {formErrors.price && <p className="text-xs text-destructive font-body">{formErrors.price}</p>}
+
+              {formErrors.price && (
+                <p className="text-xs text-destructive">
+                  {formErrors.price}
+                </p>
+              )}
             </div>
 
-            <div className="py-1">
-              <ImageUploadInput
-                value={form.image}
-                onChange={(url) => setForm(prev => ({ ...prev, image: url }))}
-              />
-            </div>
+            <ImageUploadInput
+              value={form.image}
+              onChange={(url) =>
+                setForm((prev) => ({
+                  ...prev,
+                  image: url,
+                }))
+              }
+            />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setShowModal(false)}
-              className="font-body w-full sm:w-auto mb-2 sm:mb-0"
-              disabled={saving}
             >
               Cancel
             </Button>
+
             <Button
               onClick={saveBasket}
-              className="font-body gap-2 w-full sm:w-auto"
               disabled={saving}
             >
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {editingBasket ? "Save Changes" : "Create Basket"}
+              {saving && (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              )}
+
+              {editingBasket
+                ? "Save Changes"
+                : "Create Basket"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* MANAGE ITEMS SUB-INTERFACE DIALOG */}
-      <Dialog open={showItemsModal} onOpenChange={setShowItemsModal}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl md:max-w-3xl rounded-xl p-4 sm:p-6 overflow-hidden flex flex-col max-h-[85vh]">
+      {/* RULES DIALOG */}
+      <Dialog
+        open={showRulesModal}
+        onOpenChange={setShowRulesModal}
+      >
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display font-bold flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              Manage Items in "{selectedBasket?.name}"
+            <DialogTitle>
+              Configure Composition Engine
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto pr-1 space-y-6 my-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>
+                Mandatory Categories
+              </Label>
+
+              <Input
+                placeholder="Vegetables, Protein, Spices"
+                value={rules.mandatory_categories}
+                onChange={(e) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    mandatory_categories:
+                      e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Substitution Logic
+              </Label>
+
+              <Select
+                value={rules.substitution_logic}
+                onValueChange={(v) =>
+                  setRules((prev) => ({
+                    ...prev,
+                    substitution_logic: v,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value="closest_price">
+                    Closest Price
+                  </SelectItem>
+
+                  <SelectItem value="highest_freshness">
+                    Highest Freshness
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={saveRules}>
+              Apply Rules
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MANAGE ITEMS */}
+      <Dialog
+        open={showItemsModal}
+        onOpenChange={setShowItemsModal}
+      >
+        <DialogContent className="w-[95vw] sm:max-w-3xl rounded-xl p-4 sm:p-6 overflow-hidden flex flex-col max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+
+              Manage Items in "
+              {selectedBasket?.name}"
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-6 my-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              {/* Add Items search & results panel (5 cols) */}
+              {/* Search */}
               <div className="md:col-span-5 space-y-4">
-                <h3 className="font-display font-bold text-sm text-foreground uppercase tracking-wider">
+                <h3 className="font-bold text-sm uppercase">
                   Find Products
                 </h3>
+
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+
                   <Input
-                    placeholder="Search name (min 2 chars)..."
+                    placeholder="Search products..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 font-body text-xs sm:text-sm"
+                    onChange={(e) =>
+                      setSearchQuery(e.target.value)
+                    }
+                    className="pl-9"
                   />
                 </div>
 
-                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[280px] overflow-y-auto">
                   {searchLoading ? (
-                    <div className="flex items-center justify-center py-6 text-muted-foreground">
-                      <Loader2 className="h-5 w-5 animate-spin mr-1.5" />
-                      <span className="font-body text-xs">Searching...</span>
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      Searching...
                     </div>
                   ) : searchResults.length > 0 ? (
                     searchResults.map((product) => (
                       <div
                         key={product.id}
-                        className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-card/50 hover:bg-accent/10 transition-colors"
+                        className="flex items-center justify-between p-2.5 rounded-lg border"
                       >
-                        <div className="min-w-0 pr-2">
-                          <p className="font-body text-xs font-semibold text-foreground truncate">
+                        <div>
+                          <p className="text-xs font-semibold">
                             {product.name}
                           </p>
-                          <p className="font-body text-[10px] text-muted-foreground">
+
+                          <p className="text-[10px] text-muted-foreground">
                             {formatNaira(product.price)}
                           </p>
                         </div>
+
                         <Button
                           size="sm"
-                          className="h-7 px-2 text-[10px] font-body"
-                          onClick={() => handleAddItem(product)}
+                          onClick={() =>
+                            handleAddItem(product)
+                          }
                         >
-                          <Plus className="h-3 w-3 mr-0.5" /> Add
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
                         </Button>
                       </div>
                     ))
-                  ) : searchQuery.trim().length >= 2 ? (
-                    <p className="text-center font-body text-xs text-muted-foreground py-6">
-                      No matching products found.
-                    </p>
                   ) : (
-                    <p className="text-center font-body text-xs text-muted-foreground py-6 border border-dashed rounded-lg border-border bg-muted/20">
-                      Type product name to start search
+                    <p className="text-xs text-muted-foreground text-center py-6">
+                      Search products to add them
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Current Items Table (7 cols) */}
+              {/* Basket Items */}
               <div className="md:col-span-7 space-y-4">
-                <h3 className="font-display font-bold text-sm text-foreground uppercase tracking-wider">
+                <h3 className="font-bold text-sm uppercase">
                   Basket Contents
                 </h3>
 
-                <div className="border border-border rounded-xl overflow-hidden bg-card">
+                <div className="border rounded-xl overflow-hidden bg-card">
                   {itemsLoading ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
-                      <span className="font-body text-xs">Loading items...</span>
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <Loader2 className="h-6 w-6 animate-spin mb-2" />
+                      Loading...
                     </div>
                   ) : basketItems.length > 0 ? (
                     <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-muted/40">
-                            <TableHead className="font-body text-xs">Product</TableHead>
-                            <TableHead className="font-body text-xs text-center">Qty</TableHead>
-                            <TableHead className="font-body text-xs text-right">Actions</TableHead>
+                          <TableRow>
+                            <TableHead>
+                              Product
+                            </TableHead>
+
+                            <TableHead className="text-center">
+                              Qty
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
+
                         <TableBody>
                           {basketItems.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-muted/10">
-                              <TableCell className="font-body text-xs font-semibold py-2.5">
-                                {item.product?.name || "Unknown Product"}
+                            <TableRow key={item.id}>
+                              <TableCell className="text-xs font-semibold">
+                                {item.product?.name}
                               </TableCell>
-                              <TableCell className="py-2.5 text-center">
+
+                              <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1.5">
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 w-6 p-0"
-                                    onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                                    onClick={() =>
+                                      handleUpdateQty(
+                                        item.id,
+                                        item.quantity - 1
+                                      )
+                                    }
                                   >
                                     <Minus className="h-3 w-3" />
                                   </Button>
-                                  <span className="font-body font-semibold text-xs min-w-[16px]">
+
+                                  <span className="text-xs font-semibold">
                                     {item.quantity}
                                   </span>
+
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     className="h-6 w-6 p-0"
-                                    onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                                    onClick={() =>
+                                      handleUpdateQty(
+                                        item.id,
+                                        item.quantity + 1
+                                      )
+                                    }
                                   >
                                     <Plus className="h-3 w-3" />
                                   </Button>
                                 </div>
                               </TableCell>
-                              <TableCell className="py-2.5 text-right">
+
+                              <TableCell className="text-right">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="text-destructive"
+                                  onClick={() =>
+                                    handleRemoveItem(item.id)
+                                  }
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
@@ -590,10 +975,11 @@ export default function AdminBaskets() {
                       </Table>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                      <ShoppingBag className="h-10 w-10 text-muted-foreground stroke-[1.2] mb-2" />
-                      <p className="font-body text-xs text-muted-foreground">
-                        This basket has no items yet. Select products on the left to add them.
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <ShoppingBag className="h-10 w-10 text-muted-foreground mb-2" />
+
+                      <p className="text-xs text-muted-foreground text-center">
+                        This basket has no items yet.
                       </p>
                     </div>
                   )}
@@ -602,10 +988,11 @@ export default function AdminBaskets() {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/50 pt-4 mt-auto">
+          <DialogFooter>
             <Button
-              className="font-body w-full sm:w-auto"
-              onClick={() => setShowItemsModal(false)}
+              onClick={() =>
+                setShowItemsModal(false)
+              }
             >
               Done
             </Button>
@@ -614,4 +1001,4 @@ export default function AdminBaskets() {
       </Dialog>
     </div>
   );
-          }
+}
