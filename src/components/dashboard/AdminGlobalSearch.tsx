@@ -51,11 +51,15 @@ export default function AdminGlobalSearch() {
     return () => clearTimeout(t);
   }, [q]);
 
-  // THE FIX: Route directly to the pages you already built that actually work!
+  // THE FIX: Do not use the ID in the path. Route to the main tables.
+  // We attach a "?search=" query string so your tables can optionally filter by it.
   const linkFor = (r: Result) => {
-    if (r.kind === "product") return `/shop/${r.id}`; // Uses your working Shop page
-    if (r.kind === "order") return `/orders/${r.id}`; // Uses your working Order tracking page
-    return `/admin/users`; // Just takes you to the users list
+    if (r.kind === "product") return `/admin/products?search=${encodeURIComponent(r.label)}`;
+    if (r.kind === "order") {
+       const orderNum = r.label.replace('Order #', '');
+       return `/admin/orders?search=${encodeURIComponent(orderNum)}`;
+    }
+    return `/admin/users?search=${encodeURIComponent(r.label)}`;
   };
 
   const Icon = ({ kind }: { kind: Result["kind"] }) =>
