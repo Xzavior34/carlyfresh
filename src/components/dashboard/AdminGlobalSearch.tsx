@@ -51,10 +51,11 @@ export default function AdminGlobalSearch() {
     return () => clearTimeout(t);
   }, [q]);
 
+  // UPDATED: Now returns dynamic paths with IDs
   const linkFor = (r: Result) => {
-    if (r.kind === "product") return "/admin/products";
-    if (r.kind === "order") return "/admin/orders";
-    return "/admin/users";
+    if (r.kind === "product") return `/admin/products/${r.id}`;
+    if (r.kind === "order") return `/admin/orders/${r.id}`;
+    return `/admin/users/${r.id}`;
   };
 
   const Icon = ({ kind }: { kind: Result["kind"] }) =>
