@@ -11,7 +11,6 @@ import { useEffect } from "react";
 import OneSignal from "react-onesignal";
 import { supabase } from "@/integrations/supabase/client";
 
-
 // Public pages
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -32,7 +31,6 @@ import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 import OrderTracking from "./pages/customer/OrderTracking";
-
 
 // Customer pages
 import Cart from "./pages/customer/Cart";
@@ -56,6 +54,11 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminDriverWithdrawals from "./pages/admin/AdminDriverWithdrawals";
 import AdminBlog from "./pages/admin/AdminBlog";
+
+// NEW: Detail Pages required for the Search Bar navigation
+import AdminProductDetail from "./pages/admin/AdminProductDetail";
+import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import AdminUserDetail from "./pages/admin/AdminUserDetail";
 
 // Vendor pages
 import VendorOverview from "./pages/vendor/VendorOverview";
@@ -254,7 +257,6 @@ const App = () => (
               <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/signup" element={<GuestRoute><Signup /></GuestRoute>} />
               <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
-              {/* Removed GuestRoute wrapper below to fix the redirect issue */}
               <Route path="/update-password" element={<UpdatePassword />} />
               
               {/* Customer routes (authenticated buyers) */}
@@ -264,13 +266,21 @@ const App = () => (
               <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
 
-              {/* Admin routes */}
+              {/* Admin routes (UPDATED WITH DETAIL ROUTES FOR SEARCH) */}
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<AdminOverview />} />
+                
                 <Route path="products" element={<AdminProducts />} />
+                <Route path="products/:id" element={<AdminProductDetail />} />
+                
                 <Route path="baskets" element={<AdminBaskets />} />
+                
                 <Route path="users" element={<AdminUsers />} />
+                <Route path="users/:id" element={<AdminUserDetail />} />
+                
                 <Route path="orders" element={<AdminOrders />} />
+                <Route path="orders/:id" element={<AdminOrderDetail />} />
+                
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />
@@ -312,4 +322,3 @@ const App = () => (
 );
 
 export default App;
-
