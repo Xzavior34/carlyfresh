@@ -51,11 +51,11 @@ export default function AdminGlobalSearch() {
     return () => clearTimeout(t);
   }, [q]);
 
-  // UPDATED: Now returns dynamic paths with IDs
+  // THE FIX: Route directly to the pages you already built that actually work!
   const linkFor = (r: Result) => {
-    if (r.kind === "product") return `/admin/products/${r.id}`;
-    if (r.kind === "order") return `/admin/orders/${r.id}`;
-    return `/admin/users/${r.id}`;
+    if (r.kind === "product") return `/shop/${r.id}`; // Uses your working Shop page
+    if (r.kind === "order") return `/orders/${r.id}`; // Uses your working Order tracking page
+    return `/admin/users`; // Just takes you to the users list
   };
 
   const Icon = ({ kind }: { kind: Result["kind"] }) =>
