@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Navbar from "@/components/layout/Navbar";
+import PersistentSubscribe from "@/components/PersistentSubscribe";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +120,17 @@ export default function Checkout() {
   /** Create order in DB first, then let Paystack button appear with real order ID */
   const handleCreateOrder = async () => {
     if (!user || items.length === 0 || processing) return;
+
+    // Guard: require notification permission before placing an order
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission !== "granted") {
+      toast({
+        title: "Enable Notifications First",
+        description: "Please tap the Enable Notifications button (bottom-right) to receive live order updates before placing your order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessing(true);
     const orderId = await checkout(user.id, form.getValues("address"), deliveryWindow);
     if (!orderId) { setProcessing(false); return; }
@@ -169,6 +181,8 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      {/* Persistent floating subscribe button - hidden once permission is granted */}
+      <PersistentSubscribe />
       <section className="pt-28 pb-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-12 max-w-2xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
