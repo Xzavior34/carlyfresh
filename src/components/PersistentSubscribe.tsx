@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PersistentSubscribe -- CarlyFresh
  * Floating push-notification opt-in button.
  *
@@ -12,21 +12,35 @@
 import { useEffect, useState } from "react";
 import { Bell, BellRing, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 const PersistentSubscribe = () => {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Only show if the browser supports Notifications AND permission is not yet granted
-    if (
-      typeof window !== "undefined" &&
-      "Notification" in window &&
-      Notification.permission !== "granted"
-    ) {
-      setVisible(true);
-    }
+    const checkAuth = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log("PersistentSubscribe: Checking auth state...", session);
+      
+      if (!error && session) {
+        setIsAuthenticated(true);
+        // Only show if the browser supports Notifications AND permission is not yet granted
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission !== "granted"
+        ) {
+          setVisible(true);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   /** Request browser notification permission */
@@ -49,8 +63,8 @@ const PersistentSubscribe = () => {
     }
   };
 
-  // Hidden if permission already granted, dismissed, or browser does not support
-  if (!visible || dismissed) return null;
+  // Hidden if unauthenticated, permission already granted, dismissed, or browser does not support
+  if (!isAuthenticated || !visible || dismissed) return null;
 
   return (
     <AnimatePresence>
@@ -105,3 +119,4 @@ const PersistentSubscribe = () => {
 };
 
 export default PersistentSubscribe;
+
