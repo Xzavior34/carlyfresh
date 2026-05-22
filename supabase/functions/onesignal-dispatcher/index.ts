@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+﻿import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,15 +34,15 @@ Deno.serve(async (req) => {
 
     if (status === "pending") {
       targetUserId = record.vendor_id;
-      pushMessage = "New Order 🚨! Please confirm.";
+      pushMessage = "New Order ! Please confirm.";
     } else if (status === "driver_assigned") {
-      // Handles both customer_id (from requirement) and buyer_id (from orders schema)
-      targetUserId = record.customer_id ?? record.buyer_id;
-      pushMessage = "A driver is heading to pick up your order! 🚗";
+      // orders table uses buyer_id; fall back to customer_id for safety
+      targetUserId = record.buyer_id ?? record.customer_id;
+      pushMessage = "A driver is heading to pick up your order!";
     } else if (status === "delivered") {
-      // Handles both customer_id (from requirement) and buyer_id (from orders schema)
-      targetUserId = record.customer_id ?? record.buyer_id;
-      pushMessage = "Your CarlyFresh order has arrived! 🎉";
+      // orders table uses buyer_id; fall back to customer_id for safety
+      targetUserId = record.buyer_id ?? record.customer_id;
+      pushMessage = "Your CarlyFresh order has arrived!";
     }
 
     if (!targetUserId || !pushMessage) {
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     // Initialize Supabase Client
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Query profiles to get push_token using targetUserId
+    // Query profiles to get push_token (OneSignal subscription ID) using targetUserId
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("push_token")
@@ -80,19 +80,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Send push notification via OneSignal
-    console.log(`Sending push to OneSignal player ID: ${pushToken} with message: "${pushMessage}"`);
-    
+    // Guard: ensure OneSignal credentials are present
     if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
-      console.warn("OneSignal credentials are not configured. Skipping OneSignal fetch request.");
+      console.warn("OneSignal credentials not configured. Skipping push notification.");
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "OneSignal credentials missing from Deno environment variables",
+          error: "OneSignal credentials missing (ONESIGNAL_APP_ID, ONESIGNAL_REST_API_KEY)",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Send push notification via OneSignal v1 API.
+    // pushToken = os.User.PushSubscription.id from the SDK v16 (a subscription UUID).
+    // We use include_subscription_ids — the correct field for SDK v16+ subscription IDs.
+    // (Legacy include_player_ids is for older player UUIDs and will not match new subscriptions.)
+    console.log(`Sending push to OneSignal subscription ID: ${pushToken} -> "${pushMessage}"`);
 
     const response = await fetch("https://onesignal.com/api/v1/notifications", {
       method: "POST",
@@ -102,17 +106,19 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        include_player_ids: [pushToken],
+        include_subscription_ids: [pushToken],
         headings: { en: "CarlyFresh" },
         contents: { en: pushMessage },
       }),
     });
 
     const responseData = await response.json();
-    console.log("OneSignal API response status:", response.status, "body:", responseData);
+    console.log("OneSignal API response status:", response.status, "body:", JSON.stringify(responseData));
 
     if (!response.ok) {
-      throw new Error(`OneSignal returned non-ok status: ${response.status} - ${JSON.stringify(responseData)}`);
+      throw new Error(
+        `OneSignal returned non-ok status: ${response.status} - ${JSON.stringify(responseData)}`
+      );
     }
 
     return new Response(JSON.stringify({ ok: true, onesignal: responseData }), {
