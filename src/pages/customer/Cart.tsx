@@ -1,7 +1,8 @@
-import { motion } from "framer-motion";
+﻿import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Trash2, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
+import PersistentSubscribe from "@/components/PersistentSubscribe";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ export default function Cart() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <PersistentSubscribe />
       <section className="pt-28 pb-24">
         <div className="container mx-auto px-6 lg:px-12 max-w-3xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -45,7 +47,7 @@ export default function Cart() {
                         <div className="flex-1 min-w-0">
                           <p className="font-body font-medium text-foreground">{item.name}</p>
 
-                          {/* Price breakdown — always show both regular & bulk when offer exists */}
+                          {/* Price breakdown â€” always show both regular & bulk when offer exists */}
                           <div className="mt-1 space-y-0.5">
                             <p className="font-body text-sm">
                               <span className={bulkActive ? "text-muted-foreground line-through" : "text-foreground font-medium"}>
@@ -115,3 +117,4 @@ export default function Cart() {
     </div>
   );
 }
+

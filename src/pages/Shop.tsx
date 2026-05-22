@@ -1,12 +1,11 @@
 ﻿/**
- * Shop Page — CarlyFresh Marketplace
- * Full marketplace: Featured, Baskets, Trending/Buyers Love, Bulk Deals, All Products
- * All curated sections live here — the landing page stays clean.
+ * Shop Page -- CarlyFresh Marketplace
+ * All Products shown first, then curated sections below.
  */
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -15,7 +14,7 @@ import CategoryFilter from "@/components/products/CategoryFilter";
 import type { DBProduct } from "@/components/products/ProductGrid";
 import {
   Sparkles, ShoppingBag, Heart, TrendingUp, Layers, Search,
-  Plus, Loader2, ChevronRight, Tag, Package,
+  Plus, Loader2, Tag, Package,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatNaira } from "@/lib/formatters";
@@ -26,7 +25,6 @@ type Product = DBProduct & {
   is_bundle?: boolean;
 };
 
-// ─── Tab definition ──────────────────────────────────────────────────────────
 const TABS = [
   { id: "all",      label: "All Products", icon: Layers },
   { id: "featured", label: "Featured",     icon: Sparkles },
@@ -37,21 +35,10 @@ const TABS = [
 
 type TabId = typeof TABS[number]["id"];
 
-// ─── Section header helper ────────────────────────────────────────────────────
 function SectionHeader({
-  icon: Icon,
-  accent,
-  label,
-  title,
-  sub,
-  color = "text-primary",
+  icon: Icon, accent, title, sub, color = "text-primary",
 }: {
-  icon: React.ElementType;
-  accent: string;
-  label: string;
-  title: string;
-  sub: string;
-  color?: string;
+  icon: React.ElementType; accent: string; title: string; sub: string; color?: string;
 }) {
   return (
     <div className="mb-8">
@@ -65,7 +52,6 @@ function SectionHeader({
   );
 }
 
-// ─── Basket card ─────────────────────────────────────────────────────────────
 function BasketCard({ basket, onAdd }: { basket: any; onAdd: (b: any) => void }) {
   return (
     <motion.div
@@ -75,12 +61,8 @@ function BasketCard({ basket, onAdd }: { basket: any; onAdd: (b: any) => void })
       <div>
         <div className="relative h-48 w-full overflow-hidden bg-secondary">
           {basket.image ? (
-            <img
-              src={basket.image}
-              alt={basket.name}
-              loading="lazy"
-              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
+            <img src={basket.image} alt={basket.name} loading="lazy"
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
           ) : (
             <div className="h-full w-full flex items-center justify-center">
               <ShoppingBag className="h-16 w-16 text-muted-foreground/20 stroke-[1.2]" />
@@ -103,7 +85,7 @@ function BasketCard({ basket, onAdd }: { basket: any; onAdd: (b: any) => void })
             </p>
           </div>
           {basket.basket_items && basket.basket_items.length > 0 && (
-            <div className="rounded-xl bg-muted/40 border border-border/40 p-3 space-y-1.5">
+            <div className="rounded-xl bg-muted/40 border border-border/40 p-3">
               <p className="font-body text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Includes</p>
               <div className="space-y-1 max-h-[72px] overflow-y-auto pr-1">
                 {basket.basket_items.map((item: any) => (
@@ -137,36 +119,25 @@ function BasketCard({ basket, onAdd }: { basket: any; onAdd: (b: any) => void })
   );
 }
 
-// ─── Main Shop page ───────────────────────────────────────────────────────────
 const Shop = () => {
   const [searchParams] = useSearchParams();
   const { addItem } = useCart();
 
-  // Tab state
   const [activeTab, setActiveTab] = useState<TabId>("all");
-
-  // All products (for All tab + bulk filter)
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState(searchParams.get("q") || "");
-
-  // Curated section data
   const [featured, setFeatured] = useState<Product[]>([]);
   const [buyersLove, setBuyersLove] = useState<Product[]>([]);
   const [baskets, setBaskets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const tabsRef = useRef<HTMLDivElement>(null);
-
-  // Sync search param
   useEffect(() => { setSearch(searchParams.get("q") || ""); }, [searchParams]);
 
-  // Fetch everything
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-
     Promise.all([
       supabase.from("products").select("*").eq("in_stock", true).order("created_at", { ascending: false }),
       supabase.from("products").select("*").eq("is_featured", true).eq("in_stock", true).order("created_at", { ascending: false }).limit(8),
@@ -183,7 +154,6 @@ const Shop = () => {
       if (basketsRes.data) setBaskets(basketsRes.data as any[]);
       setLoading(false);
     });
-
     return () => { mounted = false; };
   }, []);
 
@@ -191,8 +161,8 @@ const Shop = () => {
     addItem(basket.id, basket.name, basket.price, undefined, "basket", basket.price);
   };
 
-  // Filtered all-products list
   const bulkProducts = products.filter(p => p.bulk_min_qty && p.bulk_price);
+
   const filteredProducts = products.filter(p => {
     const matchCat = category === "All" || p.category === category;
     const q = search.toLowerCase().trim();
@@ -200,7 +170,7 @@ const Shop = () => {
     return matchCat && matchSearch;
   });
 
-  const scrollTabIntoView = (id: TabId) => {
+  const scrollToSection = (id: TabId) => {
     setActiveTab(id);
     setTimeout(() => {
       const el = document.getElementById(`shop-section-${id}`);
@@ -221,8 +191,8 @@ const Shop = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ── HERO BANNER ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-24 pb-10">
+      {/* HERO */}
+      <section className="relative overflow-hidden pt-24 pb-8">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-accent/8 pointer-events-none" />
         <div className="container mx-auto px-6 lg:px-12">
           <motion.div
@@ -240,11 +210,9 @@ const Shop = () => {
                 <span className="text-primary"> Straight to You</span>
               </h1>
               <p className="mt-3 max-w-lg font-body text-muted-foreground">
-                Browse featured picks, curated baskets, trending staples, and wholesale deals — all in one place.
+                Browse featured picks, curated baskets, trending staples, and wholesale deals.
               </p>
             </div>
-
-            {/* Inline search */}
             <div className="relative md:w-72 shrink-0">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
@@ -257,40 +225,18 @@ const Shop = () => {
               />
             </div>
           </motion.div>
-
-          {/* Quick Stats */}
-          {!loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-              className="mt-6 flex flex-wrap gap-3"
-            >
-              {[
-                { icon: Package, label: `${products.length} Products` },
-                { icon: Sparkles, label: `${featured.length} Featured` },
-                { icon: ShoppingBag, label: `${baskets.length} Baskets` },
-                { icon: Tag, label: `${bulkProducts.length} Bulk Deals` },
-              ].map(({ icon: Icon, label }) => (
-                <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 font-body text-xs font-semibold text-foreground shadow-sm">
-                  <Icon className="h-3.5 w-3.5 text-primary" />
-                  {label}
-                </span>
-              ))}
-            </motion.div>
-          )}
         </div>
       </section>
 
-      {/* ── STICKY TABS ─────────────────────────────────────────────────── */}
-      <div ref={tabsRef} className="sticky top-16 z-30 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
+      {/* STICKY TABS */}
+      <div className="sticky top-16 z-30 bg-background/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-none">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 id={`tab-${id}`}
-                onClick={() => scrollTabIntoView(id)}
+                onClick={() => scrollToSection(id)}
                 className={[
                   "flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 font-body text-sm font-semibold transition-all duration-200",
                   activeTab === id
@@ -314,125 +260,8 @@ const Shop = () => {
           </div>
         ) : (
           <>
-            {/* ── SECTION: FEATURED ─────────────────────────────────────── */}
-            {featured.length > 0 && (
-              <section id="shop-section-featured" className="container mx-auto px-6 lg:px-12 pt-14">
-                <SectionHeader
-                  icon={Sparkles}
-                  accent="Handpicked"
-                  label="featured"
-                  title="Featured Products"
-                  sub="Top picks selected by the CarlyFresh team — freshest arrivals and curated bundles."
-                  color="text-accent"
-                />
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.1 }}
-                  className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
-                >
-                  {featured.map(product => (
-                    <motion.div key={product.id} variants={cardVariants} className="relative">
-                      {product.is_bundle && (
-                        <span className="absolute top-3 left-3 z-10 rounded-full bg-primary px-2.5 py-1 font-body text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow">
-                          📦 Bundle
-                        </span>
-                      )}
-                      <ProductCard product={product} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {/* ── SECTION: CURATED BASKETS ──────────────────────────────── */}
-            {baskets.length > 0 && (
-              <section id="shop-section-baskets" className="container mx-auto px-6 lg:px-12 pt-14">
-                <SectionHeader
-                  icon={ShoppingBag}
-                  accent="Ready-Made Combos"
-                  label="baskets"
-                  title="Curated Kitchen Baskets"
-                  sub="Pre-packed recipe crates and household kitchen boxes. One tap adds the entire bundle."
-                  color="text-primary"
-                />
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.1 }}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
-                  {baskets.map(basket => (
-                    <motion.div key={basket.id} variants={cardVariants}>
-                      <BasketCard basket={basket} onAdd={handleAddBasket} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {/* ── SECTION: TRENDING / BUYERS LOVE ──────────────────────── */}
-            {buyersLove.length > 0 && (
-              <section id="shop-section-trending" className="pt-14">
-                <div className="container mx-auto px-6 lg:px-12">
-                  <div className="rounded-3xl bg-gradient-to-br from-rose-500/5 via-background to-accent/5 border border-border p-8 sm:p-10">
-                    <SectionHeader
-                      icon={Heart}
-                      accent="Customer Favorites"
-                      label="trending"
-                      title="What Buyers Love"
-                      sub="Consistently ordered staples that buyers keep coming back for, across our whole supply network."
-                      color="text-rose-500"
-                    />
-                    <motion.div
-                      variants={containerVariants}
-                      initial="hidden"
-                      whileInView="visible"
-                      viewport={{ once: true, amount: 0.1 }}
-                      className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
-                    >
-                      {buyersLove.map(product => (
-                        <motion.div key={product.id} variants={cardVariants}>
-                          <ProductCard product={product} />
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* ── SECTION: BULK DEALS ───────────────────────────────────── */}
-            {bulkProducts.length > 0 && (
-              <section id="shop-section-bulk" className="container mx-auto px-6 lg:px-12 pt-14">
-                <SectionHeader
-                  icon={Tag}
-                  accent="Wholesale Pricing"
-                  label="bulk"
-                  title="Bulk Deals"
-                  sub="Buy more, save more. All products here unlock a lower price when you hit the minimum quantity."
-                  color="text-emerald-600"
-                />
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, amount: 0.1 }}
-                  className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
-                >
-                  {bulkProducts.map(product => (
-                    <motion.div key={product.id} variants={cardVariants}>
-                      <ProductCard product={product} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </section>
-            )}
-
-            {/* ── SECTION: ALL PRODUCTS ─────────────────────────────────── */}
-            <section id="shop-section-all" className="container mx-auto px-6 lg:px-12 pt-14">
+            {/* === ALL PRODUCTS (first) === */}
+            <section id="shop-section-all" className="container mx-auto px-6 lg:px-12 pt-12">
               <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-1.5 text-foreground/50 mb-1">
@@ -449,7 +278,6 @@ const Shop = () => {
               </div>
 
               <div className="flex flex-col gap-8 lg:flex-row">
-                {/* Sidebar filter */}
                 <div className="w-full shrink-0 lg:w-56">
                   <div className="sticky top-32">
                     <CategoryFilter
@@ -461,8 +289,6 @@ const Shop = () => {
                     />
                   </div>
                 </div>
-
-                {/* Product grid */}
                 <div className="flex-1">
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -483,14 +309,136 @@ const Shop = () => {
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                       <Package className="h-16 w-16 text-muted-foreground/20 mb-4" />
                       <p className="font-display text-lg font-semibold text-foreground">No products found</p>
-                      <p className="font-body text-sm text-muted-foreground mt-1">
-                        Try adjusting your search or category filter.
-                      </p>
+                      <p className="font-body text-sm text-muted-foreground mt-1">Try adjusting your search or category filter.</p>
                     </div>
                   )}
                 </div>
               </div>
             </section>
+
+            {/* DIVIDER */}
+            {(featured.length > 0 || baskets.length > 0 || buyersLove.length > 0 || bulkProducts.length > 0) && (
+              <div className="container mx-auto px-6 lg:px-12 pt-16 pb-2">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="font-body text-xs font-bold uppercase tracking-widest text-muted-foreground">Curated Sections</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </div>
+            )}
+
+            {/* === FEATURED === */}
+            {featured.length > 0 && (
+              <section id="shop-section-featured" className="container mx-auto px-6 lg:px-12 pt-12">
+                <SectionHeader
+                  icon={Sparkles}
+                  accent="Handpicked"
+                  title="Featured Products"
+                  sub="Top picks selected by the CarlyFresh team — freshest arrivals and curated bundles."
+                  color="text-accent"
+                />
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.1 }}
+                  className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+                >
+                  {featured.map(product => (
+                    <motion.div key={product.id} variants={cardVariants} className="relative">
+                      {product.is_bundle && (
+                        <span className="absolute top-3 left-3 z-10 rounded-full bg-primary px-2.5 py-1 font-body text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow">
+                          Bundle
+                        </span>
+                      )}
+                      <ProductCard product={product} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </section>
+            )}
+
+            {/* === BASKETS === */}
+            {baskets.length > 0 && (
+              <section id="shop-section-baskets" className="container mx-auto px-6 lg:px-12 pt-14">
+                <SectionHeader
+                  icon={ShoppingBag}
+                  accent="Ready-Made Combos"
+                  title="Curated Kitchen Baskets"
+                  sub="Pre-packed recipe crates and household kitchen boxes. One tap adds the entire bundle."
+                  color="text-primary"
+                />
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.1 }}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {baskets.map(basket => (
+                    <motion.div key={basket.id} variants={cardVariants}>
+                      <BasketCard basket={basket} onAdd={handleAddBasket} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </section>
+            )}
+
+            {/* === TRENDING / BUYERS LOVE === */}
+            {buyersLove.length > 0 && (
+              <section id="shop-section-trending" className="pt-14">
+                <div className="container mx-auto px-6 lg:px-12">
+                  <div className="rounded-3xl bg-gradient-to-br from-rose-500/5 via-background to-accent/5 border border-border p-8 sm:p-10">
+                    <SectionHeader
+                      icon={Heart}
+                      accent="Customer Favorites"
+                      title="What Buyers Love"
+                      sub="Consistently ordered staples that buyers keep coming back for across our supply network."
+                      color="text-rose-500"
+                    />
+                    <motion.div
+                      variants={containerVariants}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true, amount: 0.1 }}
+                      className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+                    >
+                      {buyersLove.map(product => (
+                        <motion.div key={product.id} variants={cardVariants}>
+                          <ProductCard product={product} />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* === BULK DEALS === */}
+            {bulkProducts.length > 0 && (
+              <section id="shop-section-bulk" className="container mx-auto px-6 lg:px-12 pt-14">
+                <SectionHeader
+                  icon={Tag}
+                  accent="Wholesale Pricing"
+                  title="Bulk Deals"
+                  sub="Buy more, save more. Hit the minimum quantity to unlock a lower price per unit."
+                  color="text-emerald-600"
+                />
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.1 }}
+                  className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+                >
+                  {bulkProducts.map(product => (
+                    <motion.div key={product.id} variants={cardVariants}>
+                      <ProductCard product={product} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </section>
+            )}
           </>
         )}
       </div>
@@ -501,3 +449,4 @@ const Shop = () => {
 };
 
 export default Shop;
+
