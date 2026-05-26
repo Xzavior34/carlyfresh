@@ -10,6 +10,7 @@ export const getStatusColor = (status: string): string => {
   const colors: Record<string, string> = {
     pending: "bg-amber-100 text-amber-800",
     confirmed: "bg-sky-100 text-sky-800",
+    accepted: "bg-blue-100 text-blue-800",
     processing: "bg-blue-100 text-blue-800",
     preparing: "bg-indigo-100 text-indigo-800",
     packaged: "bg-purple-100 text-purple-800",
@@ -20,3 +21,4 @@ export const getStatusColor = (status: string): string => {
   };
   return colors[status] || "bg-muted text-muted-foreground";
 };
+

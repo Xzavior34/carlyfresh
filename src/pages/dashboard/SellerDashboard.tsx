@@ -349,7 +349,7 @@ export default function SellerDashboard() {
   };
 
   const handleAdvanceOrder = async (orderId: string, currentStatus: string) => {
-    if (currentStatus !== "processing") return;
+    if (currentStatus !== "accepted" && currentStatus !== "preparing" && currentStatus !== "processing") return;
     const { error } = await supabase
       .from("orders")
       .update({ status: "packaged" })
@@ -636,7 +636,7 @@ export default function SellerDashboard() {
                 {orders.slice(0, 8).map((order) => {
                   const StatusIcon = statusIcons[order.status] || Clock;
                   const isIncoming = order.status === "confirmed";
-                  const isProcessing = order.status === "processing";
+                  const isProcessing = order.status === "accepted" || order.status === "preparing" || order.status === "processing";
                   return (
                     <div
                       key={order.id}
@@ -696,3 +696,5 @@ export default function SellerDashboard() {
     </>
   );
 }
+
+

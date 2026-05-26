@@ -48,6 +48,9 @@ const trackingSteps = [
 function getStepIndex(status: string): number {
   const map: Record<string, number> = {
     pending: 0,
+    confirmed: 1,
+    accepted: 1,
+    preparing: 1,
     processing: 1,
     packaged: 1,
     "in-transit": 2,

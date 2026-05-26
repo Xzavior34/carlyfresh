@@ -338,6 +338,7 @@ function OrderRow({ order }: OrderRowProps) {
                       </p>
                       <DriverPanel info={deliveryInfo} loading={deliveryInfo === undefined} />
                     </div>
+                  )}
 
                   {/* Vendor Action Buttons */}
                   <div className="flex gap-3 pt-2 border-t border-border/30">
@@ -362,7 +363,6 @@ function OrderRow({ order }: OrderRowProps) {
                       </Button>
                     )}
                   </div>
-                  )}
                 </div>
               </motion.div>
             </TableCell>

@@ -58,6 +58,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (existing) return prev.map((item) => (item.id === id ? recompute(existing, existing.quantity + 1) : item));
       return [...prev, recompute({ id, name, price: pricePerUnit, vendorId, unit, pricePerUnit, bulkMinQty, bulkPrice, quantity: 1 }, 1)];
     });
+
+    const OneSignalDeferred = (window as any).OneSignalDeferred || [];
+    OneSignalDeferred.push(async (OneSignal: any) => {
+      const isSubscribed = OneSignal.User?.PushSubscription?.optedIn;
+      if (!isSubscribed) {
+        console.log("[OneSignal] Prompting user for push notifications on add to cart...");
+        if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === "function") {
+          OneSignal.Slidedown.promptPush().catch(console.error);
+        } else if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
+          OneSignal.Notifications.requestPermission().catch(console.error);
+        }
+      }
+    });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -99,6 +112,25 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setIsCheckingOut(false);
     }
   };
+
+  React.useEffect(() => {
+    const OneSignalDeferred = (window as any).OneSignalDeferred || [];
+    OneSignalDeferred.push(async (OneSignal: any) => {
+      if (OneSignal.User && typeof OneSignal.User.addTags === "function") {
+        if (items.length > 0) {
+          OneSignal.User.addTags({
+            cart_active: "true",
+            cart_item_count: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
+            cart_updated_at: new Date().toISOString()
+          }).catch(console.error);
+        } else {
+          OneSignal.User.addTags({
+            cart_active: "false"
+          }).catch(console.error);
+        }
+      }
+    });
+  }, [items]);
 
   return (
     <CartContext.Provider value={{ items, itemCount, total, isCheckingOut, addItem, updateQuantity, removeItem, clearCart, checkout }}>

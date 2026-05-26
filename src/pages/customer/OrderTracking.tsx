@@ -87,6 +87,7 @@ function getStepIndex(status: string): number {
     pending: 0,
     confirmed: 1,
     processing: 1, // legacy mapping
+    accepted: 2,
     preparing: 2,
     packaged: 2,   // legacy mapping
     driver_assigned: 3,
@@ -353,7 +354,7 @@ export default function OrderTracking() {
   // Determine when to show driver-related UI
   const showDriverSearch =
     order &&
-    ["confirmed", "preparing", "packaged", "driver_assigned", "in-transit"].includes(order.status) &&
+    ["confirmed", "accepted", "preparing", "packaged", "driver_assigned", "in-transit"].includes(order.status) &&
     !deliveryLoading;
 
   return (
