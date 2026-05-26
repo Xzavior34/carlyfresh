@@ -107,34 +107,16 @@ const OneSignalInitializer = () => {
       if (!isMounted) return;
 
       try {
-        // 1. Link subscription to the authenticated user
+        // Safe alias linkage (does not require subscription ID to be ready)
         if (OneSignal.User && typeof OneSignal.User.addAlias === "function") {
-          await OneSignal.User.addAlias("external_id", user.id);
+          OneSignal.User.addAlias("external_id", user.id).catch(console.error);
         }
 
-        // 2. Prompt for Push Permissions
-        if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === "function") {
-          await OneSignal.Slidedown.promptPush();
-        } else if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
-          await OneSignal.Notifications.requestPermission();
-        }
-
-        // 3. Safely sync token with retries
         const syncToken = async () => {
+          if (!isMounted) return;
           try {
-            let token = await OneSignal.User?.PushSubscription?.id;
-            
-            // Retry mechanism if the ID isn't ready immediately after permission is granted
-            if (!token) {
-              console.log("[OneSignal] Subscription ID not ready yet, checking permission...");
-              for (let i = 0; i < 5; i++) {
-                await new Promise((r) => setTimeout(r, 2000));
-                token = await OneSignal.User?.PushSubscription?.id;
-                if (token) break;
-              }
-            }
-
-            if (token && isMounted) {
+            const token = OneSignal.User?.PushSubscription?.id;
+            if (token) {
               console.log("[OneSignal] Syncing push token:", token);
               const { error } = await supabase
                 .from("profiles")
@@ -143,26 +125,42 @@ const OneSignalInitializer = () => {
               if (error) console.error("[OneSignal] Error saving push token:", error);
               else console.log("[OneSignal] Push token saved successfully.");
             } else {
-              console.warn("[OneSignal] Permission granted but no subscription ID available after retries.");
+              console.log("[OneSignal] No subscription ID available yet.");
             }
           } catch (err) {
-            console.warn("[OneSignal] Token sync bypassed:", err);
+            console.error("[OneSignal] Token sync error:", err);
           }
         };
 
-        await syncToken();
-
-        // 4. Listen for future subscription changes
+        // Listen for subscription changes (This handles when a user accepts the prompt)
         handleSubscriptionChange = () => {
-          if (isMounted) syncToken();
+          console.log("[OneSignal] Subscription changed!");
+          syncToken();
         };
 
         if (OneSignal.User?.PushSubscription && typeof OneSignal.User.PushSubscription.addEventListener === "function") {
           OneSignal.User.PushSubscription.addEventListener("change", handleSubscriptionChange);
         }
 
+        // Check current status
+        const isSubscribed = OneSignal.User?.PushSubscription?.optedIn;
+        const pushId = OneSignal.User?.PushSubscription?.id;
+
+        if (isSubscribed && pushId) {
+          // Already subscribed, sync it right away
+          syncToken();
+        } else {
+          // Not subscribed, prompt the user (fire and forget, handle result in event listener)
+          console.log("[OneSignal] User is not yet subscribed, prompting...");
+          if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === "function") {
+            OneSignal.Slidedown.promptPush().catch(console.error);
+          } else if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
+            OneSignal.Notifications.requestPermission().catch(console.error);
+          }
+        }
+
       } catch (error) {
-        console.warn("[OneSignal] Setup bypassed:", error);
+        console.error("[OneSignal] Setup error:", error);
       }
     });
 
@@ -173,7 +171,7 @@ const OneSignalInitializer = () => {
         try {
           OneSignal.User.PushSubscription.removeEventListener("change", handleSubscriptionChange);
         } catch (e) {
-          // ignore cleanup errors
+          // ignore
         }
       }
     };
