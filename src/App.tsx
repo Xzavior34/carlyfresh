@@ -109,7 +109,7 @@ const OneSignalInitializer = () => {
       try {
         // Safe alias linkage (does not require subscription ID to be ready)
         if (OneSignal.User && typeof OneSignal.User.addAlias === "function") {
-          OneSignal.User.addAlias("external_id", user.id).catch(console.error);
+          OneSignal.login(user.id).catch(console.error);
         }
 
         const syncToken = async () => {
@@ -268,3 +268,4 @@ const App = () => (
 );
 
 export default App;
+
