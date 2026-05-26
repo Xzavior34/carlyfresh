@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ScrollToTop from "@/components/layout/ScrollToTop";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useEffect } from "react";
-import OneSignal from "react-onesignal";
 import { supabase } from "@/integrations/supabase/client";
 
 // Public pages
@@ -72,7 +71,7 @@ const queryClient = new QueryClient();
 /** Route guard: redirects unauthenticated users to /login */
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) => {
   const { user, role, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-body text-muted-foreground">Loadingâ€¦</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-body text-muted-foreground">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (requiredRole && role !== requiredRole) return <Navigate to="/login" replace />;
   return <>{children}</>;
@@ -81,7 +80,7 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode;
 /** Redirect authenticated users away from auth pages */
 const GuestRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, role, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-body text-muted-foreground">Loadingâ€¦</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-body text-muted-foreground">Loading…</div>;
   if (user) {
     if (role === "admin") return <Navigate to="/admin" replace />;
     if (role === "seller") return <Navigate to="/vendor" replace />;
@@ -94,128 +93,88 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
 const OneSignalInitializer = () => {
   const { user, role } = useAuth();
 
-  const getOneSignal = () => {
-    if (typeof window !== "undefined" && (window as any).OneSignal) {
-      return (window as any).OneSignal;
-    }
-    return OneSignal;
-  };
-
   useEffect(() => {
-    const initOneSignal = async () => {
-      try {
-        const os = getOneSignal();
-        if (os && typeof os.init === "function") {
-          await os.init({
-            appId: "e6446b40-1453-4ccd-929d-d8ccb8c7ff91",
-            allowLocalhostAsSecureOrigin: true,
-          });
-        }
-      } catch (error) {
-        console.warn("[OneSignal] Init bypassed:", error);
-      }
-    };
-    initOneSignal();
-  }, []);
-
-  useEffect(() => {
+    // Only run for authenticated non-admin roles
     if (!user || !role) return;
-
-    // All authenticated non-admin roles receive push notifications
     const allowedRoles = ["buyer", "seller", "driver"];
     if (!allowedRoles.includes(role)) return;
 
+    let isMounted = true;
     let handleSubscriptionChange: ((event: any) => void) | null = null;
+    const OneSignalDeferred = (window as any).OneSignalDeferred || [];
 
-    /**
-     * Syncs the OneSignal PushSubscription.id (UUID) to profiles.push_token.
-     * The edge function reads this and uses include_subscription_ids in the
-     * OneSignal API call (SDK v16 subscription ID, not legacy player ID).
-     * Retries up to 3 times with 1.5s gaps because the ID may not be
-     * immediately available right after promptPush() resolves.
-     */
-    const syncToken = async (os: any) => {
+    OneSignalDeferred.push(async function(OneSignal: any) {
+      if (!isMounted) return;
+
       try {
-        let token: string | null | undefined = os?.User?.PushSubscription?.id;
-        if (!token) {
-          for (let i = 0; i < 3; i++) {
-            await new Promise((r) => setTimeout(r, 1500));
-            token = os?.User?.PushSubscription?.id;
-            if (token) break;
+        // 1. Link subscription to the authenticated user
+        if (OneSignal.User && typeof OneSignal.User.addAlias === "function") {
+          await OneSignal.User.addAlias("external_id", user.id);
+        }
+
+        // 2. Prompt for Push Permissions
+        if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === "function") {
+          await OneSignal.Slidedown.promptPush();
+        } else if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
+          await OneSignal.Notifications.requestPermission();
+        }
+
+        // 3. Safely sync token with retries
+        const syncToken = async () => {
+          try {
+            let token = await OneSignal.User?.PushSubscription?.id;
+            
+            // Retry mechanism if the ID isn't ready immediately after permission is granted
+            if (!token) {
+              console.log("[OneSignal] Subscription ID not ready yet, checking permission...");
+              for (let i = 0; i < 5; i++) {
+                await new Promise((r) => setTimeout(r, 2000));
+                token = await OneSignal.User?.PushSubscription?.id;
+                if (token) break;
+              }
+            }
+
+            if (token && isMounted) {
+              console.log("[OneSignal] Syncing push token:", token);
+              const { error } = await supabase
+                .from("profiles")
+                .update({ push_token: token })
+                .eq("user_id", user.id);
+              if (error) console.error("[OneSignal] Error saving push token:", error);
+              else console.log("[OneSignal] Push token saved successfully.");
+            } else {
+              console.warn("[OneSignal] Permission granted but no subscription ID available after retries.");
+            }
+          } catch (err) {
+            console.warn("[OneSignal] Token sync bypassed:", err);
           }
-        }
-        if (token) {
-          console.log("[OneSignal] Syncing push token:", token);
-          const { error } = await supabase
-            .from("profiles")
-            .update({ push_token: token })
-            .eq("user_id", user.id);
-          if (error) {
-            console.error("[OneSignal] Error saving push token:", error);
-          } else {
-            console.log("[OneSignal] Push token saved successfully.");
-          }
-        } else {
-          console.warn("[OneSignal] No subscription ID available after retries.");
-        }
-      } catch (err) {
-        console.warn("[OneSignal] Token sync bypassed:", err);
-      }
-    };
-
-    const setupPush = async () => {
-      try {
-        const os = getOneSignal();
-        if (!os) return;
-
-        // Link subscription to the authenticated user
-        if (os.User && typeof os.User.addAlias === "function") {
-          await os.User.addAlias("external_id", user.id);
-        }
-
-        // Request push permission
-        if (os.Slidedown && typeof os.Slidedown.promptPush === "function") {
-          await os.Slidedown.promptPush();
-        } else if (
-          os.Notifications &&
-          typeof os.Notifications.requestPermission === "function"
-        ) {
-          await os.Notifications.requestPermission();
-        }
-
-        // Initial sync (with retry in case subscription ID is not yet ready)
-        await syncToken(os);
-
-        // Listen for future subscription changes (e.g. user re-enables notifications)
-        handleSubscriptionChange = (_event: any) => {
-          syncToken(os);
         };
 
-        if (
-          os.User?.PushSubscription &&
-          typeof os.User.PushSubscription.addEventListener === "function"
-        ) {
-          os.User.PushSubscription.addEventListener("change", handleSubscriptionChange);
+        await syncToken();
+
+        // 4. Listen for future subscription changes
+        handleSubscriptionChange = () => {
+          if (isMounted) syncToken();
+        };
+
+        if (OneSignal.User?.PushSubscription && typeof OneSignal.User.PushSubscription.addEventListener === "function") {
+          OneSignal.User.PushSubscription.addEventListener("change", handleSubscriptionChange);
         }
+
       } catch (error) {
         console.warn("[OneSignal] Setup bypassed:", error);
       }
-    };
-
-    setupPush();
+    });
 
     return () => {
-      try {
-        const os = getOneSignal();
-        if (
-          handleSubscriptionChange &&
-          os?.User?.PushSubscription &&
-          typeof os.User.PushSubscription.removeEventListener === "function"
-        ) {
-          os.User.PushSubscription.removeEventListener("change", handleSubscriptionChange);
+      isMounted = false;
+      const OneSignal = (window as any).OneSignal;
+      if (OneSignal?.User?.PushSubscription && typeof OneSignal.User.PushSubscription.removeEventListener === "function" && handleSubscriptionChange) {
+        try {
+          OneSignal.User.PushSubscription.removeEventListener("change", handleSubscriptionChange);
+        } catch (e) {
+          // ignore cleanup errors
         }
-      } catch (err) {
-        console.warn("[OneSignal] Cleanup bypassed:", err);
       }
     };
   }, [user, role]);
@@ -311,4 +270,3 @@ const App = () => (
 );
 
 export default App;
-
