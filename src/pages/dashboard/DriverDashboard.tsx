@@ -1,5 +1,7 @@
-/**
- * Driver Dashboard — Real-time job feed with wallet metrics
+﻿/**
+ * Driver Dashboard - Real-time job feed with atomic claim_order RPC
+ * FIXED: handleAcceptJob calls claim_order RPC (race-condition safe fastest-finger)
+ * Realtime channel watches delivery_jobs for live updates
  */
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,166 +31,60 @@ export default function DriverDashboard() {
   const fetchAll = useCallback(async () => {
     if (!user) return;
     try {
-      const [availRes, prepOrdersRes, myRes, walletRes] = await Promise.all([
-        supabase
-          .from("delivery_jobs")
+      const [availRes, myRes, walletRes] = await Promise.all([
+        supabase.from("delivery_jobs")
           .select("*, orders(order_number, delivery_window, delivery_address, total_amount, items)")
-          .eq("status", "available")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("orders")
-          .select("*, delivery_jobs(*)")
-          .eq("status", "packaged")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("delivery_jobs")
-          .select("*")
-          .eq("driver_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("driver_wallet")
-          .select("*")
-          .eq("driver_id", user.id)
-          .maybeSingle(),
+          .eq("status", "available").is("driver_id", null).order("created_at", { ascending: false }),
+        supabase.from("delivery_jobs").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("driver_wallet").select("*").eq("driver_id", user.id).maybeSingle(),
       ]);
-
-      const mergedJobs: any[] = [];
-      const seenOrderIds = new Set<string>();
-
-      // 1. Process explicit delivery_jobs that are available
       if (availRes.data) {
-        availRes.data.forEach((job: any) => {
-          mergedJobs.push({
-            id: job.id,
-            order_id: job.order_id,
-            pickup_address: job.pickup_address || "Vendor Location",
-            dropoff_address: job.dropoff_address || job.orders?.delivery_address || "Customer Address",
-            payout_amount: Number(job.payout_amount || 1500),
-            status: "available",
-            created_at: job.created_at,
-            orders: job.orders,
-          });
-          seenOrderIds.add(job.order_id);
-        });
+        setJobs(availRes.data.map((job: any) => ({
+          id: job.id, order_id: job.order_id,
+          pickup_address: job.pickup_address || "Vendor Location",
+          dropoff_address: job.dropoff_address || job.orders?.delivery_address || "Customer Address",
+          payout_amount: Number(job.payout_amount || 1500),
+          status: "available", created_at: job.created_at, orders: job.orders,
+        })));
       }
-
-      // 2. Process preparing orders that don't have an active/assigned job yet
-      if (prepOrdersRes.data) {
-        prepOrdersRes.data.forEach((order: any) => {
-          if (!seenOrderIds.has(order.id)) {
-            const job = order.delivery_jobs?.[0];
-            if (!job || job.status === "available" || !job.driver_id) {
-              mergedJobs.push({
-                id: job?.id || `temp-${order.id}`,
-                order_id: order.id,
-                pickup_address: job?.pickup_address || "Vendor Location",
-                dropoff_address: order.delivery_address || job?.dropoff_address || "Customer Address",
-                payout_amount: Number(job?.payout_amount || 1500),
-                status: "available",
-                created_at: order.created_at,
-                orders: order,
-              });
-              seenOrderIds.add(order.id);
-            }
-          }
-        });
-      }
-
-      setJobs(mergedJobs);
       if (myRes.data) setMyJobs(myRes.data);
       if (walletRes.data) setWalletBalance(Number((walletRes.data as any)?.balance || 0));
-    } catch (err: any) {
-      console.error("Error fetching driver dashboard data:", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { console.error("Driver dashboard fetch error:", err); }
+    finally { setLoading(false); }
   }, [user]);
 
   useEffect(() => {
     if (!user) return;
     fetchAll();
-
-    const channel = supabase
-      .channel("driver-jobs-rt-all")
-      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: "status=eq.packaged" }, () => fetchAll());
-    channel.subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    const ch = supabase.channel("driver-jobs-rt-v2")
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchAll());
+    ch.subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [user, fetchAll]);
 
-  const handleAcceptJob = async (
-    jobId: string,
-    orderId: string,
-    pickupAddress: string,
-    dropoffAddress: string,
-    payoutAmount: number
-  ) => {
+  // Atomic claim via RPC - only the first driver wins, no double-booking
+  const handleAcceptJob = async (jobId: string, orderId: string) => {
     if (!user || accepting) return;
     setAccepting(jobId);
-
     try {
-      const isTempJob = jobId.startsWith("temp-");
-      let finalJobId = jobId;
-
-      if (isTempJob) {
-        // Insert a new delivery job mapping user ID as driver_id, status to accepted
-        const { data: newJob, error: createError } = await supabase
-          .from("delivery_jobs")
-          .insert({
-            order_id: orderId,
-            driver_id: user.id,
-            status: "accepted" as any,
-            pickup_address: pickupAddress || "Vendor Location",
-            dropoff_address: dropoffAddress || "Customer Address",
-            payout_amount: payoutAmount || 1500,
-          })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        finalJobId = newJob.id;
+      const { data: claimed, error } = await supabase.rpc("claim_order" as any, {
+        p_order_id: orderId,
+        p_driver_id: user.id,
+      });
+      if (error) throw error;
+      if (claimed) {
+        toast({ title: "Job Accepted! 🚚", description: "Head to the pickup address." });
+        fetchAll();
       } else {
-        // Update existing delivery job mapping user ID as driver_id, status to accepted
-        const { error: updateError } = await supabase
-          .from("delivery_jobs")
-          .update({
-            driver_id: user.id,
-            status: "accepted" as any,
-          })
-          .eq("id", jobId);
-
-        if (updateError) throw updateError;
+        toast({ title: "Too Slow! ⚡", description: "Another driver already claimed this delivery.", variant: "destructive" });
+        setJobs(prev => prev.filter(j => j.order_id !== orderId));
       }
-
-      // Update the corresponding order status directly to 'driver_assigned'
-      const { error: orderError } = await supabase
-        .from("orders")
-        .update({ status: "in-transit" as any })
-        .eq("id", orderId);
-
-      if (orderError) throw orderError;
-
-      toast({
-        title: "Job Accepted! 🚚",
-        description: "Delivery assigned successfully.",
-      });
-
-      fetchAll();
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to accept job",
-        variant: "destructive",
-      });
-    } finally {
-      setAccepting(null);
-    }
+      toast({ title: "Error", description: err.message || "Failed to accept job", variant: "destructive" });
+    } finally { setAccepting(null); }
   };
 
   const completedJobs = myJobs?.filter(j => j?.status === "completed") ?? [];
-  const todayEarnings = completedJobs.reduce((sum, j) => sum + Number(j?.payout_amount ?? 0), 0);
-
   if (loading) return <DashboardSkeleton />;
 
   return (
@@ -197,8 +93,6 @@ export default function DriverDashboard() {
         <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">Driver Dashboard</h1>
         <p className="text-muted-foreground font-body mt-1">Manage your deliveries and track earnings.</p>
       </div>
-
-      {/* Status toggle */}
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}>
         <Card className={`border-2 transition-all duration-500 ${isOnline ? "border-primary bg-gradient-to-br from-primary/5 to-primary/10" : "border-border bg-card"}`}>
           <CardContent className="p-6">
@@ -218,8 +112,6 @@ export default function DriverDashboard() {
           </CardContent>
         </Card>
       </motion.div>
-
-      {/* Metrics */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Wallet", value: formatNaira(walletBalance), icon: Wallet, accent: "text-primary" },
@@ -229,21 +121,14 @@ export default function DriverDashboard() {
         ].map(item => (
           <Card key={item.label} className="border border-border">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <item.icon className={`h-4 w-4 ${item.accent}`} />
-                <span className="text-[10px] font-body uppercase tracking-wider text-muted-foreground">{item.label}</span>
-              </div>
+              <div className="flex items-center gap-2 mb-2"><item.icon className={`h-4 w-4 ${item.accent}`} /><span className="text-[10px] font-body uppercase tracking-wider text-muted-foreground">{item.label}</span></div>
               <p className="font-display text-lg font-bold text-foreground">{item.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
-
-      {/* Available Jobs */}
       <Card className="border border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-display flex items-center gap-2"><Navigation className="h-5 w-5 text-primary" /> Available Jobs</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-lg font-display flex items-center gap-2"><Navigation className="h-5 w-5 text-primary" /> Available Jobs</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <AnimatePresence>
             {jobs?.map(job => (
@@ -256,33 +141,18 @@ export default function DriverDashboard() {
                     <div className="h-2.5 w-2.5 rounded-full bg-accent" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-body uppercase text-muted-foreground">Pickup</span>
-                      <Badge variant="secondary" className="text-[10px] font-body">{job?.id?.slice(0, 8) || "N/A"}</Badge>
-                    </div>
+                    <div className="flex items-center gap-2"><span className="text-[10px] font-body uppercase text-muted-foreground">Pickup</span><Badge variant="secondary" className="text-[10px] font-body">{job?.id?.slice(0, 8) || "N/A"}</Badge></div>
                     <p className="font-body text-sm font-medium text-foreground truncate">{job?.pickup_address || "N/A"}</p>
-                    <div className="mt-3">
-                      <span className="text-[10px] font-body uppercase text-muted-foreground">Dropoff</span>
-                      <p className="font-body text-sm font-medium text-foreground">{job?.dropoff_address || "N/A"}</p>
-                    </div>
-                    {(job as any)?.orders?.delivery_window && (
-                      <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-body text-[11px] font-semibold text-primary">
-                        <Navigation className="h-3 w-3" /> {(job as any).orders.delivery_window}
-                      </p>
-                    )}
+                    <div className="mt-3"><span className="text-[10px] font-body uppercase text-muted-foreground">Dropoff</span><p className="font-body text-sm font-medium text-foreground">{job?.dropoff_address || "N/A"}</p></div>
+                    {(job as any)?.orders?.delivery_window && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-body text-[11px] font-semibold text-primary"><Navigation className="h-3 w-3" /> {(job as any).orders.delivery_window}</p>}
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
                   <div className="flex items-center gap-1 text-xs font-body text-muted-foreground"><MapPin className="h-3 w-3" /> Delivery</div>
                   <div className="flex items-center gap-3">
                     <span className="font-display text-lg font-bold text-primary">{formatNaira(Number(job?.payout_amount ?? 0))}</span>
-                    <Button 
-                      size="sm" 
-                      className="font-body text-xs bg-primary hover:bg-primary/90 gap-1" 
-                      onClick={() => handleAcceptJob(job.id, job.order_id, job.pickup_address, job.dropoff_address, job.payout_amount)} 
-                      disabled={!isOnline || accepting === job.id}
-                    >
-                      {accepting === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null} Accept Delivery Job
+                    <Button size="sm" className="font-body text-xs bg-primary hover:bg-primary/90 gap-1" onClick={() => handleAcceptJob(job.id, job.order_id)} disabled={!isOnline || accepting === job.id}>
+                      {accepting === job.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null} Accept Delivery
                     </Button>
                   </div>
                 </div>
@@ -296,9 +166,7 @@ export default function DriverDashboard() {
               <p className="font-body text-sm text-muted-foreground max-w-xs text-center">New delivery requests appear here in real time.</p>
             </div>
           )}
-          {!isOnline && (jobs?.length ?? 0) > 0 && (
-            <p className="text-center font-body text-sm text-muted-foreground py-2">Go online to accept delivery jobs.</p>
-          )}
+          {!isOnline && (jobs?.length ?? 0) > 0 && <p className="text-center font-body text-sm text-muted-foreground py-2">Go online to accept delivery jobs.</p>}
         </CardContent>
       </Card>
     </div>

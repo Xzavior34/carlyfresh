@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Order Tracking Page — Real-time order status updates
  * Milestones: pending → confirmed → preparing → driver_assigned → in-transit → delivered
  * Includes: Driver profile card, delivery_jobs joined with profiles
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -237,6 +237,8 @@ export default function OrderTracking() {
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  // Ref holds latest order to avoid stale closure in delivery realtime callback
+  const orderRef = useRef<Order | null>(null);
 
   useEffect(() => {
     if (order?.status === "delivered") {
@@ -249,7 +251,7 @@ export default function OrderTracking() {
     navigate("/");
   };
 
-  const fetchDeliveryInfo = async (currentOrder: Order) => {
+  const fetchDeliveryInfo = useCallback(async (currentOrder: Order) => {
     if (!currentOrder) return;
     setDeliveryLoading(true);
 
@@ -289,7 +291,8 @@ export default function OrderTracking() {
 
     setDeliveryInfo({ job: jobData, driver, driverLocation });
     setDeliveryLoading(false);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!user || !orderId) return;
@@ -303,6 +306,7 @@ export default function OrderTracking() {
         .maybeSingle();
       if (data) {
         setOrder(data);
+        orderRef.current = data;
         fetchDeliveryInfo(data);
       }
       setLoading(false);
@@ -311,13 +315,14 @@ export default function OrderTracking() {
 
     // Real-time: order status changes
     const orderChannel = supabase
-      .channel(`order-track-${orderId}-${Math.random().toString(36).substring(2, 9)}`)
+      .channel(`order-track-${orderId}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
         (payload) => {
           const updated = payload.new as Order;
           setOrder(updated);
+          orderRef.current = updated;
           fetchDeliveryInfo(updated);
         }
       );
@@ -325,12 +330,12 @@ export default function OrderTracking() {
 
     // Real-time: delivery job changes
     const deliveryChannel = supabase
-      .channel(`delivery-track-${orderId}-${Math.random().toString(36).substring(2, 9)}`)
+      .channel(`delivery-track-${orderId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_jobs", filter: `order_id=eq.${orderId}` },
         () => {
-          if (order) fetchDeliveryInfo(order);
+          if (orderRef.current) fetchDeliveryInfo(orderRef.current);
           else fetchOrder();
         }
       );
@@ -340,14 +345,15 @@ export default function OrderTracking() {
       supabase.removeChannel(orderChannel);
       supabase.removeChannel(deliveryChannel);
     };
-  }, [user, orderId, order]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, orderId]); // intentionally omits 'order' - using orderRef to avoid infinite re-subscriptions
 
   const currentStep = order ? getStepIndex(order.status) : 0;
 
   // Determine when to show driver-related UI
   const showDriverSearch =
     order &&
-    ["confirmed", "preparing", "driver_assigned", "in-transit"].includes(order.status) &&
+    ["confirmed", "preparing", "packaged", "driver_assigned", "in-transit"].includes(order.status) &&
     !deliveryLoading;
 
   return (
@@ -594,3 +600,4 @@ export default function OrderTracking() {
     </div>
   );
 }
+
