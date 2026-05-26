@@ -6,14 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 interface CartItem {
   id: string;
   name: string;
-  /** Effective unit price (may switch to bulk_price when qty >= bulk_min_qty) */
   price: number;
   quantity: number;
   vendorId?: string;
   unit: string;
-  /** Original (regular) per-unit price */
   pricePerUnit: number;
-  /** Bulk pricing config */
   bulkMinQty?: number | null;
   bulkPrice?: number | null;
 }
@@ -41,13 +38,11 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-/** Returns the effective unit price given qty + bulk config */
 function effectiveUnitPrice(item: Pick<CartItem, "pricePerUnit" | "bulkMinQty" | "bulkPrice">, qty: number): number {
   if (item.bulkMinQty && item.bulkPrice && qty >= item.bulkMinQty) return Number(item.bulkPrice);
   return Number(item.pricePerUnit);
 }
 
-/** Whether bulk discount is active for this item right now */
 export function isBulkActive(item: Pick<CartItem, "bulkMinQty" | "bulkPrice" | "quantity">) {
   return Boolean(item.bulkMinQty && item.bulkPrice && item.quantity >= item.bulkMinQty);
 }
@@ -66,75 +61,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     price: effectiveUnitPrice(item, qty),
   });
 
-  const addItem = async (
-    id: string,
-    name: string,
-    price: number,
-    vendorId?: string,
-    unit: string = "piece",
-    pricePerUnit: number = price,
-    bulkMinQty: number | null = null,
-    bulkPrice: number | null = null,
-  ) => {
-    try {
-      if (user?.id) {
-        await supabase.rpc('send_cart_notification', { 
-          p_user_id: user.id, 
-          p_message: `${name} has been added to your cart! 🛒` 
-        });
-      }
-    } catch (rpcError) {
-      console.error('Cart push notification failed safely:', rpcError);
-    }
-
+  const addItem = async (id: string, name: string, price: number, vendorId?: string, unit: string = "piece", pricePerUnit: number = price, bulkMinQty: number | null = null, bulkPrice: number | null = null) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === id);
       if (existing) {
         const newQty = existing.quantity + 1;
-        const wasBulk = isBulkActive(existing);
-        const updated = recompute(existing, newQty);
-        if (!wasBulk && isBulkActive(updated)) {
-          toast({ title: "Bulk Discount Applied!", description: `${name} is now at wholesale price.` });
-        }
-        return prev.map((item) => (item.id === id ? updated : item));
+        return prev.map((item) => (item.id === id ? recompute(existing, newQty) : item));
       }
-      const base: CartItem = {
-        id,
-        name,
-        price: pricePerUnit,
-        quantity: 1,
-        vendorId,
-        unit,
-        pricePerUnit,
-        bulkMinQty,
-        bulkPrice,
-      };
-      return [...prev, recompute(base, 1)];
+      return [...prev, recompute({ id, name, price: pricePerUnit, vendorId, unit, pricePerUnit, bulkMinQty, bulkPrice, quantity: 1 }, 1)];
     });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      setItems((prev) => prev.filter((item) => item.id !== id));
-      return;
-    }
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-        const wasBulk = isBulkActive(item);
-        const next = recompute(item, quantity);
-        if (!wasBulk && isBulkActive(next)) {
-          toast({ title: "Bulk Discount Applied!", description: `${item.name} is now at wholesale price.` });
-        }
-        return next;
-      })
-    );
+    if (quantity <= 0) { setItems((prev) => prev.filter((item) => item.id !== id)); return; }
+    setItems((prev) => prev.map((item) => (item.id === id ? recompute(item, quantity) : item)));
   };
 
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
+  const removeItem = (id: string) => setItems((prev) => prev.filter((item) => item.id !== id));
   const clearCart = () => setItems([]);
 
   const checkout = async (buyerId: string, deliveryAddress?: string, deliveryWindow?: string): Promise<string | null> => {
@@ -142,31 +85,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setIsCheckingOut(true);
 
     try {
-      const vendorId = items[0]?.vendorId || buyerId;
-
-      const orderItems = items.map((i) => ({
-        product_id: i.id,
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity,
-        unit: i.unit,
-      }));
-
+      // Create the order with 'pending' - this matches your database ENUM exactly
       const { data, error } = await supabase
         .from("orders")
         .insert({
-          buyer_id: buyerId,
-          vendor_id: vendorId,
-          items: orderItems as any,
+          user_id: buyerId, // Ensure this matches your table column name (user_id vs buyer_id)
+          status: "pending", 
           total_amount: total,
-          status: "pending",
           delivery_address: deliveryAddress || "",
           delivery_window: deliveryWindow || null,
-        } as any)
+        })
         .select("id")
         .single();
 
       if (error) {
+        console.error("Checkout Error:", error);
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
         return null;
       }
