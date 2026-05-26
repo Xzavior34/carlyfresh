@@ -73,15 +73,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setIsCheckingOut(true);
 
     try {
-      // Use buyer_id (verified from your database schema)
+      // Correctly mapping to your database schema
       const { data, error } = await supabase
         .from("orders")
         .insert({
-          buyer_id: buyerId, 
+          buyer_id: buyerId,
           vendor_id: items[0]?.vendorId || buyerId,
           items: items as any,
           total_amount: total,
-          status: "pending", // Valid enum value
+          status: "pending", // VALID database enum value
           delivery_address: deliveryAddress || "",
           delivery_window: deliveryWindow || null,
         })
@@ -89,7 +89,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
-        console.error("Checkout Error:", error);
+        console.error("Database Insert Error:", error);
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
         return null;
       }
