@@ -116,18 +116,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   React.useEffect(() => {
     const OneSignalDeferred = (window as any).OneSignalDeferred || [];
     OneSignalDeferred.push(async (OneSignal: any) => {
-      if (OneSignal.User && typeof OneSignal.User.addTags === "function") {
-        if (items.length > 0) {
-          OneSignal.User.addTags({
-            cart_active: "true",
-            cart_item_count: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
-            cart_updated_at: new Date().toISOString()
-          }).catch(console.error);
-        } else {
-          OneSignal.User.addTags({
-            cart_active: "false"
-          }).catch(console.error);
+      try {
+        if (OneSignal.User && typeof OneSignal.User.addTags === "function") {
+          if (items.length > 0) {
+            OneSignal.User.addTags({
+              cart_active: "true",
+              cart_item_count: items.reduce((sum, item) => sum + item.quantity, 0).toString(),
+              cart_updated_at: new Date().toISOString()
+            });
+          } else {
+            OneSignal.User.addTags({
+              cart_active: "false"
+            });
+          }
         }
+      } catch (err) {
+        console.error("[OneSignal] Tag error:", err);
       }
     });
   }, [items]);
