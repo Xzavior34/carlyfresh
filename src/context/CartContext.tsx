@@ -73,26 +73,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setIsCheckingOut(true);
 
     try {
-      // If you get an error, check your Supabase Table Editor: 
-      // Are these columns named 'buyer_id'/'vendor_id' or 'user_id'/'vendor_id'?
-      const orderPayload = {
-        buyer_id: buyerId,
-        vendor_id: items[0]?.vendorId || buyerId,
-        items: items as any,
-        total_amount: total,
-        status: "pending", 
-        delivery_address: deliveryAddress || "",
-        delivery_window: deliveryWindow || null,
-      };
-
+      // Use buyer_id (verified from your database schema)
       const { data, error } = await supabase
         .from("orders")
-        .insert(orderPayload)
+        .insert({
+          buyer_id: buyerId, 
+          vendor_id: items[0]?.vendorId || buyerId,
+          items: items as any,
+          total_amount: total,
+          status: "pending", // Valid enum value
+          delivery_address: deliveryAddress || "",
+          delivery_window: deliveryWindow || null,
+        })
         .select("id")
         .single();
 
       if (error) {
-        console.error("Checkout DB Error:", error);
+        console.error("Checkout Error:", error);
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
         return null;
       }
