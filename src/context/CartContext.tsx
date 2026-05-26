@@ -20,16 +20,7 @@ interface CartContextType {
   itemCount: number;
   total: number;
   isCheckingOut: boolean;
-  addItem: (
-    id: string,
-    name: string,
-    price: number,
-    vendorId?: string,
-    unit?: string,
-    pricePerUnit?: number,
-    bulkMinQty?: number | null,
-    bulkPrice?: number | null,
-  ) => void;
+  addItem: (id: string, name: string, price: number, vendorId?: string, unit?: string, pricePerUnit?: number, bulkMinQty?: number | null, bulkPrice?: number | null) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -64,10 +55,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addItem = async (id: string, name: string, price: number, vendorId?: string, unit: string = "piece", pricePerUnit: number = price, bulkMinQty: number | null = null, bulkPrice: number | null = null) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === id);
-      if (existing) {
-        const newQty = existing.quantity + 1;
-        return prev.map((item) => (item.id === id ? recompute(existing, newQty) : item));
-      }
+      if (existing) return prev.map((item) => (item.id === id ? recompute(existing, existing.quantity + 1) : item));
       return [...prev, recompute({ id, name, price: pricePerUnit, vendorId, unit, pricePerUnit, bulkMinQty, bulkPrice, quantity: 1 }, 1)];
     });
   };
@@ -85,21 +73,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setIsCheckingOut(true);
 
     try {
-      // Create the order with 'pending' - this matches your database ENUM exactly
+      // If you get an error, check your Supabase Table Editor: 
+      // Are these columns named 'buyer_id'/'vendor_id' or 'user_id'/'vendor_id'?
+      const orderPayload = {
+        buyer_id: buyerId,
+        vendor_id: items[0]?.vendorId || buyerId,
+        items: items as any,
+        total_amount: total,
+        status: "pending", 
+        delivery_address: deliveryAddress || "",
+        delivery_window: deliveryWindow || null,
+      };
+
       const { data, error } = await supabase
         .from("orders")
-        .insert({
-          user_id: buyerId, // Ensure this matches your table column name (user_id vs buyer_id)
-          status: "pending", 
-          total_amount: total,
-          delivery_address: deliveryAddress || "",
-          delivery_window: deliveryWindow || null,
-        })
+        .insert(orderPayload)
         .select("id")
         .single();
 
       if (error) {
-        console.error("Checkout Error:", error);
+        console.error("Checkout DB Error:", error);
         toast({ title: "Checkout failed", description: error.message, variant: "destructive" });
         return null;
       }
