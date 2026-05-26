@@ -1,6 +1,6 @@
-/**
- * Vendor Store Orders — Full order management with delivery tracking
- * DATA SOURCE: Live Supabase — orders, delivery_jobs, profiles tables
+﻿/**
+ * Vendor Store Orders â€” Full order management with delivery tracking
+ * DATA SOURCE: Live Supabase â€” orders, delivery_jobs, profiles tables
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -48,10 +48,10 @@ interface DeliveryInfo {
   driverLocation: { latitude: number; longitude: number; updated_at: string } | null;
 }
 
-// ─── Order milestone steps ────────────────────────────────────────────────────
+// â”€â”€â”€ Order milestone steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MILESTONES = [
   { key: "pending", label: "Pending" },
-  { key: "confirmed", label: "Confirmed" },
+  { key: "accepted", label: "Accepted" },
   { key: "preparing", label: "Preparing" },
   { key: "driver_assigned", label: "Driver Assigned" },
   { key: "in-transit", label: "In Transit" },
@@ -61,18 +61,12 @@ const MILESTONES = [
 function getMilestoneIndex(status: string): number {
   const map: Record<string, number> = {
     pending: 0,
-    confirmed: 1,
-    processing: 1,
-    preparing: 2,
-    packaged: 2,
-    driver_assigned: 3,
-    "in-transit": 4,
-    delivered: 5,
+    accepted: 1, preparing: 2, packaged: 3, driver_assigned: 4, "in-transit": 5, delivered: 6,
   };
   return map[status] ?? 0;
 }
 
-// ─── Inline Progress Bar ──────────────────────────────────────────────────────
+// â”€â”€â”€ Inline Progress Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MilestoneBar({ status }: { status: string }) {
   const idx = getMilestoneIndex(status);
   const pct = Math.round((idx / (MILESTONES.length - 1)) * 100);
@@ -112,13 +106,13 @@ function MilestoneBar({ status }: { status: string }) {
   );
 }
 
-// ─── Driver Info Panel ────────────────────────────────────────────────────────
+// â”€â”€â”€ Driver Info Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined; loading: boolean }) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-xs font-body text-muted-foreground pt-2">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        <span>Loading delivery info…</span>
+        <span>Loading delivery infoâ€¦</span>
       </div>
     );
   }
@@ -127,7 +121,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
     return (
       <div className="flex items-center gap-2 pt-2 text-xs font-body text-muted-foreground">
         <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-        <span>Searching for nearby drivers…</span>
+        <span>Searching for nearby driversâ€¦</span>
       </div>
     );
   }
@@ -138,7 +132,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
     return (
       <div className="flex items-center gap-2 pt-2 text-xs font-body text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-        <span>Driver assignment in progress…</span>
+        <span>Driver assignment in progressâ€¦</span>
       </div>
     );
   }
@@ -160,7 +154,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
           <div className="flex items-center gap-1.5 mt-0.5">
             <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
             <span className="font-body text-[10px] text-muted-foreground">
-              {driver.driver_rating?.toFixed(1) || "N/A"} · {driver.phone || "No phone"}
+              {driver.driver_rating?.toFixed(1) || "N/A"} Â· {driver.phone || "No phone"}
             </span>
           </div>
         </div>
@@ -184,7 +178,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
             </span>
             <span className="tabular-nums">
-              {driverLocation.latitude.toFixed(4)}°N, {driverLocation.longitude.toFixed(4)}°E
+              {driverLocation.latitude.toFixed(4)}Â°N, {driverLocation.longitude.toFixed(4)}Â°E
             </span>
           </div>
           {lastSeen && <span>Updated {lastSeen}</span>}
@@ -199,7 +193,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
   );
 }
 
-// ─── Expandable Order Row ─────────────────────────────────────────────────────
+// â”€â”€â”€ Expandable Order Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface OrderRowProps {
   order: Order;
 }
@@ -317,7 +311,7 @@ function OrderRow({ order }: OrderRowProps) {
                         {items.map((item: any, i: number) => (
                           <div key={i} className="flex items-center justify-between font-body text-sm">
                             <span className="text-foreground">
-                              {item?.name || "Item"} × {item?.quantity || 1}
+                              {item?.name || "Item"} Ã— {item?.quantity || 1}
                             </span>
                             <span className="tabular-nums text-muted-foreground">
                               {formatNaira((item?.price || 0) * (item?.quantity || 1))}
@@ -344,6 +338,30 @@ function OrderRow({ order }: OrderRowProps) {
                       </p>
                       <DriverPanel info={deliveryInfo} loading={deliveryInfo === undefined} />
                     </div>
+
+                  {/* Vendor Action Buttons */}
+                  <div className="flex gap-3 pt-2 border-t border-border/30">
+                    {order.status === "accepted" && (
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          await supabase.from("orders").update({ status: "preparing" }).eq("id", order.id);
+                        }}
+                      >
+                        Start Preparing
+                      </Button>
+                    )}
+                    {order.status === "preparing" && (
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          await supabase.from("orders").update({ status: "packaged" }).eq("id", order.id);
+                        }}
+                      >
+                        Mark Ready & Request Driver
+                      </Button>
+                    )}
+                  </div>
                   )}
                 </div>
               </motion.div>
@@ -355,7 +373,7 @@ function OrderRow({ order }: OrderRowProps) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function VendorOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -389,7 +407,7 @@ export default function VendorOrders() {
     };
   }, [user, fetchOrders]);
 
-  const statusFilters = ["all", "confirmed", "preparing", "driver_assigned", "in-transit", "delivered"];
+  const statusFilters = ["all", "accepted", "preparing", "packaged", "driver_assigned", "in-transit", "delivered"];
 
   const filtered = filterStatus === "all"
     ? orders
@@ -469,3 +487,4 @@ export default function VendorOrders() {
     </div>
   );
 }
+
