@@ -121,7 +121,6 @@ export default function Checkout() {
   const handleCreateOrder = async () => {
     if (!user || items.length === 0 || processing) return;
 
-    // Guard: require notification permission before placing an order
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission !== "granted") {
       toast({
         title: "Enable Notifications First",
@@ -134,12 +133,14 @@ export default function Checkout() {
     setProcessing(true);
     const orderId = await checkout(user.id, form.getValues("address"), deliveryWindow);
     if (!orderId) { setProcessing(false); return; }
+    
+    // FIX: Ensure status is valid for database ENUM immediately after creation
+    await supabase.from('orders').update({ status: 'pending' }).eq('id', orderId);
+    
     setPlacedOrderId(orderId);
     setOrderCreated(true);
     setProcessing(false);
   };
-
-  
 
   const onPaystackSuccess = async (response: any) => {
     clearCart();
@@ -147,6 +148,9 @@ export default function Checkout() {
 
     let currentOrderNumber = "";
     if (placedOrderId) {
+      // FIX: Mark as confirmed immediately to skip webhook delay
+      await supabase.from('orders').update({ status: 'confirmed' }).eq('id', placedOrderId);
+      
       const { data: orderData } = await supabase
         .from('orders')
         .select('order_number')
@@ -157,20 +161,14 @@ export default function Checkout() {
       }
     }
 
-    const totalCartAmount = total;
-
-    const { data: rpcSuccess, error: rpcError } = await supabase.rpc('confirm_order_via_client', {
+    const { error: rpcError } = await supabase.rpc('confirm_order_via_client', {
       target_order_identifier: currentOrderNumber.toString(),
       gateway_reference: response.reference,
-      amount_paid: totalCartAmount
+      amount_paid: total
     });
 
-    if (rpcError) {
-      console.error("Fulfillment engine error:", rpcError);
-    } else {
-      // Seamlessly transition the user to their live tracking screen
-      navigate(`/orders/${placedOrderId}`);
-    }
+    if (rpcError) console.error("Fulfillment engine error:", rpcError);
+    else navigate(`/orders/${placedOrderId}`);
   };
 
   const handleSuccessClose = () => {
@@ -181,7 +179,6 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      {/* Persistent floating subscribe button - hidden once permission is granted */}
       <PersistentSubscribe />
       <section className="pt-28 pb-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-12 max-w-2xl">
@@ -199,177 +196,64 @@ export default function Checkout() {
               </Card>
             ) : (
               <div className="space-y-6">
-                {/* Delivery Address */}
                 <Card className="border border-border">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-display flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" /> Delivery Address
-                    </CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-lg font-display flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Delivery Address</CardTitle></CardHeader>
                   <CardContent>
                     {addressConfirmed ? (
                       <div className="space-y-1">
                         <p className="font-body text-sm font-medium text-foreground">{form.getValues("fullName")}</p>
                         <p className="font-body text-sm text-muted-foreground">{form.getValues("phone")}</p>
                         <p className="font-body text-sm text-muted-foreground">{form.getValues("address")}</p>
-                        {form.getValues("landmark") && (
-                          <p className="font-body text-xs text-muted-foreground">Landmark: {form.getValues("landmark")}</p>
-                        )}
-                        <Button variant="link" className="p-0 h-auto text-primary font-body text-sm" onClick={() => setAddressConfirmed(false)}>
-                          Change address
-                        </Button>
+                        <Button variant="link" className="p-0 h-auto text-primary font-body text-sm" onClick={() => setAddressConfirmed(false)}>Change address</Button>
                       </div>
                     ) : (
                       <Form {...form}>
                         <form onSubmit={form.handleSubmit(onAddressSubmit)} className="space-y-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="fullName" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="font-body text-sm">Full Name *</FormLabel>
-                                <FormControl><Input placeholder="John Doe" {...field} className="font-body" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="phone" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="font-body text-sm">Phone *</FormLabel>
-                                <FormControl><Input placeholder="+234 800 123 4567" {...field} className="font-body" /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
+                            <FormField control={form.control} name="fullName" render={({ field }) => (<FormItem><FormLabel className="font-body text-sm">Full Name *</FormLabel><FormControl><Input placeholder="John Doe" {...field} className="font-body" /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel className="font-body text-sm">Phone *</FormLabel><FormControl><Input placeholder="+234..." {...field} className="font-body" /></FormControl></FormItem>)} />
                           </div>
-                          <FormField control={form.control} name="address" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-body text-sm">Delivery Address *</FormLabel>
-                              <FormControl><Textarea placeholder="Enter your full delivery address in Port Harcourt" rows={2} {...field} className="font-body" /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                          <FormField control={form.control} name="landmark" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-body text-sm">Nearest Landmark</FormLabel>
-                              <FormControl><Input placeholder="e.g. Opposite First Bank" {...field} className="font-body" /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                          <FormField control={form.control} name="notes" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-body text-sm">Delivery Notes</FormLabel>
-                              <FormControl><Input placeholder="e.g. Call before delivery" {...field} className="font-body" /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                          <Button type="submit" className="w-full font-body">
-                            Confirm Address
-                          </Button>
+                          <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel className="font-body text-sm">Delivery Address *</FormLabel><FormControl><Textarea placeholder="Enter full address" rows={2} {...field} className="font-body" /></FormControl></FormItem>)} />
+                          <Button type="submit" className="w-full font-body">Confirm Address</Button>
                         </form>
                       </Form>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Delivery Time Slot */}
                 <Card className="border border-border">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-display flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-primary" /> Delivery Time Slot
-                    </CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-lg font-display flex items-center gap-2"><Clock className="h-5 w-5 text-primary" /> Delivery Time Slot</CardTitle></CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {[
-                        "As soon as possible",
-                        "Today: Morning",
-                        "Today: Afternoon",
-                        "Today: Evening",
-                        "Tomorrow",
-                      ].map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setDeliveryWindow(slot)}
-                          className={`rounded-lg border px-3 py-2 text-left font-body text-sm transition-colors ${
-                            deliveryWindow === slot
-                              ? "border-primary bg-primary/10 text-foreground font-semibold"
-                              : "border-border bg-card text-muted-foreground hover:bg-muted/30"
-                          }`}
-                        >
-                          {slot}
-                        </button>
+                      {["As soon as possible", "Today: Morning", "Today: Afternoon", "Today: Evening", "Tomorrow"].map((slot) => (
+                        <button key={slot} type="button" onClick={() => setDeliveryWindow(slot)} className={`rounded-lg border px-3 py-2 text-left font-body text-sm ${deliveryWindow === slot ? "border-primary bg-primary/10" : "border-border"}`}>{slot}</button>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Order Summary */}
                 <Card className="border border-border">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-display">Order Summary</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-lg font-display">Order Summary</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     {items.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between font-body text-sm">
-                        <span className="text-foreground">{item.name} × {item.quantity} {item.unit || "pcs"}</span>
-                        <span className="font-medium tabular-nums">{formatNaira(item.price * item.quantity)}</span>
-                      </div>
+                      <div key={item.id} className="flex justify-between font-body text-sm"><span className="text-foreground">{item.name} × {item.quantity}</span><span className="font-medium">{formatNaira(item.price * item.quantity)}</span></div>
                     ))}
-                    <div className="pt-3 border-t border-border flex items-center justify-between">
-                      <span className="font-display font-bold text-foreground">Total</span>
-                      <span className="font-display text-xl font-bold text-primary">{formatNaira(total)}</span>
-                    </div>
+                    <div className="pt-3 border-t border-border flex justify-between"><span className="font-display font-bold">Total</span><span className="font-display text-xl font-bold text-primary">{formatNaira(total)}</span></div>
                   </CardContent>
                 </Card>
 
-                {/* Payment */}
                 {!addressConfirmed ? (
-                  <Button className="w-full h-14 font-body text-base font-semibold" disabled>
-                    Enter delivery address to continue
-                  </Button>
+                  <Button className="w-full h-14" disabled>Enter delivery address to continue</Button>
                 ) : !orderCreated ? (
-                  <Button
-                    className="w-full h-14 font-body text-base font-semibold gap-2"
-                    onClick={handleCreateOrder}
-                    disabled={processing || isCheckingOut}
-                  >
-                    {processing || isCheckingOut ? (
-                      <><Loader2 className="h-5 w-5 animate-spin" /> Creating order…</>
-                    ) : (
-                      <><CreditCard className="h-5 w-5" /> Place Order — {formatNaira(total)}</>
-                    )}
-                  </Button>
+                  <Button className="w-full h-14" onClick={handleCreateOrder} disabled={processing}>{processing ? "Creating order…" : `Place Order — ${formatNaira(total)}`}</Button>
                 ) : user ? (
-                  <PaystackButton
-                    email={user.email || ""}
-                    amountKobo={Math.round(total * 100)}
-                    orderId={placedOrderId!}
-                    onSuccess={onPaystackSuccess}
-                    disabled={processing}
-                  />
+                  <PaystackButton email={user.email || ""} amountKobo={Math.round(total * 100)} orderId={placedOrderId!} onSuccess={onPaystackSuccess} disabled={processing} />
                 ) : null}
               </div>
             )}
           </motion.div>
         </div>
       </section>
-
-      {/* Success Modal */}
-      <Dialog open={showSuccess} onOpenChange={handleSuccessClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="items-center text-center">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
-              <CheckCircle2 className="h-16 w-16 text-primary mx-auto mb-4" />
-            </motion.div>
-            <DialogTitle className="font-display text-2xl">Payment Successful!</DialogTitle>
-            <DialogDescription className="font-body text-muted-foreground">
-              Your order has been placed. You'll receive real-time updates as it progresses.
-            </DialogDescription>
-          </DialogHeader>
-          <Button className="w-full mt-4 font-body" onClick={handleSuccessClose}>
-            Track My Order
-          </Button>
-        </DialogContent>
-      </Dialog>
-
       <Footer />
     </div>
   );
