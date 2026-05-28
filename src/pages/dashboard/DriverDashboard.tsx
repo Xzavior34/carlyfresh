@@ -56,6 +56,9 @@ export default function DriverDashboard() {
   useEffect(() => {
     if (!user) return;
     fetchAll();
+    if (typeof window !== 'undefined' && window.OneSignal) {
+      window.OneSignal.User.addTag("role", "driver");
+    }
     const ch = supabase.channel("driver-jobs-rt-v2")
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_jobs" }, () => fetchAll());
     ch.subscribe();
