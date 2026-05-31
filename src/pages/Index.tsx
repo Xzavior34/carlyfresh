@@ -1,11 +1,13 @@
 ﻿import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/hero/Hero";
 import FeaturesSection from "@/components/products/FeaturesSection";
+import StorefrontFeeds from "@/components/products/StorefrontFeeds";
 import HowItWorks from "@/components/products/HowItWorks";
 import ReviewCarousel from "@/components/products/ReviewCarousel";
 import Pricing from "@/components/products/Pricing";
 import HealthyBanner from "@/components/products/HealthyBanner";
 import ToSellBanner from "@/components/layout/ToSellBanner";
+import AppDownloadBanner from "@/components/layout/AppDownloadBanner";
 import Footer from "@/components/layout/Footer";
 
 const Index = () => {
@@ -20,20 +22,26 @@ const Index = () => {
       {/* 3. Core Value Features Strip */}
       <FeaturesSection />
 
-      {/* 4. Process Flow */}
+      {/* 4. Live Storefront Feeds (Featured & Trending) */}
+      <StorefrontFeeds />
+
+      {/* 5. Process Flow */}
       <HowItWorks />
 
-      {/* 5. Social Proof & Reviews */}
+      {/* 6. Social Proof & Reviews */}
       <ReviewCarousel />
 
-      {/* 6. Pricing Packages */}
+      {/* 7. Pricing Packages */}
       <Pricing />
 
-      {/* 7. Promotional Banners */}
+      {/* 8. Promotional Banners */}
       <HealthyBanner />
       <ToSellBanner />
 
-      {/* 8. Global Footer */}
+      {/* 9. Mobile App QR Scan Banner */}
+      <AppDownloadBanner />
+
+      {/* 10. Global Footer */}
       <Footer />
     </div>
   );
