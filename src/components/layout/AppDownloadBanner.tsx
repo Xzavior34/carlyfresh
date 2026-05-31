@@ -1,22 +1,26 @@
 ﻿import { useRef, useEffect, useState } from "react";
 import { motion, useInView } from "framer-motion";
-import { Smartphone, ShieldCheck, Zap, Laptop } from "lucide-react";
+import { Smartphone, ShieldCheck, Zap } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 
 const AppDownloadBanner = () => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const [qrUrl, setQrUrl] = useState("https://carlyfresh.vercel.app");
+  const [qrUrl, setQrUrl] = useState("https://carlyfresh.vercel.app/?install=true");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setQrUrl(`${window.location.origin}?install=true`);
+      const origin = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "https://carlyfresh.vercel.app"
+        : window.location.origin;
+      setQrUrl(`${origin}?install=true`);
     }
   }, []);
 
-  const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+  // Using ecc=H (High error correction 30%) to allow the central logo overlay without breaking readability
+  const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
     qrUrl
-  )}&color=166534&bgcolor=ffffff&qzone=1`;
+  )}&color=166534&bgcolor=ffffff&qzone=1&ecc=H`;
 
   return (
     <section ref={ref} className="relative overflow-hidden py-16 md:py-24 bg-gradient-to-b from-background to-secondary/30">
@@ -105,9 +109,9 @@ const AppDownloadBanner = () => {
                     loading="lazy"
                   />
                   
-                  {/* Styled central logo overlay */}
-                  <div className="absolute inset-0 m-auto h-12 w-12 rounded-xl bg-white border-2 border-primary/20 p-1 flex items-center justify-center shadow-md">
-                    <BrandLogo size={36} className="rounded-lg" />
+                  {/* Smaller central logo overlay + High ECC error correction makes scan work perfectly */}
+                  <div className="absolute inset-0 m-auto h-8 w-8 rounded-lg bg-white border border-primary/20 p-0.5 flex items-center justify-center shadow-md">
+                    <BrandLogo size={28} className="rounded-md" />
                   </div>
                 </div>
 
@@ -118,8 +122,8 @@ const AppDownloadBanner = () => {
                 <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br-md" />
               </div>
 
-              <div className="mt-4 flex items-center gap-2 text-xs font-body text-muted-foreground bg-muted/40 px-3.5 py-1.5 rounded-full border border-border/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent animate-ping" />
+              <div className="mt-4 flex items-center gap-2 text-xs font-body text-muted-foreground bg-muted/40 px-3.5 py-1.5 rounded-full border border-border/30 animate-pulse">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                 <span>Scan with camera to install PWA</span>
               </div>
             </div>

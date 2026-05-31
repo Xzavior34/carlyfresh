@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/products/ProductCard";
 import type { Tables } from "@/integrations/supabase/types";
-import { Loader2, Sparkles, Heart, ShoppingBag, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Sparkles, Heart, ShoppingBag, Plus, ChevronLeft, ChevronRight, Tag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatNaira } from "@/lib/formatters";
 import { motion } from "framer-motion";
@@ -13,11 +13,13 @@ export default function StorefrontFeeds() {
   const [featured, setFeatured] = useState<Product[]>([]);
   const [buyersLove, setBuyersLove] = useState<Product[]>([]);
   const [baskets, setBaskets] = useState<any[]>([]);
+  const [bulkDeals, setBulkDeals] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
 
   const featuredScrollRef = useRef<HTMLDivElement>(null);
   const buyersLoveScrollRef = useRef<HTMLDivElement>(null);
+  const bulkScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -25,8 +27,8 @@ export default function StorefrontFeeds() {
     const fetchDynamicFeeds = async () => {
       setLoading(true);
 
-      // Concurrently query Supabase for items matching placement flags & curated baskets
-      const [featuredRes, buyersRes, basketsRes] = await Promise.all([
+      // Concurrently query Supabase for items matching placement flags & curated baskets & bulk deals
+      const [featuredRes, buyersRes, basketsRes, bulkRes] = await Promise.all([
         supabase
           .from("products")
           .select("*")
@@ -46,13 +48,44 @@ export default function StorefrontFeeds() {
           .select("*, basket_items(*, product:products(*))")
           .order("created_at", { ascending: false })
           .limit(6),
+        supabase
+          .from("products")
+          .select("*")
+          .eq("in_stock", true)
+          .not("bulk_price", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(8)
       ]);
 
       if (!mounted) return;
 
+      // Handle featured
       if (featuredRes.data) setFeatured(featuredRes.data as Product[]);
-      if (buyersRes.data) setBuyersLove(buyersRes.data as Product[]);
+
+      // Handle baskets
       if (basketsRes.data) setBaskets(basketsRes.data as any[]);
+
+      // Handle bulk deals
+      if (bulkRes.data) setBulkDeals(bulkRes.data as Product[]);
+
+      // Handle buyersLove with fallback padding if count is low (< 6) to ensure the Trending carousel shows up fully populated!
+      let buyersLoveData = buyersRes.data || [];
+      if (buyersLoveData.length < 6) {
+        const { data: fallbackData } = await supabase
+          .from("products")
+          .select("*")
+          .eq("in_stock", true)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (fallbackData) {
+          const existingIds = new Set(buyersLoveData.map(p => p.id));
+          const padding = fallbackData.filter(p => !existingIds.has(p.id));
+          // Merge to form 8 popular items
+          buyersLoveData = [...buyersLoveData, ...padding].slice(0, 8);
+        }
+      }
+      setBuyersLove(buyersLoveData as Product[]);
+
       setLoading(false);
     };
 
@@ -94,7 +127,7 @@ export default function StorefrontFeeds() {
   }
 
   // Gracefully collapse the section space if there is no data to show
-  if (featured.length === 0 && buyersLove.length === 0 && baskets.length === 0) {
+  if (featured.length === 0 && buyersLove.length === 0 && baskets.length === 0 && bulkDeals.length === 0) {
     return null;
   }
 
@@ -275,7 +308,7 @@ export default function StorefrontFeeds() {
         </section>
       )}
 
-      {/* SECTION 3: WHAT BUYERS LOVE (SLIDEABLE CAROUSEL) */}
+      {/* SECTION 3: WHAT BUYERS LOVE / TRENDING (SLIDEABLE CAROUSEL) */}
       {buyersLove.length > 0 && (
         <section className="container mx-auto px-6 lg:px-12 overflow-hidden">
           <div className="rounded-3xl bg-secondary/40 border border-border p-8 sm:p-12">
@@ -325,6 +358,56 @@ export default function StorefrontFeeds() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 4: BULK DEALS (SLIDEABLE CAROUSEL) */}
+      {bulkDeals.length > 0 && (
+        <section className="container mx-auto px-6 lg:px-12 overflow-hidden">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-1.5 text-emerald-600 mb-1">
+                <Tag className="h-4 w-4" />
+                <span className="font-body text-xs font-semibold uppercase tracking-widest text-emerald-700">
+                  Wholesale Pricing
+                </span>
+              </div>
+              <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+                Bulk Deals
+              </h2>
+            </div>
+            
+            {/* Scroll Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => scrollContainer(bulkScrollRef, "left")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary active:scale-95 shadow-sm"
+                aria-label="Scroll bulk deals left"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => scrollContainer(bulkScrollRef, "right")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary active:scale-95 shadow-sm"
+                aria-label="Scroll bulk deals right"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div
+              ref={bulkScrollRef}
+              className="flex gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-6 -mx-6 px-6 lg:-mx-12 lg:px-12 scrollbar-none"
+            >
+              {bulkDeals.map((product) => (
+                <div key={product.id} className="w-[280px] shrink-0 snap-start">
+                  <ProductCard product={product as any} />
+                </div>
+              ))}
             </div>
           </div>
         </section>
