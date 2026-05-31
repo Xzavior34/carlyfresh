@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/products/ProductCard";
 import type { Tables } from "@/integrations/supabase/types";
-import { Loader2, Sparkles, Heart, ShoppingBag, Plus } from "lucide-react";
+import { Loader2, Sparkles, Heart, ShoppingBag, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatNaira } from "@/lib/formatters";
 import { motion } from "framer-motion";
@@ -15,6 +15,9 @@ export default function StorefrontFeeds() {
   const [baskets, setBaskets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
+
+  const featuredScrollRef = useRef<HTMLDivElement>(null);
+  const buyersLoveScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -60,13 +63,23 @@ export default function StorefrontFeeds() {
     };
   }, []);
 
+  const scrollContainer = (ref: React.RefObject<HTMLDivElement>, direction: "left" | "right") => {
+    if (ref.current) {
+      const scrollAmount = 300; // card width (280) + gap (20)
+      ref.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
   const handleAddBasket = (basket: any) => {
     addItem(
       basket.id,
       basket.name,
       basket.price,
-      undefined, // vendorId (can be undefined since it is a multi-vendor/platform combo basket)
-      "basket", // unit of measurement
+      undefined,
+      "basket",
       basket.price
     );
   };
@@ -87,10 +100,20 @@ export default function StorefrontFeeds() {
 
   return (
     <div className="space-y-16 py-12">
-      {/* SECTION 1: FEATURED PRODUCTS & BUNDLES */}
+      <style>{`
+        .scrollbar-none::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-none {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+
+      {/* SECTION 1: FEATURED PRODUCTS & BUNDLES (SLIDEABLE CAROUSEL) */}
       {featured.length > 0 && (
-        <section className="container mx-auto px-6 lg:px-12">
-          <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <section className="container mx-auto px-6 lg:px-12 overflow-hidden">
+          <div className="mb-6 flex items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-1.5 text-accent mb-1">
                 <Sparkles className="h-4 w-4" />
@@ -102,23 +125,43 @@ export default function StorefrontFeeds() {
                 Featured Products & Bundles
               </h2>
             </div>
-            <p className="font-body text-sm text-muted-foreground max-w-sm">
-              Handpicked fresh arrivals and multi-item basket bundles for your kitchen.
-            </p>
+            
+            {/* Scroll Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => scrollContainer(featuredScrollRef, "left")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary active:scale-95 shadow-sm"
+                aria-label="Scroll featured products left"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => scrollContainer(featuredScrollRef, "right")}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary active:scale-95 shadow-sm"
+                aria-label="Scroll featured products right"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {featured.map((product) => (
-              <div key={product.id} className="relative group">
-                {/* Dynamically render a prominent tag if marked as a multi-item bundle */}
-                {(product as any).is_bundle && (
-                  <span className="absolute top-3 left-3 z-10 rounded-full bg-primary px-3 py-1 font-body text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-md ring-1 ring-white/20">
-                    📦 Combo Pack
-                  </span>
-                )}
-                <ProductCard product={product as any} />
-              </div>
-            ))}
+          <div className="relative">
+            <div
+              ref={featuredScrollRef}
+              className="flex gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-6 -mx-6 px-6 lg:-mx-12 lg:px-12 scrollbar-none"
+            >
+              {featured.map((product) => (
+                <div key={product.id} className="w-[280px] shrink-0 snap-start relative group">
+                  {/* Dynamically render a prominent tag if marked as a multi-item bundle */}
+                  {(product as any).is_bundle && (
+                    <span className="absolute top-3 left-3 z-10 rounded-full bg-primary px-3 py-1 font-body text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-md ring-1 ring-white/20">
+                      📦 Combo Pack
+                    </span>
+                  )}
+                  <ProductCard product={product as any} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
@@ -232,29 +275,56 @@ export default function StorefrontFeeds() {
         </section>
       )}
 
-      {/* SECTION 3: WHAT BUYERS LOVE */}
+      {/* SECTION 3: WHAT BUYERS LOVE (SLIDEABLE CAROUSEL) */}
       {buyersLove.length > 0 && (
-        <section className="container mx-auto px-6 lg:px-12">
+        <section className="container mx-auto px-6 lg:px-12 overflow-hidden">
           <div className="rounded-3xl bg-secondary/40 border border-border p-8 sm:p-12">
-            <div className="mb-8">
-              <div className="flex items-center gap-1.5 text-rose-500 mb-1">
-                <Heart className="h-4 w-4 fill-rose-500" />
-                <span className="font-body text-xs font-semibold uppercase tracking-widest text-rose-600">
-                  Customer Favorites
-                </span>
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-1.5 text-rose-500 mb-1">
+                  <Heart className="h-4 w-4 fill-rose-500" />
+                  <span className="font-body text-xs font-semibold uppercase tracking-widest text-rose-600">
+                    Customer Favorites
+                  </span>
+                </div>
+                <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+                  What Buyers Love
+                </h2>
+                <p className="font-body text-sm text-muted-foreground mt-1">
+                  Highly rated staples consistently ordered across our supply network.
+                </p>
               </div>
-              <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-                What Buyers Love
-              </h2>
-              <p className="font-body text-sm text-muted-foreground mt-1">
-                Highly rated staples consistently ordered across our supply network.
-              </p>
+
+              {/* Scroll Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => scrollContainer(buyersLoveScrollRef, "left")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary active:scale-95 shadow-sm"
+                  aria-label="Scroll buyer favorites left"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => scrollContainer(buyersLoveScrollRef, "right")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary active:scale-95 shadow-sm"
+                  aria-label="Scroll buyer favorites right"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {buyersLove.map((product) => (
-                <ProductCard key={product.id} product={product as any} />
-              ))}
+            <div className="relative">
+              <div
+                ref={buyersLoveScrollRef}
+                className="flex gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-6 -mx-2 px-2 scrollbar-none"
+              >
+                {buyersLove.map((product) => (
+                  <div key={product.id} className="w-[280px] shrink-0 snap-start">
+                    <ProductCard product={product as any} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
