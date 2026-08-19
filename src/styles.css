@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system definition — CarlyFresh theme ported from the Classic stack.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-brand-light-green: var(--brand-light-green);
+  --color-hero-overlay: var(--hero-overlay);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", sans-serif;
+
+  --animate-fade-up: fade-up 0.6s ease-out forwards;
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes fade-up {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: hsl(210 20% 99%);
+  --foreground: hsl(150 40% 10%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(150 40% 10%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(150 40% 10%);
+  --primary: hsl(149 65% 24%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(150 10% 95%);
+  --secondary-foreground: hsl(150 40% 10%);
+  --muted: hsl(210 15% 96%);
+  --muted-foreground: hsl(210 10% 45%);
+  --accent: hsl(93 40% 53%);
+  --accent-foreground: hsl(0 0% 100%);
+  --brand-light-green: hsl(93 40% 53%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(210 15% 90%);
+  --input: hsl(210 15% 90%);
+  --ring: hsl(149 65% 24%);
+  --hero-overlay: hsl(150 40% 8%);
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --background: hsl(150 20% 5%);
+  --foreground: hsl(210 20% 98%);
+  --card: hsl(150 15% 8%);
+  --card-foreground: hsl(210 20% 98%);
+  --popover: hsl(150 15% 8%);
+  --popover-foreground: hsl(210 20% 98%);
+  --primary: hsl(149 65% 40%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(150 10% 15%);
+  --secondary-foreground: hsl(210 20% 98%);
+  --muted: hsl(150 10% 15%);
+  --muted-foreground: hsl(210 10% 60%);
+  --accent: hsl(93 40% 53%);
+  --accent-foreground: hsl(0 0% 100%);
+  --brand-light-green: hsl(93 40% 53%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(150 10% 18%);
+  --input: hsl(150 10% 18%);
+  --ring: hsl(149 65% 40%);
+  --hero-overlay: hsl(150 40% 8%);
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  width: 100%;
+  @media (width >= 96rem) {
+    max-width: 1400px;
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@utility font-display {
+  font-family: 'Playfair Display', serif;
+}
+
+@utility font-body {
+  font-family: 'Inter', sans-serif;
+}
