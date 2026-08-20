@@ -46,7 +46,7 @@ export default function SupplyLayer() {
   const toggleColdChain = async (userId: string, currentState: boolean) => {
     const { error } = await supabase
       .from("profiles")
-      .update({ cold_chain_verified: !currentState })
+      .update({ cold_chain_verified: !currentState } as never)
       .eq("user_id", userId);
 
     if (error) {

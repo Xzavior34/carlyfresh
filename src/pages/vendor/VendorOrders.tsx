@@ -342,7 +342,7 @@ function OrderRow({ order }: OrderRowProps) {
 
                   {/* Vendor Action Buttons */}
                   <div className="flex gap-3 pt-2 border-t border-border/30">
-                    {order.status === "accepted" && (
+                    {String(order.status) === "accepted" && (
                       <Button
                         size="sm"
                         onClick={async () => {
