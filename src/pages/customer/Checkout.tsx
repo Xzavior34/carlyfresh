@@ -249,7 +249,7 @@ export default function Checkout() {
     }
 
     const { error: rpcError } = await supabase.rpc(
-      "confirm_order_via_client" as never,
+      "confirm_order_via_client" as any,
       {
         target_order_identifier: currentOrderNumber.toString(),
         gateway_reference: response.reference,
