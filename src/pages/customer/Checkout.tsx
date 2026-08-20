@@ -244,12 +244,12 @@ export default function Checkout() {
         .single();
 
       if (orderData) {
-        currentOrderNumber = orderData.order_number;
+        currentOrderNumber = String(orderData.order_number);
       }
     }
 
     const { error: rpcError } = await supabase.rpc(
-      "confirm_order_via_client",
+      "confirm_order_via_client" as any,
       {
         target_order_identifier: currentOrderNumber.toString(),
         gateway_reference: response.reference,

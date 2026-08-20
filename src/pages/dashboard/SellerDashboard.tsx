@@ -334,7 +334,7 @@ export default function SellerDashboard() {
     console.log("Payload being sent to Supabase:", updatePayload);
     const { error } = await supabase
       .from("orders")
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq("id", order.id);
     setAccepting(false);
 
@@ -636,7 +636,7 @@ export default function SellerDashboard() {
                 {orders.slice(0, 8).map((order) => {
                   const StatusIcon = statusIcons[order.status] || Clock;
                   const isIncoming = order.status === "confirmed";
-                  const isProcessing = order.status === "accepted" || order.status === "preparing" || order.status === "processing";
+                  const isProcessing = String(order.status) === "accepted" || order.status === "preparing" || order.status === "processing";
                   return (
                     <div
                       key={order.id}
