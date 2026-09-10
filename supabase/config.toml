@@ -1,4 +1,4 @@
-project_id = "nftdcfursazeeqaxbihs"
+project_id = "thldkqfacwfievhziepc"
 
 [functions.notify-vendor-new-order]
 verify_jwt = false
