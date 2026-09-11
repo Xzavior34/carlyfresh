@@ -24,7 +24,7 @@ export default function AdminChats() {
   const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvKey, setActiveConvKey] = useState<string | null>(null);
-  const [allProfiles, setAllProfiles] = useState<(Profile & { role: string })[]>([]);
+  const [allProfiles, setAllProfiles] = useState<(Profile & { role: string; email: string | null })[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -38,10 +38,11 @@ export default function AdminChats() {
 
     const fetchAllData = async () => {
       // 1. Fetch all profiles and roles so Admin can search anyone
-      const [profRes, rolesRes, messagesRes] = await Promise.all([
+      const [profRes, rolesRes, messagesRes, emailsRes] = await Promise.all([
         supabase.from("profiles").select("*"),
         supabase.from("user_roles").select("*"),
-        supabase.from("chats").select("*").or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order("created_at", { ascending: true })
+        supabase.from("chats").select("*").or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order("created_at", { ascending: true }),
+        supabase.rpc("admin_get_users_emails" as any)
       ]);
 
       if (profRes.error || rolesRes.error || messagesRes.error) {
@@ -51,8 +52,14 @@ export default function AdminChats() {
       }
 
       const roleMap = new Map(rolesRes.data.map(r => [r.user_id, r.role]));
-      const profilesWithRoles = profRes.data.map(p => ({ ...p, role: roleMap.get(p.user_id) || "buyer" }));
-      setAllProfiles(profilesWithRoles);
+      const emailMap = new Map((emailsRes.data || []).map((e: any) => [e.user_id, e.email]));
+      
+      const profilesWithRoles = profRes.data.map(p => ({ 
+        ...p, 
+        role: roleMap.get(p.user_id) || "buyer",
+        email: emailMap.get(p.user_id) || null
+      }));
+      setAllProfiles(profilesWithRoles as any);
 
       const profileMap = new Map(profilesWithRoles.map(p => [p.user_id, p]));
       const convMap = new Map<string, Conversation>();
@@ -271,6 +278,11 @@ export default function AdminChats() {
                             {item.role}
                           </span>
                         </div>
+                        {item.user?.email && (
+                          <span className="text-[10px] text-muted-foreground truncate mb-1">
+                            {item.user.email}
+                          </span>
+                        )}
                         {item.lastMessage && (
                           <span className="text-xs text-muted-foreground truncate mt-1">
                             {item.lastMessage}
@@ -300,10 +312,15 @@ export default function AdminChats() {
                   <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setActiveConvKey(null)}>
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
-                  <div>
+                  <div className="flex flex-col">
                     <h3 className="font-semibold font-display">
                       {activeConversation.otherUser?.business_name || activeConversation.otherUser?.full_name || 'Unknown User'}
                     </h3>
+                    {(activeConversation.otherUser as any)?.email && (
+                      <span className="text-xs text-muted-foreground font-body">
+                        {(activeConversation.otherUser as any).email}
+                      </span>
+                    )}
                   </div>
                 </div>
 
