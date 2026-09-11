@@ -24,51 +24,40 @@ export default function AdminChats() {
   const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvKey, setActiveConvKey] = useState<string | null>(null);
-  const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
+  const [allProfiles, setAllProfiles] = useState<(Profile & { role: string })[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // If we came from AdminUsers with state: { startChat: { userId, name } }
   const preselectedChat = location.state?.startChat as { userId: string, name?: string } | undefined;
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchChats = async () => {
-      // Admin might want to see all their chats
-      const { data: messages, error } = await supabase
-        .from("chats")
-        .select("*")
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order("created_at", { ascending: true });
+    const fetchAllData = async () => {
+      // 1. Fetch all profiles and roles so Admin can search anyone
+      const [profRes, rolesRes, messagesRes] = await Promise.all([
+        supabase.from("profiles").select("*"),
+        supabase.from("user_roles").select("*"),
+        supabase.from("chats").select("*").or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`).order("created_at", { ascending: true })
+      ]);
 
-      if (error) {
-        console.error("Error fetching chats:", error);
+      if (profRes.error || rolesRes.error || messagesRes.error) {
+        console.error("Error fetching data");
         setLoading(false);
         return;
       }
 
-      const userIds = new Set<string>();
-      (messages || []).forEach(m => {
-        if (m.sender_id !== user.id) userIds.add(m.sender_id);
-        if (m.receiver_id !== user.id) userIds.add(m.receiver_id);
-      });
-      if (preselectedChat) userIds.add(preselectedChat.userId);
+      const roleMap = new Map(rolesRes.data.map(r => [r.user_id, r.role]));
+      const profilesWithRoles = profRes.data.map(p => ({ ...p, role: roleMap.get(p.user_id) || "buyer" }));
+      setAllProfiles(profilesWithRoles);
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .in("user_id", Array.from(userIds));
-        
-      const profileMap = new Map((profileData || []).map(p => [p.user_id, p]));
-      setProfiles(profileMap);
-
+      const profileMap = new Map(profilesWithRoles.map(p => [p.user_id, p]));
       const convMap = new Map<string, Conversation>();
 
-      (messages || []).forEach(m => {
+      (messagesRes.data || []).forEach(m => {
         const otherId = m.sender_id === user.id ? m.receiver_id : m.sender_id;
         if (!convMap.has(otherId)) {
           convMap.set(otherId, {
@@ -106,7 +95,7 @@ export default function AdminChats() {
       setLoading(false);
     };
 
-    fetchChats();
+    fetchAllData();
 
     const channel = supabase.channel('admin_chats_realtime')
       .on('postgres_changes', { 
@@ -162,25 +151,70 @@ export default function AdminChats() {
       toast({ title: "Failed to send", description: error.message, variant: "destructive" });
       setNewMessage(msgText);
     } else if (data) {
+      // Create/update conversation locally
       setConversations(prev => {
         const updated = [...prev];
         const idx = updated.findIndex(c => c === activeConversation);
         if (idx >= 0) {
           updated[idx].messages.push(data);
           updated[idx].lastMessageAt = data.created_at;
+        } else {
+          updated.push({
+             otherUserId: activeConversation.otherUserId,
+             otherUser: activeConversation.otherUser,
+             messages: [data],
+             lastMessageAt: data.created_at
+          });
         }
         return updated.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
       });
+
+      // Trigger Push Notification via Edge Function
+      supabase.functions.invoke("onesignal-direct-message", {
+        body: { 
+          receiver_id: activeConversation.otherUserId, 
+          sender_name: "CarlyFresh Admin", 
+          message: msgText 
+        }
+      }).catch(err => console.error("Push error:", err));
     }
     setSending(false);
   };
 
-  const filteredConvs = conversations.filter(c => {
-    const name = c.otherUser?.full_name?.toLowerCase() || '';
-    const biz = c.otherUser?.business_name?.toLowerCase() || '';
+  const hasSearch = searchQuery.trim().length > 0;
+  
+  // If searching, show all profiles matching the query
+  // Otherwise, show active conversations
+  let displayList: any[] = [];
+  if (hasSearch) {
     const q = searchQuery.toLowerCase();
-    return name.includes(q) || biz.includes(q);
-  });
+    displayList = allProfiles.filter(p => {
+      const name = p.full_name?.toLowerCase() || '';
+      const biz = p.business_name?.toLowerCase() || '';
+      return name.includes(q) || biz.includes(q);
+    }).map(p => {
+      // Find if we already have a conversation to show the last message
+      const existingConv = conversations.find(c => c.otherUserId === p.user_id);
+      return {
+        userId: p.user_id,
+        user: p,
+        role: p.role,
+        lastMessage: existingConv && existingConv.messages.length > 0 
+          ? existingConv.messages[existingConv.messages.length - 1].message 
+          : null
+      };
+    });
+  } else {
+    displayList = conversations.map(c => {
+      const p = allProfiles.find(x => x.user_id === c.otherUserId);
+      return {
+        userId: c.otherUserId,
+        user: p || c.otherUser,
+        role: p?.role || "buyer",
+        lastMessage: c.messages.length > 0 ? c.messages[c.messages.length - 1].message : null
+      };
+    });
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] max-w-6xl mx-auto">
@@ -211,24 +245,40 @@ export default function AdminChats() {
               </div>
             </div>
             <ScrollArea className="flex-1">
-              {filteredConvs.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground text-sm font-body">No conversations. Send a message from the Users tab.</div>
+              {displayList.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground text-sm font-body">
+                  {hasSearch ? "No users found matching your search." : "No conversations. Send a message from the Users tab."}
+                </div>
               ) : (
                 <div className="flex flex-col">
-                  {filteredConvs.map(conv => {
-                    const isActive = activeConvKey === conv.otherUserId;
-                    const name = conv.otherUser?.business_name || conv.otherUser?.full_name || 'Unknown User';
+                  {displayList.map(item => {
+                    const isActive = activeConvKey === item.userId;
+                    const name = item.user?.business_name || item.user?.full_name || 'Unknown User';
                     
                     return (
                       <button
-                        key={conv.otherUserId}
-                        onClick={() => setActiveConvKey(conv.otherUserId)}
+                        key={item.userId}
+                        onClick={() => {
+                          setActiveConvKey(item.userId);
+                          // If it was a search result and they clicked, clear search to see the actual conversation
+                          if (hasSearch) setSearchQuery("");
+                        }}
                         className={`flex flex-col p-4 text-left border-b hover:bg-muted/50 transition-colors ${isActive ? 'bg-muted/80' : ''}`}
                       >
-                        <span className="font-semibold text-sm truncate">{name}</span>
-                        {conv.messages.length > 0 && (
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-semibold text-sm truncate">{name}</span>
+                          <span className="text-[9px] uppercase tracking-wider font-semibold text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded ml-2">
+                            {item.role}
+                          </span>
+                        </div>
+                        {item.lastMessage && (
                           <span className="text-xs text-muted-foreground truncate mt-1">
-                            {conv.messages[conv.messages.length - 1].message}
+                            {item.lastMessage}
+                          </span>
+                        )}
+                        {!item.lastMessage && hasSearch && (
+                          <span className="text-xs text-muted-foreground/60 italic mt-1">
+                            Start a new conversation
                           </span>
                         )}
                       </button>

@@ -200,6 +200,15 @@ export default function Chats() {
         }
         return updated.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
       });
+
+      // Trigger Push Notification via Edge Function
+      supabase.functions.invoke("onesignal-direct-message", {
+        body: { 
+          receiver_id: activeConversation.otherUserId, 
+          sender_name: user.user_metadata?.full_name || "A user", 
+          message: msgText 
+        }
+      }).catch(err => console.error("Push error:", err));
     }
     setSending(false);
   };
