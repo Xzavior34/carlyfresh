@@ -10,10 +10,88 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      basket_items: {
+        Row: {
+          basket_id: string | null
+          created_at: string | null
+          id: string
+          product_id: string | null
+          quantity: number | null
+        }
+        Insert: {
+          basket_id?: string | null
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number | null
+        }
+        Update: {
+          basket_id?: string | null
+          created_at?: string | null
+          id?: string
+          product_id?: string | null
+          quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "basket_items_basket_id_fkey"
+            columns: ["basket_id"]
+            isOneToOne: false
+            referencedRelation: "baskets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "basket_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      baskets: {
+        Row: {
+          composition_rules: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          image: string | null
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          composition_rules?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          composition_rules?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blog_comments: {
         Row: {
           author_id: string
@@ -335,6 +413,48 @@ export type Database = {
         }
         Relationships: []
       }
+      fulfillment_jobs: {
+        Row: {
+          created_at: string | null
+          id: string
+          items_json: Json | null
+          order_id: string | null
+          status: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          items_json?: Json | null
+          order_id?: string | null
+          status?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          items_json?: Json | null
+          order_id?: string | null
+          status?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fulfillment_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fulfillment_jobs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string
@@ -357,27 +477,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_read: boolean | null
           link: string | null
           message: string
           read_status: boolean
+          title: string | null
           type: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          is_read?: boolean | null
           link?: string | null
           message?: string
           read_status?: boolean
+          title?: string | null
           type?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_read?: boolean | null
           link?: string | null
           message?: string
           read_status?: boolean
+          title?: string | null
           type?: string
           user_id?: string
         }
@@ -385,13 +511,16 @@ export type Database = {
       }
       orders: {
         Row: {
+          assigned_driver_id: string | null
           buyer_id: string
           created_at: string
           delivery_address: string
           delivery_window: string | null
           driver_assignment_deadline: string | null
+          fulfillment_stage: string | null
           id: string
           items: Json
+          metadata: Json | null
           order_number: number
           status: Database["public"]["Enums"]["order_status"]
           supplier_response_deadline: string | null
@@ -400,13 +529,16 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          assigned_driver_id?: string | null
           buyer_id: string
           created_at?: string
           delivery_address?: string
           delivery_window?: string | null
           driver_assignment_deadline?: string | null
+          fulfillment_stage?: string | null
           id?: string
           items?: Json
+          metadata?: Json | null
           order_number?: number
           status?: Database["public"]["Enums"]["order_status"]
           supplier_response_deadline?: string | null
@@ -415,13 +547,16 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          assigned_driver_id?: string | null
           buyer_id?: string
           created_at?: string
           delivery_address?: string
           delivery_window?: string | null
           driver_assignment_deadline?: string | null
+          fulfillment_stage?: string | null
           id?: string
           items?: Json
+          metadata?: Json | null
           order_number?: number
           status?: Database["public"]["Enums"]["order_status"]
           supplier_response_deadline?: string | null
@@ -430,6 +565,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "orders_buyer_id_fkey"
             columns: ["buyer_id"]
@@ -487,11 +629,13 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          freshness_status: string | null
+          handling_notes: string | null
           id: string
           image_url: string | null
           in_stock: boolean
-          is_buyer_favourite: boolean | null
           is_bundle: boolean | null
+          is_buyer_favourite: boolean | null
           is_featured: boolean | null
           name: string
           price: number
@@ -508,11 +652,13 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          freshness_status?: string | null
+          handling_notes?: string | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
-          is_buyer_favourite?: boolean | null
           is_bundle?: boolean | null
+          is_buyer_favourite?: boolean | null
           is_featured?: boolean | null
           name: string
           price?: number
@@ -529,11 +675,13 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          freshness_status?: string | null
+          handling_notes?: string | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
-          is_buyer_favourite?: boolean | null
           is_bundle?: boolean | null
+          is_buyer_favourite?: boolean | null
           is_featured?: boolean | null
           name?: string
           price?: number
@@ -556,45 +704,66 @@ export type Database = {
       profiles: {
         Row: {
           business_name: string | null
+          cold_chain_verified: boolean | null
           created_at: string
           driver_rating: number
+          farm_location: string | null
           full_name: string | null
           id: string
           is_b2b_customer: boolean
+          is_verified: boolean | null
           phone: string | null
           push_token: string | null
+          supplier_rating: number | null
+          supply_categories: string[] | null
           updated_at: string
           user_id: string
-          wallet_balance: number | null
           vehicle_info: string | null
+          virtual_account_number: string | null
+          virtual_bank_name: string | null
+          wallet_balance: number | null
         }
         Insert: {
           business_name?: string | null
+          cold_chain_verified?: boolean | null
           created_at?: string
           driver_rating?: number
+          farm_location?: string | null
           full_name?: string | null
           id?: string
           is_b2b_customer?: boolean
+          is_verified?: boolean | null
           phone?: string | null
           push_token?: string | null
+          supplier_rating?: number | null
+          supply_categories?: string[] | null
           updated_at?: string
           user_id: string
-          wallet_balance?: number | null
           vehicle_info?: string | null
+          virtual_account_number?: string | null
+          virtual_bank_name?: string | null
+          wallet_balance?: number | null
         }
         Update: {
           business_name?: string | null
+          cold_chain_verified?: boolean | null
           created_at?: string
           driver_rating?: number
+          farm_location?: string | null
           full_name?: string | null
           id?: string
           is_b2b_customer?: boolean
+          is_verified?: boolean | null
           phone?: string | null
           push_token?: string | null
+          supplier_rating?: number | null
+          supply_categories?: string[] | null
           updated_at?: string
           user_id?: string
-          wallet_balance?: number | null
           vehicle_info?: string | null
+          virtual_account_number?: string | null
+          virtual_bank_name?: string | null
+          wallet_balance?: number | null
         }
         Relationships: []
       }
@@ -666,6 +835,42 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount_kobo: number
+          balance_after_kobo: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          reference: string | null
+          status: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_kobo: number
+          balance_after_kobo?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference?: string | null
+          status?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_kobo?: number
+          balance_after_kobo?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference?: string | null
+          status?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           account_holder_name: string | null
@@ -675,6 +880,7 @@ export type Database = {
           bank_name: string
           created_at: string
           id: string
+          metadata: Json | null
           status: Database["public"]["Enums"]["withdrawal_status"]
           updated_at: string
           vendor_id: string
@@ -687,6 +893,7 @@ export type Database = {
           bank_name: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           status?: Database["public"]["Enums"]["withdrawal_status"]
           updated_at?: string
           vendor_id: string
@@ -699,6 +906,7 @@ export type Database = {
           bank_name?: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           status?: Database["public"]["Enums"]["withdrawal_status"]
           updated_at?: string
           vendor_id?: string
@@ -710,6 +918,59 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_order: {
+        Args: { p_driver_id: string; p_order_id: string }
+        Returns: boolean
+      }
+      confirm_order_fulfillment:
+        | {
+            Args: {
+              amount_paid: number
+              gateway_reference: string
+              target_order_id: number
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              amount_paid: number
+              gateway_reference: string
+              target_order_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              amount_paid: number
+              gateway_reference: string
+              target_order_identifier: string
+            }
+            Returns: boolean
+          }
+      confirm_order_via_client: {
+        Args: {
+          amount_paid: number
+          gateway_reference: string
+          target_order_identifier: string
+        }
+        Returns: boolean
+      }
+      create_withdrawal_request:
+        | {
+            Args: {
+              account_holder_name: string
+              account_number: string
+              amount: number
+              bank_name: string
+              vendor_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { amount: number; bank_details?: Json; vendor_id: string }
+            Returns: boolean
+          }
+      force_ping_test: { Args: never; Returns: undefined }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -721,18 +982,15 @@ export type Database = {
         }
         Returns: boolean
       }
-      create_withdrawal_request: {
-        Args: {
-          vendor_id: string
-          amount: number
-          bank_info: {
-            bank_name: string
-            account_number: string
-            account_holder_name: string
-          }
-        }
-        Returns: { id: string; status: string } | null
+      increment_wallet_balance: {
+        Args: { p_amount_kobo: number; p_user_id: string }
+        Returns: undefined
       }
+      send_cart_notification: {
+        Args: { p_message: string; p_user_id: string }
+        Returns: undefined
+      }
+      test_push_notification: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "buyer" | "seller" | "driver" | "admin"
@@ -744,16 +1002,24 @@ export type Database = {
         | "awaiting_supplier"
         | "awaiting_driver"
         | "supplier_missed"
-      order_status:
         | "pending"
-        | "confirmed"
-        | "processing"
-        | "preparing"
-        | "packaged"
-        | "driver_assigned"
-        | "in-transit"
+        | "assigned"
+        | "picked_up"
+        | "in_transit"
         | "delivered"
         | "cancelled"
+      order_status:
+        | "pending"
+        | "processing"
+        | "packaged"
+        | "in-transit"
+        | "delivered"
+        | "confirmed"
+        | "preparing"
+        | "paid"
+        | "driver_assigned"
+        | "cancelled"
+        | "accepted"
       transaction_status: "completed" | "pending"
       transaction_type: "sale" | "commission" | "withdrawal"
       withdrawal_status: "pending" | "approved" | "rejected"
@@ -772,12 +1038,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -801,11 +1067,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -826,11 +1092,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -851,11 +1117,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -868,11 +1134,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -893,6 +1159,12 @@ export const Constants = {
         "awaiting_supplier",
         "awaiting_driver",
         "supplier_missed",
+        "pending",
+        "assigned",
+        "picked_up",
+        "in_transit",
+        "delivered",
+        "cancelled",
       ],
       order_status: [
         "pending",
@@ -900,6 +1172,12 @@ export const Constants = {
         "packaged",
         "in-transit",
         "delivered",
+        "confirmed",
+        "preparing",
+        "paid",
+        "driver_assigned",
+        "cancelled",
+        "accepted",
       ],
       transaction_status: ["completed", "pending"],
       transaction_type: ["sale", "commission", "withdrawal"],
