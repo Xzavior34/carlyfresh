@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
 
 type Order = Tables<"orders">;
@@ -94,6 +95,7 @@ function FulfillmentTimeline({ record }: { record: FulfillmentRecord }) {
 
 export default function AdminFulfillment() {
   const [records, setRecords] = useState<FulfillmentRecord[]>([]);
+  const [drivers, setDrivers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,15 +108,16 @@ export default function AdminFulfillment() {
     else setLoading(true);
     setError(null);
 
-    const [ordersResult, jobsResult, profilesResult] = await Promise.all([
+    const [ordersResult, jobsResult, profilesResult, rolesResult] = await Promise.all([
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
       supabase.from("delivery_jobs").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("*")
+      supabase.from("profiles").select("*"),
+      supabase.from("user_roles").select("user_id").eq("role", "driver")
     ]);
 
     if (currentRequest !== requestId.current) return;
 
-    const firstError = ordersResult.error || jobsResult.error || profilesResult.error;
+    const firstError = ordersResult.error || jobsResult.error || profilesResult.error || rolesResult.error;
     if (firstError) {
       setError("Some fulfillment data could not be loaded. Try refreshing to reconnect.");
       setLoading(false);
@@ -127,6 +130,10 @@ export default function AdminFulfillment() {
     const profiles = profilesResult.data || [];
     const profileMap = new Map(profiles.map((profile) => [profile.user_id, profile]));
     const jobsByOrder = new Map(jobs.map((job) => [job.order_id, job]));
+    
+    const driverIds = new Set((rolesResult.data || []).map(r => r.user_id));
+    const availableDrivers = profiles.filter(p => driverIds.has(p.user_id));
+    setDrivers(availableDrivers);
 
     setRecords(orders.map((order) => {
       const job = jobsByOrder.get(order.id) || null;
@@ -143,6 +150,32 @@ export default function AdminFulfillment() {
     setLoading(false);
     setRefreshing(false);
   }, []);
+
+  const assignDriver = async (orderId: string, driverId: string) => {
+    try {
+      setRefreshing(true);
+      const { error: orderError } = await supabase
+        .from("orders")
+        .update({ assigned_driver_id: driverId, status: "driver_assigned" })
+        .eq("id", orderId);
+        
+      if (orderError) throw orderError;
+      
+      const record = records.find(r => r.order.id === orderId);
+      if (record?.job) {
+        await supabase
+          .from("delivery_jobs")
+          .update({ driver_id: driverId, status: "assigned" })
+          .eq("id", record.job.id);
+      }
+      
+      await fetchFulfillment(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to assign driver");
+      setRefreshing(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchFulfillment();
@@ -237,7 +270,26 @@ export default function AdminFulfillment() {
                   <div className="grid gap-4 md:grid-cols-3">
                     <Assignment icon={Warehouse} label="Supplier" value={displayName(record.supplier, "Supplier not identified")} muted={!record.supplier} />
                     <Assignment icon={UserRound} label="Customer" value={displayName(record.buyer, "Customer not identified")} muted={!record.buyer} />
-                    <Assignment icon={Truck} label="Driver" value={record.driver ? displayName(record.driver, "Driver") : "Waiting for driver assignment"} muted={driverMissing} />
+                    
+                    {driverMissing ? (
+                      <div className="flex flex-col gap-2">
+                        <Assignment icon={Truck} label="Driver" value="Waiting for driver assignment" muted={true} />
+                        <Select onValueChange={(val) => assignDriver(order.id, val)} disabled={refreshing}>
+                          <SelectTrigger className="h-8 text-xs font-body w-full max-w-[200px]">
+                            <SelectValue placeholder="Assign a driver..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {drivers.map(d => (
+                              <SelectItem key={d.user_id} value={d.user_id} className="text-xs">
+                                {displayName(d, "Unnamed Driver")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <Assignment icon={Truck} label="Driver" value={displayName(record.driver, "Driver")} muted={false} />
+                    )}
                   </div>
 
                   <FulfillmentTimeline record={record} />

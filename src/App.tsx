@@ -1,4 +1,4 @@
-﻿import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -50,6 +50,8 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
 import AdminFulfillment from "./pages/admin/AdminFulfillment";
+import AdminMessages from "./pages/admin/AdminMessages";
+import Chats from "./pages/customer/Chats";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminDriverWithdrawals from "./pages/admin/AdminDriverWithdrawals";
@@ -217,6 +219,7 @@ const App = () => (
               {/* Customer routes (authenticated buyers) */}
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+              <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><CustomerOrders /></ProtectedRoute>} />
               <Route path="/orders/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><CustomerProfile /></ProtectedRoute>} />
@@ -230,6 +233,7 @@ const App = () => (
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="fulfillment" element={<AdminFulfillment />} />
+                <Route path="messages" element={<AdminMessages />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />
                 <Route path="blog" element={<AdminBlog />} />

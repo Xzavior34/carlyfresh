@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
+import { ShoppingCart, Menu, X, User, LogOut, MessageSquare } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -103,7 +103,14 @@ const Navbar = () => {
                 Login
               </Link>
             )}
-            {user && <NotificationPopover className={`${textClass} ${hoverClass}`} />}
+            {user && (
+              <>
+                <Link to="/chats" className={`relative p-2 transition-colors ${textClass} ${hoverClass}`}>
+                  <MessageSquare size={20} />
+                </Link>
+                <NotificationPopover className={`${textClass} ${hoverClass}`} />
+              </>
+            )}
             <Link to="/cart" className={`relative p-2 transition-colors ${textClass} ${hoverClass}`}>
               <ShoppingCart size={22} />
               {itemCount > 0 && (

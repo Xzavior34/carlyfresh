@@ -77,12 +77,14 @@ function PaystackButton({
   amountKobo,
   orderId,
   onSuccess,
+  onClose,
   disabled,
 }: {
   email: string;
   amountKobo: number;
   orderId: string;
   onSuccess: (response: any) => void;
+  onClose?: () => void;
   disabled: boolean;
 }) {
   const config = {
@@ -116,6 +118,7 @@ function PaystackButton({
 
     initializePayment({
       onSuccess,
+      onClose,
     } as any);
   };
 
@@ -259,9 +262,13 @@ export default function Checkout() {
 
     if (rpcError) {
       console.error("Fulfillment engine error:", rpcError);
-    } else {
-      navigate(`/orders/${placedOrderId}`);
+      toast({
+        title: "Order Processed",
+        description: "We received your payment, though a background process is delayed. We will handle it.",
+      });
     }
+    
+    navigate(`/orders/${placedOrderId}`);
   };
 
   const handleSuccessClose = () => {
@@ -499,6 +506,7 @@ export default function Checkout() {
                     amountKobo={Math.round(total * 100)}
                     orderId={placedOrderId!}
                     onSuccess={onPaystackSuccess}
+                    onClose={() => setProcessing(false)}
                     disabled={processing}
                   />
                 ) : null}
