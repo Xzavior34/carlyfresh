@@ -49,6 +49,7 @@ import AdminBaskets from "./pages/admin/AdminBaskets";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
+import AdminFulfillment from "./pages/admin/AdminFulfillment";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminWithdrawals from "./pages/admin/AdminWithdrawals";
 import AdminDriverWithdrawals from "./pages/admin/AdminDriverWithdrawals";
@@ -228,6 +229,7 @@ const App = () => (
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />
+                <Route path="fulfillment" element={<AdminFulfillment />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />
                 <Route path="blog" element={<AdminBlog />} />

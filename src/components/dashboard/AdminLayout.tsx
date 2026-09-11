@@ -15,6 +15,7 @@ const navItems = [
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Deliveries", url: "/admin/deliveries", icon: Truck },
+  { title: "Fulfillment Tracker", url: "/admin/fulfillment", icon: GitBranch },
   { title: "Vendor Withdrawals", url: "/admin/withdrawals", icon: Banknote },
   { title: "Driver Withdrawals", url: "/admin/driver-withdrawals", icon: Bike },
   { title: "Blog", url: "/admin/blog", icon: FileText },
