@@ -266,9 +266,20 @@ export default function AdminChats() {
                       <button
                         key={item.userId}
                         onClick={() => {
+                          // Ensure it exists in conversations so it doesn't disappear when search clears
+                          if (hasSearch) {
+                            const existing = conversations.find(c => c.otherUserId === item.userId);
+                            if (!existing) {
+                              setConversations(prev => [{
+                                otherUserId: item.userId,
+                                otherUser: item.user,
+                                messages: [],
+                                lastMessageAt: new Date().toISOString()
+                              }, ...prev]);
+                            }
+                            setSearchQuery("");
+                          }
                           setActiveConvKey(item.userId);
-                          // If it was a search result and they clicked, clear search to see the actual conversation
-                          if (hasSearch) setSearchQuery("");
                         }}
                         className={`flex flex-col p-4 text-left border-b hover:bg-muted/50 transition-colors ${isActive ? 'bg-muted/80' : ''}`}
                       >

@@ -4,12 +4,13 @@ import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Navigation, MapPin, Wallet, ArrowDownToLine, LogOut } from "lucide-react";
+import { Navigation, MapPin, Wallet, LogOut, MessageSquare } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 
 const navItems = [
   { title: "Available Deliveries", url: "/driver", icon: Navigation },
   { title: "Active Route", url: "/driver/active", icon: MapPin },
+  { title: "Messages", url: "/chats", icon: MessageSquare },
   { title: "Earnings & Wallet", url: "/driver/earnings", icon: Wallet },
 ];
 
