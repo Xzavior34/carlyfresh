@@ -50,6 +50,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveries from "./pages/admin/AdminDeliveries";
 import AdminFulfillment from "./pages/admin/AdminFulfillment";
+import AdminChats from "./pages/admin/AdminChats";
 import AdminMessages from "./pages/admin/AdminMessages";
 import Chats from "./pages/customer/Chats";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -233,6 +234,7 @@ const App = () => (
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="fulfillment" element={<AdminFulfillment />} />
+                <Route path="chats" element={<AdminChats />} />
                 <Route path="messages" element={<AdminMessages />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="driver-withdrawals" element={<AdminDriverWithdrawals />} />

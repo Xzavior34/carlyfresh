@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNaira } from "@/lib/formatters";
-import { Users, Store } from "lucide-react";
+import { Users, Store, MessageSquare } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 import { toast } from "@/hooks/use-toast";
@@ -13,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 type Profile = Tables<"profiles">;
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<(Profile & { role?: string; totalSales?: number })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -153,7 +156,17 @@ export default function AdminUsers() {
                     <TableCell><Badge variant="secondary" className="font-body text-[11px] capitalize">{u.role}</Badge></TableCell>
                     <TableCell className="font-body text-sm text-muted-foreground">{u.business_name || "—"}</TableCell>
                     <TableCell className="font-body text-sm text-muted-foreground">{u.phone || "—"}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center flex justify-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-xs font-body gap-1"
+                        onClick={() => {
+                          navigate(`/admin/chats`, { state: { startChat: { userId: u.user_id, name: u.full_name } } });
+                        }}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" /> Message
+                      </Button>
                       <Switch
                         checked={Boolean((u as any).is_b2b_customer)}
                         onCheckedChange={async (val) => {
