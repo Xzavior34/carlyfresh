@@ -4,7 +4,7 @@ import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Banknote, Bike, FileText, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Package, Users, ShoppingCart, Truck, Settings, LogOut, Banknote, Bike, FileText, ShoppingBag, GitBranch } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import AdminGlobalSearch from "@/components/dashboard/AdminGlobalSearch";
 
