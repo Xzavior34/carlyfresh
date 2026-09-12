@@ -121,7 +121,7 @@ export default function AdminChats() {
             updated[existingIdx].messages.push(newMsg);
             updated[existingIdx].lastMessageAt = newMsg.created_at;
           } else {
-            fetchChats(); // refresh for new user
+            fetchAllData(); // refresh for new user
           }
           return updated.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
         });
