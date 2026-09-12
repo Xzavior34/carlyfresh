@@ -918,6 +918,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_users_emails: {
+        Args: never
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       claim_order: {
         Args: { p_driver_id: string; p_order_id: string }
         Returns: boolean
