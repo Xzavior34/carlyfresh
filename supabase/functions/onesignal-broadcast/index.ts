@@ -28,8 +28,10 @@ serve(async (req) => {
     const body = {
       app_id: ONESIGNAL_APP_ID,
       included_segments: ['All'],
-      headings: { en: title },
+      headings: { en: `CarlyFresh: ${title}` },
       contents: { en: message },
+      data: { app: 'CarlyFresh' },
+      android_channel_name: 'CarlyFresh',
     };
 
     const response = await fetch('https://onesignal.com/api/v1/notifications', {
