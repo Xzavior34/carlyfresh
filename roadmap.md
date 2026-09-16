@@ -1,0 +1,2 @@
+- [ ] Deploy notify-vendor-whatsapp and dispatch-driver-proximity edge functions (user request; verify they exist first)
+- [ ] Messaging identity: CarlyFresh branding, names/role tags, push safety
