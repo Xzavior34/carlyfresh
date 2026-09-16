@@ -1,142 +1,156 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+// Supabase Edge Function — notify-vendor-whatsapp
+// Notifies the vendor about a new order on WhatsApp (WhatsApp Cloud API) and
+// always records an in-app notification as a guaranteed fallback.
+// Accepts a database webhook payload ({ record: order }) or a direct call
+// ({ order_id } or a full order record).
+// Optional secrets: WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID.
+// Auth: verify_jwt = false; uses the service role key server-side.
+
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface OrderItem {
-  name?: string;
-  quantity?: number;
-  price?: number;
-  unit?: string;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_TOKEN") ?? "";
+const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "";
+
+/** Normalise a phone number to an E.164-ish digit string (defaults to Nigeria +234). */
+function toWhatsAppNumber(raw: string): string | null {
+  let digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0")) digits = `234${digits.slice(1)}`;
+  if (digits.length <= 10) digits = `234${digits}`;
+  return digits.length >= 11 && digits.length <= 15 ? digits : null;
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+function json(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { order_id } = await req.json();
-
-    if (!order_id) {
-      throw new Error("order_id is required.");
+    if (!SUPABASE_URL || !SERVICE_ROLE) {
+      return json({ error: "Backend is not configured." }, 500);
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-    const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
-    const WHATSAPP_API_TOKEN = Deno.env.get("WHATSAPP_API_TOKEN");
-    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const body = await req.json().catch(() => ({}));
+    const order = body?.record ?? body?.order ?? body ?? {};
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    let orderId: string | undefined = body?.order_id ?? order?.id;
 
-    // Fetch order details
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("*, profiles:vendor_id(full_name, business_name, phone)")
-      .eq("id", order_id)
-      .single();
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    if (orderError || !order) {
-      throw new Error(orderError?.message || "Order not found");
+    // When called with only an id (or a webhook for a different table), reload the order.
+    let fullOrder = order;
+    if (!orderId || !order?.vendor_id) {
+      if (!orderId) return json({ error: "order_id is required." }, 400);
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, order_number, vendor_id, buyer_id, total_amount, delivery_address, items")
+        .eq("id", orderId)
+        .maybeSingle();
+      if (error) return json({ error: error.message }, 400);
+      if (!data) return json({ error: "Order not found." }, 404);
+      fullOrder = data;
     }
 
-    const vendorProfile = (order as any).profiles;
-    const vendorPhone = vendorProfile?.phone?.replace(/\D/g, "");
-    const orderNumber = order.order_number || order.id.slice(0, 8);
-    const items: OrderItem[] = Array.isArray(order.items) ? order.items : [];
-    const itemsList = items
-      .map((i) => `• ${i.name || "Item"} (${i.quantity || 1} ${i.unit || "unit"}) - ₦${Number((i.price || 0) * (i.quantity || 1)).toLocaleString("en-NG")}`)
-      .join("\n");
+    // 1. Load the vendor profile.
+    const { data: vendor, error: vendorError } = await supabase
+      .from("profiles")
+      .select("user_id, business_name, full_name, phone")
+      .eq("user_id", fullOrder.vendor_id)
+      .maybeSingle();
 
-    const whatsappMessage = `🚨 *NEW CARLYFRESH ORDER #${orderNumber}*\n\n` +
-      `*Amount:* ₦${Number(order.total_amount).toLocaleString("en-NG")}\n` +
-      `*Delivery Window:* ${order.delivery_window || "As soon as possible"}\n` +
-      `*Delivery Address:* ${order.delivery_address || "Customer Address"}\n\n` +
-      `*Items:*\n${itemsList || "No items listed"}\n\n` +
-      `👉 *Action Required:*\n` +
-      `Log in to your vendor portal to *Accept* or *Decline* this order:\n` +
-      `https://carlyfresh.com/vendor/orders?orderId=${order.id}`;
+    if (vendorError) return json({ error: vendorError.message }, 400);
+    if (!vendor) return json({ error: "Vendor profile not found." }, 404);
 
-    // 1. Send WhatsApp via Meta Cloud API if configured
-    let whatsappSent = false;
-    if (WHATSAPP_API_TOKEN && WHATSAPP_PHONE_NUMBER_ID && vendorPhone) {
-      try {
-        const formattedPhone = vendorPhone.startsWith("0") ? `234${vendorPhone.slice(1)}` : vendorPhone;
-        const waResponse = await fetch(`https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${WHATSAPP_API_TOKEN}`,
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: formattedPhone,
-            type: "text",
-            text: { body: whatsappMessage },
-          }),
-        });
-        const waData = await waResponse.json();
-        console.log("WhatsApp Cloud API response:", waData);
-        whatsappSent = waResponse.ok;
-      } catch (waErr) {
-        console.warn("WhatsApp API dispatch failed:", waErr);
-      }
-    }
-
-    // 2. Send OneSignal Push to Vendor
-    let pushSent = false;
-    if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
-      try {
-        const pushBody = {
-          app_id: ONESIGNAL_APP_ID,
-          include_aliases: { external_id: [order.vendor_id] },
-          target_channel: "push",
-          headings: { en: `🚨 New Order #${orderNumber} Received!` },
-          contents: {
-            en: `₦${Number(order.total_amount).toLocaleString("en-NG")} — Tap to Accept and begin preparing.`,
-          },
-          data: {
-            order_id: order.id,
-            action_type: "new_order_review",
-            url: `/vendor/orders?orderId=${order.id}`,
-          },
-        };
-
-        const pushRes = await fetch("https://onesignal.com/api/v1/notifications", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`,
-          },
-          body: JSON.stringify(pushBody),
-        });
-        pushSent = pushRes.ok;
-      } catch (pErr) {
-        console.warn("OneSignal Push dispatch failed:", pErr);
-      }
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        order_id: order.id,
-        whatsapp_sent: whatsappSent,
-        push_sent: pushSent,
-        whatsapp_text: whatsappMessage,
-        vendor_phone: vendorPhone,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error: any) {
-    console.error("notify-vendor-whatsapp error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
+    const orderLabel = fullOrder.order_number ? `#${fullOrder.order_number}` : "";
+    const total = Number(fullOrder.total_amount ?? 0).toLocaleString("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      maximumFractionDigits: 0,
     });
+    const message =
+      `🛒 New CarlyFresh order ${orderLabel}!\n` +
+      `Total: ${total}\n` +
+      `Deliver to: ${fullOrder.delivery_address ?? "address on file"}\n` +
+      `Open your vendor portal to confirm and prepare this order.`;
+
+    // 2. Guaranteed in-app notification.
+    const { error: notifError } = await supabase.from("notifications").insert({
+      user_id: vendor.user_id,
+      type: "order_new_whatsapp",
+      title: "New order received",
+      message: `New paid order ${orderLabel} — ${total}. Confirm and start preparing.`,
+      link: "/vendor/orders",
+    });
+    if (notifError) console.error("[notify-vendor-whatsapp] in-app notification failed:", notifError.message);
+
+    // 3. WhatsApp send when credentials are configured.
+    if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+      return json({
+        ok: true,
+        whatsapp: "skipped",
+        reason: "WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID not configured — in-app notification sent instead.",
+      });
+    }
+
+    if (!vendor.phone) {
+      return json({
+        ok: true,
+        whatsapp: "skipped",
+        reason: "Vendor has no phone number on their profile — in-app notification sent instead.",
+      });
+    }
+
+    const to = toWhatsAppNumber(vendor.phone);
+    if (!to) {
+      return json({
+        ok: true,
+        whatsapp: "skipped",
+        reason: `Vendor phone "${vendor.phone}" is not a valid WhatsApp number — in-app notification sent instead.`,
+      });
+    }
+
+    const waRes = await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { body: message },
+      }),
+    });
+
+    const waBody = await waRes.text();
+    if (!waRes.ok) {
+      console.error(`[notify-vendor-whatsapp] WhatsApp send failed (${waRes.status}): ${waBody}`);
+      return json({
+        ok: true,
+        whatsapp: "failed",
+        status: waRes.status,
+        details: waBody,
+        note: "In-app notification was still delivered.",
+      });
+    }
+
+    return json({ ok: true, whatsapp: "sent", to });
+  } catch (error) {
+    console.error("[notify-vendor-whatsapp]", error);
+    return json({ error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });

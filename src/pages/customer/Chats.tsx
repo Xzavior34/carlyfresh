@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Send, MessageSquare, ArrowLeft, Loader2, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -11,15 +11,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
 import {
-  displayName,
-  roleLabel,
-  roleBadgeClass,
-  formatMsgTime,
-} from "@/lib/chatIdentity";
+  formatMessageTime,
+  getChatDisplayName,
+  getRoleLabel,
+  getRoleTagClasses,
+} from "@/lib/chat-identity";
 
 type ChatMessage = Tables<"chats">;
-type RawProfile = Tables<"profiles">;
-type Profile = RawProfile & { role: string };
+type Profile = Tables<"profiles"> & { role: string };
 
 type Conversation = {
   otherUserId: string;
@@ -31,28 +30,20 @@ type Conversation = {
 export default function Chats() {
   const { user } = useAuth();
   const location = useLocation();
-
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvKey, setActiveConvKey] = useState<string | null>(null);
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
-  // Map of user_id → Profile used for resolving sender names inside messages
-  const [profileMap, setProfileMap] = useState<Map<string, Profile>>(new Map());
-
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Guard against double-submits at event level
-  const sendingRef = useRef(false);
 
-  // Support pre-selecting a chat target from another page
-  const preselectedChat = location.state?.startChat as
-    | { userId?: string; vendorId?: string }
-    | undefined;
+  // Support pre-selecting a vendor from an order page: { startChat: { userId } }
+  const preselectedChat = location.state?.startChat as { userId?: string; vendorId?: string } | undefined;
   const preselectedId = preselectedChat?.userId || preselectedChat?.vendorId;
 
-  const fetchAllData = useCallback(async () => {
+  const fetchAllData = async () => {
     if (!user) return;
 
     const [profRes, rolesRes, messagesRes] = await Promise.all([
@@ -66,7 +57,7 @@ export default function Chats() {
     ]);
 
     if (profRes.error || rolesRes.error || messagesRes.error) {
-      console.error("Error fetching chat data");
+      console.error("Error fetching data");
       setLoading(false);
       return;
     }
@@ -76,12 +67,11 @@ export default function Chats() {
       ...p,
       role: roleMap.get(p.user_id) || "buyer",
     }));
+    // Exclude current user from list
+    const otherProfiles = profiles.filter((p) => p.user_id !== user.id);
+    setAllProfiles(otherProfiles);
 
-    const newProfileMap = new Map(profiles.map((p) => [p.user_id, p]));
-    setProfileMap(newProfileMap);
-
-    // Exclude self from search list
-    setAllProfiles(profiles.filter((p) => p.user_id !== user.id));
+    const profileMap = new Map(profiles.map((p) => [p.user_id, p]));
 
     const convMap = new Map<string, Conversation>();
     (messagesRes.data || []).forEach((m) => {
@@ -89,21 +79,22 @@ export default function Chats() {
       if (!convMap.has(otherId)) {
         convMap.set(otherId, {
           otherUserId: otherId,
-          otherUser: newProfileMap.get(otherId) || null,
+          otherUser: profileMap.get(otherId) || null,
           messages: [],
           lastMessageAt: m.created_at,
         });
       }
       const conv = convMap.get(otherId)!;
       conv.messages.push(m);
-      if (m.created_at > conv.lastMessageAt) conv.lastMessageAt = m.created_at;
+      conv.lastMessageAt =
+        m.created_at > conv.lastMessageAt ? m.created_at : conv.lastMessageAt;
     });
 
-    // Ensure pre-selected conversation slot exists
+    // Ensure pre-selected conversation exists
     if (preselectedId && !convMap.has(preselectedId)) {
       convMap.set(preselectedId, {
         otherUserId: preselectedId,
-        otherUser: newProfileMap.get(preselectedId) || null,
+        otherUser: profileMap.get(preselectedId) || null,
         messages: [],
         lastMessageAt: new Date().toISOString(),
       });
@@ -118,12 +109,12 @@ export default function Chats() {
 
     if (preselectedId) {
       setActiveConvKey(preselectedId);
-    } else {
-      setActiveConvKey((prev) => prev || sorted[0]?.otherUserId || null);
+    } else if (sorted.length > 0) {
+      setActiveConvKey((prev) => prev || sorted[0].otherUserId);
     }
 
     setLoading(false);
-  }, [user, preselectedId]);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -139,14 +130,29 @@ export default function Chats() {
           table: "chats",
           filter: `receiver_id=eq.${user.id}`,
         },
-        () => fetchAllData()
+        () => {
+          fetchAllData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chats",
+          filter: `sender_id=eq.${user.id}`,
+        },
+        () => {
+          fetchAllData();
+        }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [user, fetchAllData]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -174,16 +180,16 @@ export default function Chats() {
   const activeConversation = conversations.find(
     (c) => c.otherUserId === activeConvKey
   );
+  const otherUserRole =
+    (activeConversation?.otherUser as Profile | undefined)?.role || "buyer";
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Guard against double-submit
-    if (!newMessage.trim() || !activeConversation || sendingRef.current) return;
+    if (!newMessage.trim() || !activeConversation || sending) return;
 
-    sendingRef.current = true;
     setSending(true);
     const msgText = newMessage.trim();
-    setNewMessage(""); // Optimistically clear
+    setNewMessage("");
 
     const { data, error } = await supabase
       .from("chats")
@@ -197,45 +203,45 @@ export default function Chats() {
 
     if (error) {
       toast({
-        title: "Message not sent",
+        title: "Failed to send",
         description: error.message,
         variant: "destructive",
       });
-      setNewMessage(msgText); // Restore on failure
+      setNewMessage(msgText);
     } else if (data) {
-      // Append optimistically to local state
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.otherUserId === activeConversation.otherUserId
-            ? {
-                ...c,
-                messages: [...c.messages, data],
-                lastMessageAt: data.created_at,
-              }
-            : c
-        ).sort(
+      setConversations((prev) => {
+        const updated = [...prev];
+        const idx = updated.findIndex(
+          (c) => c.otherUserId === activeConversation.otherUserId
+        );
+        if (idx >= 0) {
+          updated[idx].messages.push(data);
+          updated[idx].lastMessageAt = data.created_at;
+        }
+        return updated.sort(
           (a, b) =>
             new Date(b.lastMessageAt).getTime() -
             new Date(a.lastMessageAt).getTime()
-        )
-      );
+        );
+      });
 
-      // Fire-and-forget push notification (server derives sender identity)
       supabase.functions
         .invoke("onesignal-direct-message", {
-          body: { receiver_id: activeConversation.otherUserId, message: msgText },
+          body: {
+            receiver_id: activeConversation.otherUserId,
+            message: msgText,
+          },
         })
         .catch((err) => console.error("Push error:", err));
     }
-
-    sendingRef.current = false;
     setSending(false);
   };
 
-  // ── Display list ──────────────────────────────────────────────────────────
   const hasSearch = searchQuery.trim().length > 0;
   const q = searchQuery.toLowerCase();
 
+  // When searching: show ALL users matching query
+  // When not searching: show only existing conversations
   let displayList: Array<{
     userId: string;
     user: Profile | null;
@@ -255,7 +261,7 @@ export default function Chats() {
           userId: p.user_id,
           user: p,
           lastMessage:
-            existing?.messages.length
+            existing && existing.messages.length > 0
               ? existing.messages[existing.messages.length - 1].message
               : null,
         };
@@ -266,31 +272,13 @@ export default function Chats() {
       return {
         userId: c.otherUserId,
         user: profile || c.otherUser,
-        lastMessage: c.messages.length
-          ? c.messages[c.messages.length - 1].message
-          : null,
+        lastMessage:
+          c.messages.length > 0
+            ? c.messages[c.messages.length - 1].message
+            : null,
       };
     });
   }
-
-  const handleSelectUser = (item: (typeof displayList)[0]) => {
-    if (hasSearch) {
-      const exists = conversations.some((c) => c.otherUserId === item.userId);
-      if (!exists) {
-        setConversations((prev) => [
-          {
-            otherUserId: item.userId,
-            otherUser: item.user,
-            messages: [],
-            lastMessageAt: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
-      }
-      setSearchQuery("");
-    }
-    setActiveConvKey(item.userId);
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -306,7 +294,7 @@ export default function Chats() {
           </div>
         ) : (
           <div className="flex flex-col md:flex-row bg-card border rounded-xl overflow-hidden shadow-sm h-[calc(100vh-240px)] min-h-[500px]">
-            {/* ── Sidebar ── */}
+            {/* Sidebar */}
             <div
               className={`md:w-80 border-r flex flex-col ${
                 activeConvKey ? "hidden md:flex" : "flex"
@@ -326,22 +314,42 @@ export default function Chats() {
               </div>
               <ScrollArea className="flex-1">
                 {displayList.length === 0 ? (
-                  <p className="p-8 text-center text-muted-foreground text-sm font-body">
+                  <div className="p-8 text-center text-muted-foreground text-sm font-body">
                     {hasSearch
                       ? "No users found."
                       : "No conversations yet. Search for a user to start chatting."}
-                  </p>
+                  </div>
                 ) : (
                   <div className="flex flex-col divide-y">
                     {displayList.map((item) => {
                       const isActive = activeConvKey === item.userId;
-                      const role = item.user?.role || "buyer";
-                      const name = displayName(item.user, role);
+                      const role = (item.user as Profile)?.role || "buyer";
+                      const name = getChatDisplayName(item.user, role);
 
                       return (
                         <button
                           key={item.userId}
-                          onClick={() => handleSelectUser(item)}
+                          onClick={() => {
+                            // If search result, add to conversations list so it persists when search clears
+                            if (hasSearch) {
+                              const exists = conversations.find(
+                                (c) => c.otherUserId === item.userId
+                              );
+                              if (!exists) {
+                                setConversations((prev) => [
+                                  {
+                                    otherUserId: item.userId,
+                                    otherUser: item.user,
+                                    messages: [],
+                                    lastMessageAt: new Date().toISOString(),
+                                  },
+                                  ...prev,
+                                ]);
+                              }
+                              setSearchQuery("");
+                            }
+                            setActiveConvKey(item.userId);
+                          }}
                           className={`flex flex-col p-4 text-left hover:bg-muted/50 transition-colors ${
                             isActive ? "bg-muted/80" : ""
                           }`}
@@ -351,12 +359,9 @@ export default function Chats() {
                               {name}
                             </span>
                             <span
-                              className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                                roleBadgeClass[role] ||
-                                "bg-muted text-muted-foreground"
-                              }`}
+                              className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded shrink-0 ${getRoleTagClasses(role)}`}
                             >
-                              {roleLabel(role)}
+                              {getRoleLabel(role)}
                             </span>
                           </div>
                           {item.lastMessage ? (
@@ -376,7 +381,7 @@ export default function Chats() {
               </ScrollArea>
             </div>
 
-            {/* ── Chat area ── */}
+            {/* Chat area */}
             <div
               className={`flex-1 flex flex-col ${
                 !activeConvKey ? "hidden md:flex" : "flex"
@@ -401,75 +406,71 @@ export default function Chats() {
                     </Button>
                     <div>
                       <h3 className="font-semibold font-display">
-                        {displayName(
+                        {getChatDisplayName(
                           activeConversation.otherUser,
-                          activeConversation.otherUser?.role || "buyer"
+                          otherUserRole
                         )}
                       </h3>
                       <span
-                        className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${
-                          roleBadgeClass[
-                            activeConversation.otherUser?.role || "buyer"
-                          ] || ""
-                        }`}
+                        className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${getRoleTagClasses(otherUserRole)}`}
                       >
-                        {roleLabel(activeConversation.otherUser?.role || "buyer")}
+                        {getRoleLabel(otherUserRole)}
                       </span>
                     </div>
                   </div>
 
                   {/* Messages */}
                   <div
-                    className="flex-1 p-4 overflow-y-auto space-y-4 bg-muted/10"
+                    className="flex-1 p-4 overflow-y-auto space-y-3 bg-muted/10"
                     ref={scrollRef}
                   >
                     {activeConversation.messages.length === 0 ? (
-                      <p className="text-center text-muted-foreground text-sm font-body mt-10">
+                      <div className="text-center text-muted-foreground text-sm font-body mt-10">
                         Send a message to start the conversation.
-                      </p>
+                      </div>
                     ) : (
                       activeConversation.messages.map((msg, i) => {
                         const isMe = msg.sender_id === user.id;
-                        const senderProfile = profileMap.get(msg.sender_id);
-                        const senderRole = senderProfile?.role || "buyer";
-                        const senderName = isMe
-                          ? "You"
-                          : displayName(senderProfile, senderRole);
-
                         return (
                           <div
                             key={msg.id || i}
-                            className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+                            className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                           >
-                            {/* Sender name + role tag */}
-                            <div className="flex items-center gap-1.5 mb-1">
-                              {!isMe && (
-                                <span
-                                  className={`text-[8px] uppercase tracking-wider font-bold px-1 py-0.5 rounded ${
-                                    roleBadgeClass[senderRole] || ""
-                                  }`}
-                                >
-                                  {roleLabel(senderRole)}
-                                </span>
-                              )}
-                              <span className="text-[10px] font-medium text-muted-foreground">
-                                {senderName}
-                              </span>
-                            </div>
-                            {/* Bubble */}
                             <div
-                              className={`max-w-[80%] rounded-2xl px-4 py-2 font-body text-sm ${
-                                isMe
-                                  ? "bg-primary text-primary-foreground rounded-tr-sm"
-                                  : "bg-muted text-foreground rounded-tl-sm"
+                              className={`flex max-w-[80%] flex-col gap-0.5 ${
+                                isMe ? "items-end" : "items-start"
                               }`}
                             >
-                              {msg.message}
+                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                <span className="font-semibold text-foreground/80">
+                                  {isMe
+                                    ? "You"
+                                    : getChatDisplayName(
+                                        activeConversation.otherUser,
+                                        otherUserRole
+                                      )}
+                                </span>
+                                {!isMe && (
+                                  <span
+                                    className={`rounded px-1 py-px text-[9px] font-bold uppercase tracking-wide ${getRoleTagClasses(otherUserRole)}`}
+                                  >
+                                    {getRoleLabel(otherUserRole)}
+                                  </span>
+                                )}
+                                <span>
+                                  {formatMessageTime(msg.created_at)}
+                                </span>
+                              </div>
+                              <div
+                                className={`rounded-2xl px-4 py-2 font-body text-sm ${
+                                  isMe
+                                    ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                    : "bg-muted text-foreground rounded-tl-sm"
+                                }`}
+                              >
+                                {msg.message}
+                              </div>
                             </div>
-                            {/* Timestamp */}
-                            <span className="text-[9px] text-muted-foreground mt-1">
-                              {formatMsgTime(msg.created_at)}
-                            </span>
                           </div>
                         );
                       })
@@ -492,11 +493,7 @@ export default function Chats() {
                         disabled={!newMessage.trim() || sending}
                         size="icon"
                       >
-                        {sending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
+                        <Send className="h-4 w-4" />
                       </Button>
                     </form>
                   </div>
