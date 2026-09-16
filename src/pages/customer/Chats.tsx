@@ -406,23 +406,16 @@ export default function Chats() {
                     </Button>
                     <div>
                       <h3 className="font-semibold font-display">
-                        {activeConversation.otherUser?.business_name ||
-                          activeConversation.otherUser?.full_name ||
-                          "Unknown User"}
+                        {getChatDisplayName(
+                          activeConversation.otherUser,
+                          otherUserRole
+                        )}
                       </h3>
-                      {activeConversation.otherUser && (
-                        <span
-                          className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${
-                            roleColor[
-                              (activeConversation.otherUser as Profile)?.role ||
-                                "buyer"
-                            ] || ""
-                          }`}
-                        >
-                          {(activeConversation.otherUser as Profile)?.role ||
-                            "buyer"}
-                        </span>
-                      )}
+                      <span
+                        className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${getRoleTagClasses(otherUserRole)}`}
+                      >
+                        {getRoleLabel(otherUserRole)}
+                      </span>
                     </div>
                   </div>
 
@@ -444,13 +437,39 @@ export default function Chats() {
                             className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                           >
                             <div
-                              className={`max-w-[80%] rounded-2xl px-4 py-2 font-body text-sm ${
-                                isMe
-                                  ? "bg-primary text-primary-foreground rounded-tr-sm"
-                                  : "bg-muted text-foreground rounded-tl-sm"
+                              className={`flex max-w-[80%] flex-col gap-0.5 ${
+                                isMe ? "items-end" : "items-start"
                               }`}
                             >
-                              {msg.message}
+                              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                <span className="font-semibold text-foreground/80">
+                                  {isMe
+                                    ? "You"
+                                    : getChatDisplayName(
+                                        activeConversation.otherUser,
+                                        otherUserRole
+                                      )}
+                                </span>
+                                {!isMe && (
+                                  <span
+                                    className={`rounded px-1 py-px text-[9px] font-bold uppercase tracking-wide ${getRoleTagClasses(otherUserRole)}`}
+                                  >
+                                    {getRoleLabel(otherUserRole)}
+                                  </span>
+                                )}
+                                <span>
+                                  {formatMessageTime(msg.created_at)}
+                                </span>
+                              </div>
+                              <div
+                                className={`rounded-2xl px-4 py-2 font-body text-sm ${
+                                  isMe
+                                    ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                    : "bg-muted text-foreground rounded-tl-sm"
+                                }`}
+                              >
+                                {msg.message}
+                              </div>
                             </div>
                           </div>
                         );
