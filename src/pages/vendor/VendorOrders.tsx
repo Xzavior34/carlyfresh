@@ -1,7 +1,6 @@
-/**
- * Vendor Store Orders — Full order management with live prep timer,
- * WhatsApp/Push notifications, Accept/Decline flow, and Proximity Driver Dispatch.
- * DATA SOURCE: Live Supabase — orders, delivery_jobs, profiles tables
+﻿/**
+ * Vendor Store Orders â€” Full order management with delivery tracking
+ * DATA SOURCE: Live Supabase â€” orders, delivery_jobs, profiles tables
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -16,6 +15,8 @@ import {
   User,
   Star,
   MapPin,
+  Navigation,
+  UserCheck,
   ChevronDown,
   ChevronUp,
   Loader2,
@@ -37,14 +38,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
@@ -62,12 +55,11 @@ interface DeliveryInfo {
   driverLocation: { latitude: number; longitude: number; updated_at: string } | null;
 }
 
-// ─── Order milestone steps ───────────────────────────────────────────────────
+// â”€â”€â”€ Order milestone steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MILESTONES = [
   { key: "pending", label: "Pending" },
   { key: "accepted", label: "Accepted" },
   { key: "preparing", label: "Preparing" },
-  { key: "packaged", label: "Ready / Packaged" },
   { key: "driver_assigned", label: "Driver Assigned" },
   { key: "in-transit", label: "In Transit" },
   { key: "delivered", label: "Delivered" },
@@ -76,17 +68,12 @@ const MILESTONES = [
 function getMilestoneIndex(status: string): number {
   const map: Record<string, number> = {
     pending: 0,
-    confirmed: 0,
-    accepted: 1,
-    preparing: 2,
-    packaged: 3,
-    driver_assigned: 4,
-    "in-transit": 5,
-    delivered: 6,
+    accepted: 1, preparing: 2, packaged: 3, driver_assigned: 4, "in-transit": 5, delivered: 6,
   };
   return map[status] ?? 0;
 }
 
+// â”€â”€â”€ Inline Progress Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MilestoneBar({ status }: { status: string }) {
   const idx = getMilestoneIndex(status);
   const pct = Math.round((idx / (MILESTONES.length - 1)) * 100);
@@ -126,12 +113,13 @@ function MilestoneBar({ status }: { status: string }) {
   );
 }
 
+// â”€â”€â”€ Driver Info Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined; loading: boolean }) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-xs font-body text-muted-foreground pt-2">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        <span>Loading delivery info…</span>
+        <span>Loading delivery infoâ€¦</span>
       </div>
     );
   }
@@ -140,7 +128,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
     return (
       <div className="flex items-center gap-2 pt-2 text-xs font-body text-muted-foreground">
         <div className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-        <span>Searching for nearby drivers…</span>
+        <span>Searching for nearby driversâ€¦</span>
       </div>
     );
   }
@@ -151,7 +139,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
     return (
       <div className="flex items-center gap-2 pt-2 text-xs font-body text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-        <span>Driver assignment in progress…</span>
+        <span>Driver assignment in progressâ€¦</span>
       </div>
     );
   }
@@ -173,7 +161,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
           <div className="flex items-center gap-1.5 mt-0.5">
             <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
             <span className="font-body text-[10px] text-muted-foreground">
-              {driver.driver_rating?.toFixed(1) || "N/A"} · {driver.phone || "No phone"}
+              {driver.driver_rating?.toFixed(1) || "N/A"} Â· {driver.phone || "No phone"}
             </span>
           </div>
         </div>
@@ -197,7 +185,7 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
             </span>
             <span className="tabular-nums">
-              {driverLocation.latitude.toFixed(4)}°N, {driverLocation.longitude.toFixed(4)}°E
+              {driverLocation.latitude.toFixed(4)}Â°N, {driverLocation.longitude.toFixed(4)}Â°E
             </span>
           </div>
           {lastSeen && <span>Updated {lastSeen}</span>}
@@ -212,14 +200,9 @@ function DriverPanel({ info, loading }: { info: DeliveryInfo | null | undefined;
   );
 }
 
-// ─── Order Row Component ────────────────────────────────────────────────────
+// â”€â”€â”€ Expandable Order Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface OrderRowProps {
   order: Order;
-  onAccept: (order: Order) => void;
-  onDecline: (order: Order) => void;
-  onPromptPrepFinished: (order: Order) => void;
-  onRequestDriver: (order: Order) => void;
-  prepTimeRemaining?: number | null;
 }
 
 function OrderRow({
@@ -289,14 +272,7 @@ function OrderRow({
 
   const items = Array.isArray(order.items) ? (order.items as any[]) : [];
   const stepIdx = getMilestoneIndex(order.status);
-  const showDriver = stepIdx >= 3; // show when packaged or driver assigned
-
-  const openWhatsAppToBuyer = () => {
-    const text = encodeURIComponent(
-      `Hello! This is regarding your CarlyFresh Order #${order.order_number || order.id.slice(0, 8)}. We are currently preparing your fresh items!`
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank");
-  };
+  const showDriver = stepIdx >= 1; // show from 'confirmed' onward
 
   return (
     <>
@@ -305,7 +281,7 @@ function OrderRow({
         onClick={() => setExpanded((v) => !v)}
       >
         <TableCell className="font-medium font-body text-foreground">
-          #{order.order_number || order.id.slice(0, 8)}
+          #{order.order_number}
         </TableCell>
         <TableCell className="text-right font-body tabular-nums">
           {formatNaira(Number(order.total_amount))}
@@ -393,7 +369,7 @@ function OrderRow({
                         {items.map((item: any, i: number) => (
                           <div key={i} className="flex items-center justify-between font-body text-sm">
                             <span className="text-foreground">
-                              {item?.name || "Item"} × {item?.quantity || 1}
+                              {item?.name || "Item"} Ã— {item?.quantity || 1}
                             </span>
                             <span className="tabular-nums text-muted-foreground">
                               {formatNaira((item?.price || 0) * (item?.quantity || 1))}
@@ -471,58 +447,26 @@ function OrderRow({
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30">
-                    {(order.status === "pending" || order.status === "confirmed") && (
-                      <>
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-body"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAccept(order);
-                          }}
-                        >
-                          <CheckCircle2 className="h-4 w-4" /> Accept Order
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="gap-1.5 font-body"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDecline(order);
-                          }}
-                        >
-                          <XCircle className="h-4 w-4" /> Decline
-                        </Button>
-                      </>
-                    )}
-
-                    {order.status === "accepted" && (
+                  {/* Vendor Action Buttons */}
+                  <div className="flex gap-3 pt-2 border-t border-border/30">
+                    {String(order.status) === "accepted" && (
                       <Button
                         size="sm"
-                        className="gap-1.5 font-body"
-                        onClick={async (e) => {
-                          e.stopPropagation();
+                        onClick={async () => {
                           await supabase.from("orders").update({ status: "preparing" }).eq("id", order.id);
-                          toast.success("Order marked as Preparing");
                         }}
                       >
-                        <Clock className="h-4 w-4" /> Start Preparing
+                        Start Preparing
                       </Button>
                     )}
-
-                    {order.status === "packaged" && (
+                    {order.status === "preparing" && (
                       <Button
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 font-body"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRequestDriver(order);
+                        onClick={async () => {
+                          await supabase.from("orders").update({ status: "packaged" }).eq("id", order.id);
                         }}
                       >
-                        <Truck className="h-4 w-4" /> Dispatch Nearby Drivers
+                        Mark Ready & Request Driver
                       </Button>
                     )}
 
@@ -548,7 +492,7 @@ function OrderRow({
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function VendorOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -637,9 +581,8 @@ export default function VendorOrders() {
   useEffect(() => {
     fetchOrders();
     if (!user) return;
-
     const channel = supabase
-      .channel("vendor-orders-realtime-flow")
+      .channel("vendor-orders-page")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders", filter: `vendor_id=eq.${user.id}` },
@@ -653,7 +596,6 @@ export default function VendorOrders() {
           fetchOrders();
         }
       );
-
     channel.subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -779,25 +721,9 @@ export default function VendorOrders() {
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Store Orders</h1>
-          <p className="text-muted-foreground font-body text-sm">{orders.length} orders received</p>
-        </div>
-
-        {/* Quick WhatsApp Share Button */}
-        {user && (
-          <Button
-            variant="outline"
-            className="gap-2 font-body text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-            onClick={() => {
-              const text = encodeURIComponent("Check out my fresh products on CarlyFresh: https://carlyfresh.com");
-              window.open(`https://wa.me/?text=${text}`, "_blank");
-            }}
-          >
-            <MessageCircle className="h-4 w-4 text-emerald-600" /> Share Store on WhatsApp
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-display font-bold text-foreground">Store Orders</h1>
+        <p className="text-muted-foreground font-body text-sm">{orders.length} orders received</p>
       </div>
 
       {/* Filter chips */}
@@ -1014,3 +940,4 @@ export default function VendorOrders() {
     </div>
   );
 }
+
