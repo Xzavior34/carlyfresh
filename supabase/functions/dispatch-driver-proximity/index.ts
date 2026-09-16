@@ -39,8 +39,8 @@ function extractPickup(raw: unknown): { lat: number; lng: number } | null {
   ];
   for (const c of candidates) {
     if (!c || typeof c !== "object") continue;
-    const lat = Number(c.latitude ?? c.lat);
-    const lng = Number(c.longitude ?? c.lng ?? c.lon);
+    const lat = Number(c.latitude ?? c.lat ?? c.vendor_lat);
+    const lng = Number(c.longitude ?? c.lng ?? c.lon ?? c.vendor_lon);
     if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
       return { lat, lng };
     }
