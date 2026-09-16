@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import {
+  formatMessageTime,
+  getChatDisplayName,
+  getRoleLabel,
+  getRoleTagClasses,
+} from "@/lib/chat-identity";
 
 type ChatMessage = Tables<"chats">;
 type Profile = Tables<"profiles"> & { role: string };
@@ -128,6 +134,18 @@ export default function Chats() {
           fetchAllData();
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chats",
+          filter: `sender_id=eq.${user.id}`,
+        },
+        () => {
+          fetchAllData();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -162,6 +180,8 @@ export default function Chats() {
   const activeConversation = conversations.find(
     (c) => c.otherUserId === activeConvKey
   );
+  const otherUserRole =
+    (activeConversation?.otherUser as Profile | undefined)?.role || "buyer";
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +229,6 @@ export default function Chats() {
         .invoke("onesignal-direct-message", {
           body: {
             receiver_id: activeConversation.otherUserId,
-            sender_name: user.user_metadata?.full_name || "A user",
             message: msgText,
           },
         })
