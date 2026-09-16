@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Driver Dashboard - Real-time job feed with atomic claim_order RPC
  * FIXED: handleAcceptJob calls claim_order RPC (race-condition safe fastest-finger)
  * Realtime channel watches delivery_jobs for live updates
@@ -52,6 +52,36 @@ export default function DriverDashboard() {
     } catch (err: any) { console.error("Driver dashboard fetch error:", err); }
     finally { setLoading(false); }
   }, [user]);
+
+  // Update driver location when online
+  useEffect(() => {
+    if (!user || !isOnline) return;
+
+    if ("geolocation" in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            await supabase.from("driver_locations").upsert(
+              {
+                driver_id: user.id,
+                latitude,
+                longitude,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "driver_id" }
+            );
+          } catch (e) {
+            console.warn("Could not sync driver location:", e);
+          }
+        },
+        (err) => console.warn("Driver geolocation warning:", err),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, [user, isOnline]);
 
   useEffect(() => {
     if (!user) return;
