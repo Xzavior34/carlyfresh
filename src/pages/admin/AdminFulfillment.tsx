@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   Truck,
   UserRound,
   Warehouse,
+  MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,6 +96,7 @@ function FulfillmentTimeline({ record }: { record: FulfillmentRecord }) {
 }
 
 export default function AdminFulfillment() {
+  const navigate = useNavigate();
   const [records, setRecords] = useState<FulfillmentRecord[]>([]);
   const [drivers, setDrivers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -268,8 +271,37 @@ export default function AdminFulfillment() {
                 </CardHeader>
                 <CardContent className="space-y-5 p-4 md:p-6">
                   <div className="grid gap-4 md:grid-cols-3">
-                    <Assignment icon={Warehouse} label="Supplier" value={displayName(record.supplier, "Supplier not identified")} muted={!record.supplier} />
-                    <Assignment icon={UserRound} label="Customer" value={displayName(record.buyer, "Customer not identified")} muted={!record.buyer} />
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Assignment icon={Warehouse} label="Supplier" value={displayName(record.supplier, "Supplier not identified")} muted={!record.supplier} />
+                        {record.supplier && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs font-body gap-1 text-primary hover:bg-primary/10"
+                            onClick={() => navigate("/admin/chats", { state: { startChat: { userId: record.supplier!.user_id, name: displayName(record.supplier, "Supplier") } } })}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" /> Chat
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Assignment icon={UserRound} label="Customer" value={displayName(record.buyer, "Customer not identified")} muted={!record.buyer} />
+                        {record.buyer && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs font-body gap-1 text-primary hover:bg-primary/10"
+                            onClick={() => navigate("/admin/chats", { state: { startChat: { userId: record.buyer!.user_id, name: displayName(record.buyer, "Customer") } } })}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" /> Chat
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                     
                     {driverMissing ? (
                       <div className="flex flex-col gap-2">
@@ -288,7 +320,21 @@ export default function AdminFulfillment() {
                         </Select>
                       </div>
                     ) : (
-                      <Assignment icon={Truck} label="Driver" value={displayName(record.driver, "Driver")} muted={false} />
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Assignment icon={Truck} label="Driver" value={displayName(record.driver, "Driver")} muted={false} />
+                          {record.driver && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs font-body gap-1 text-primary hover:bg-primary/10"
+                              onClick={() => navigate("/admin/chats", { state: { startChat: { userId: record.driver!.user_id, name: displayName(record.driver, "Driver") } } })}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" /> Chat
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
 

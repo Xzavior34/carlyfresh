@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Package,
@@ -21,6 +22,7 @@ import {
   Bell,
   XCircle,
   MessageCircle,
+  MessageSquare,
   AlertCircle,
   Send,
 } from "lucide-react";
@@ -228,13 +230,27 @@ function OrderRow({
   onRequestDriver,
   prepTimeRemaining,
 }: OrderRowProps) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null | undefined>(undefined);
+  const [buyerProfile, setBuyerProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
-    if (!expanded || deliveryInfo !== undefined) return;
+    if (!expanded) return;
 
     const fetch = async () => {
+      // Fetch buyer profile
+      if (order.buyer_id && !buyerProfile) {
+        const { data: bData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", order.buyer_id)
+          .maybeSingle();
+        if (bData) setBuyerProfile(bData);
+      }
+
+      if (deliveryInfo !== undefined) return;
+
       const { data: jobData } = await supabase
         .from("delivery_jobs")
         .select("*")
@@ -269,7 +285,7 @@ function OrderRow({
     };
 
     fetch();
-  }, [expanded, order.id, deliveryInfo]);
+  }, [expanded, order.id, order.buyer_id, deliveryInfo, buyerProfile]);
 
   const items = Array.isArray(order.items) ? (order.items as any[]) : [];
   const stepIdx = getMilestoneIndex(order.status);
@@ -342,7 +358,17 @@ function OrderRow({
                     <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2 text-amber-900 font-body text-sm">
                         <Clock className="h-4 w-4 text-amber-600 animate-spin" />
-                        <span>Order in Preparation</span>
+                        <span>
+                          Order in Preparation{" "}
+                          {prepTimeRemaining !== undefined && prepTimeRemaining !== null ? (
+                            <strong className="text-amber-800 tabular-nums">
+                              ({Math.floor(prepTimeRemaining / 60)}:
+                              {(prepTimeRemaining % 60).toString().padStart(2, "0")} remaining)
+                            </strong>
+                          ) : (
+                            ""
+                          )}
+                        </span>
                       </div>
                       <Button
                         size="sm"
@@ -352,7 +378,7 @@ function OrderRow({
                           onPromptPrepFinished(order);
                         }}
                       >
-                        Finished Preparing? Send Order
+                        Ready or Not Ready?
                       </Button>
                     </div>
                   )}
@@ -378,28 +404,69 @@ function OrderRow({
                     </div>
                   )}
 
-                  {/* Delivery address & window */}
-                  <div className="space-y-1 text-xs font-body text-muted-foreground">
+                  {/* Customer / Buyer & Delivery Info */}
+                  <div className="bg-muted/40 p-3 rounded-lg space-y-1.5 text-xs font-body">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                        <span>Customer: {buyerProfile?.full_name || "Customer"}</span>
+                      </div>
+                      {order.buyer_id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs font-body gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate("/chats", {
+                              state: { startChat: { userId: order.buyer_id, name: buyerProfile?.full_name } },
+                            });
+                          }}
+                        >
+                          <MessageSquare className="h-3 w-3" /> Message Buyer
+                        </Button>
+                      )}
+                    </div>
+                    {buyerProfile?.phone && (
+                      <p className="text-muted-foreground">Phone: {buyerProfile.phone}</p>
+                    )}
                     {order.delivery_address && (
-                      <div className="flex items-start gap-2">
+                      <div className="flex items-start gap-1.5 text-muted-foreground pt-1">
                         <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                        <span>{order.delivery_address}</span>
+                        <span>Address: {order.delivery_address}</span>
                       </div>
                     )}
                     {order.delivery_window && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span>Slot: {order.delivery_window}</span>
+                        <span>Delivery Slot: <strong className="text-foreground">{order.delivery_window}</strong></span>
                       </div>
                     )}
                   </div>
 
                   {/* Driver panel */}
                   {showDriver && (
-                    <div>
-                      <p className="font-body text-xs font-semibold text-foreground mb-1 uppercase tracking-wider">
-                        Assigned Driver
-                      </p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <p className="font-body text-xs font-semibold text-foreground uppercase tracking-wider">
+                          Assigned Driver
+                        </p>
+                        {deliveryInfo?.driver && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs font-body gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/chats", {
+                                state: { startChat: { userId: deliveryInfo.driver!.user_id, name: deliveryInfo.driver?.full_name } },
+                              });
+                            }}
+                          >
+                            <MessageSquare className="h-3 w-3" /> Message Driver
+                          </Button>
+                        )}
+                      </div>
                       <DriverPanel info={deliveryInfo} loading={deliveryInfo === undefined} />
                     </div>
                   )}
@@ -468,7 +535,7 @@ function OrderRow({
                         openWhatsAppToBuyer();
                       }}
                     >
-                      <MessageCircle className="h-4 w-4" /> Buyer WhatsApp
+                      <MessageCircle className="h-4 w-4" /> WhatsApp
                     </Button>
                   </div>
                 </div>
@@ -488,11 +555,14 @@ export default function VendorOrders() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  // Preparation countdown timers (orderId -> remaining seconds)
+  const [prepTimers, setPrepTimers] = useState<Record<string, number>>({});
+
   // Incoming Order Modal state
   const [incomingOrder, setIncomingOrder] = useState<Order | null>(null);
   const [showIncomingModal, setShowIncomingModal] = useState(false);
 
-  // Preparation finished prompt modal state
+  // Preparation finished prompt modal state ("Ready or Not Ready")
   const [prepPromptOrder, setPrepPromptOrder] = useState<Order | null>(null);
   const [showPrepModal, setShowPrepModal] = useState(false);
   const [dispatching, setDispatching] = useState(false);
@@ -504,6 +574,32 @@ export default function VendorOrders() {
 
   const prevOrdersRef = useRef<Order[]>([]);
 
+  // Live countdown timer decrementing every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPrepTimers((prev) => {
+        let changed = false;
+        const updated = { ...prev };
+        Object.keys(updated).forEach((id) => {
+          if (updated[id] > 0) {
+            updated[id] -= 1;
+            changed = true;
+            if (updated[id] === 0) {
+              const target = orders.find((o) => o.id === id);
+              if (target && target.status === "preparing") {
+                setPrepPromptOrder(target);
+                setShowPrepModal(true);
+                toast.info(`⏱️ Order #${target.order_number || target.id.slice(0, 8)} prep time elapsed. Ready or Not Ready?`);
+              }
+            }
+          }
+        });
+        return changed ? updated : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [orders]);
+
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -513,6 +609,13 @@ export default function VendorOrders() {
       .order("created_at", { ascending: false });
 
     if (data) {
+      // Initialize 15m timers for preparing orders that don't have active timers yet
+      data.forEach((o) => {
+        if (o.status === "preparing") {
+          setPrepTimers((prev) => (prev[o.id] !== undefined ? prev : { ...prev, [o.id]: 15 * 60 }));
+        }
+      });
+
       // Detect newly placed orders
       if (prevOrdersRef.current.length > 0) {
         const newUnaccepted = data.find(
@@ -545,7 +648,7 @@ export default function VendorOrders() {
             const newOrd = payload.new as Order;
             setIncomingOrder(newOrd);
             setShowIncomingModal(true);
-            toast.info(`🚨 New Order #${newOrd.order_number || newOrd.id.slice(0, 8)} received!`);
+            toast.info(`🚨 New Order #${newOrd.order_number || newOrd.id.slice(0, 8)} received! Accept or Reject.`);
           }
           fetchOrders();
         }
@@ -567,7 +670,10 @@ export default function VendorOrders() {
 
       if (error) throw error;
 
-      toast.success(`Order #${order.order_number || order.id.slice(0, 8)} accepted! Preparation started.`);
+      // Start 15 minutes preparation timer (900 seconds)
+      setPrepTimers((prev) => ({ ...prev, [order.id]: 15 * 60 }));
+
+      toast.success(`Order #${order.order_number || order.id.slice(0, 8)} accepted! 15-minute preparation started.`);
       setShowIncomingModal(false);
       setIncomingOrder(null);
       fetchOrders();
@@ -576,12 +682,6 @@ export default function VendorOrders() {
       supabase.functions.invoke("notify-order-status", {
         body: { record: { ...order, status: "preparing" } },
       }).catch(console.error);
-
-      // Schedule automated "Finished preparation?" reminder in 20 minutes (or test prompt in 45s)
-      setTimeout(() => {
-        setPrepPromptOrder(order);
-        setShowPrepModal(true);
-      }, 25 * 60 * 1000);
     } catch (err: any) {
       toast.error(err.message || "Failed to accept order");
     }
@@ -741,6 +841,7 @@ export default function VendorOrders() {
                   <OrderRow
                     key={order.id}
                     order={order}
+                    prepTimeRemaining={prepTimers[order.id]}
                     onAccept={(ord) => handleAcceptOrder(ord)}
                     onDecline={(ord) => {
                       setDeclineOrder(ord);
@@ -775,16 +876,16 @@ export default function VendorOrders() {
         </CardContent>
       </Card>
 
-      {/* ── 1. INCOMING NEW ORDER MODAL ── */}
+      {/* ── 1. INCOMING NEW ORDER MODAL: ACCEPT OR REJECT ── */}
       <Dialog open={showIncomingModal} onOpenChange={setShowIncomingModal}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-2 text-primary font-display font-bold">
               <Bell className="h-5 w-5 animate-bounce" />
-              <DialogTitle className="text-xl">🚨 New Order Received!</DialogTitle>
+              <DialogTitle className="text-xl">🚨 New Order: Accept or Reject?</DialogTitle>
             </div>
             <DialogDescription className="font-body">
-              A customer has placed an order from your store. Accept to begin preparing immediately.
+              A customer has placed an order from your store. Accept to start 15-minute preparation or reject.
             </DialogDescription>
           </DialogHeader>
 
@@ -819,7 +920,7 @@ export default function VendorOrders() {
 
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
-              variant="outline"
+              variant="destructive"
               className="font-body"
               onClick={() => {
                 if (incomingOrder) {
@@ -829,29 +930,30 @@ export default function VendorOrders() {
                 setShowIncomingModal(false);
               }}
             >
-              Decline
+              Reject Order
             </Button>
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-body gap-1.5 flex-1"
               onClick={() => incomingOrder && handleAcceptOrder(incomingOrder)}
             >
-              <CheckCircle2 className="h-4 w-4" /> Accept & Prepare
+              <CheckCircle2 className="h-4 w-4" /> Accept (Start 15m Prep)
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── 2. PREPARATION FINISHED / SEND ORDER DIALOG ── */}
+      {/* ── 2. PREPARATION FINISHED: READY OR NOT READY (+5m) DIALOG ── */}
       <Dialog open={showPrepModal} onOpenChange={setShowPrepModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-2 text-primary font-display font-bold">
               <Clock className="h-5 w-5 text-amber-600" />
-              <DialogTitle className="text-lg">Finished preparation? Send order?</DialogTitle>
+              <DialogTitle className="text-lg">
+                Order #{prepPromptOrder?.order_number || prepPromptOrder?.id.slice(0, 8)}: Ready or Not Ready?
+              </DialogTitle>
             </div>
             <DialogDescription className="font-body">
-              Order #{prepPromptOrder?.order_number || prepPromptOrder?.id.slice(0, 8)} is scheduled.
-              Clicking <strong>Yes</strong> will package the order and alert the closest active drivers based on GPS location.
+              Preparation time has elapsed. Click <strong>Ready</strong> to link available drivers by location, or <strong>Not Ready</strong> for an extra 5 minutes.
             </DialogDescription>
           </DialogHeader>
 
@@ -860,11 +962,14 @@ export default function VendorOrders() {
               variant="outline"
               className="font-body"
               onClick={() => {
-                toast.info("Preparation extended by 10 minutes.");
+                if (prepPromptOrder) {
+                  setPrepTimers((prev) => ({ ...prev, [prepPromptOrder.id]: 5 * 60 }));
+                }
+                toast.info("Preparation extended by 5 minutes.");
                 setShowPrepModal(false);
               }}
             >
-              Need More Time (+10m)
+              Not Ready (+5 mins)
             </Button>
             <Button
               className="bg-primary text-primary-foreground font-body gap-1.5 flex-1"
@@ -876,7 +981,7 @@ export default function VendorOrders() {
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Yes, Dispatch Drivers
+              Ready (Link Driver)
             </Button>
           </DialogFooter>
         </DialogContent>
