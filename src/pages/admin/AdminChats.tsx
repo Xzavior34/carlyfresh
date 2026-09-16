@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
+import {
+  formatMessageTime,
+  getChatDisplayName,
+  getRoleLabel,
+  getRoleTagClasses,
+} from "@/lib/chat-identity";
 
 type ChatMessage = Tables<"chats">;
 type Profile = Tables<"profiles">;
@@ -104,28 +110,39 @@ export default function AdminChats() {
 
     fetchAllData();
 
+    const upsertMessage = (newMsg: ChatMessage) => {
+      const otherId = newMsg.sender_id === user.id ? newMsg.receiver_id : newMsg.sender_id;
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.otherUserId === otherId);
+        if (idx < 0) {
+          fetchAllData(); // refresh for a brand-new participant
+          return prev;
+        }
+        if (prev[idx].messages.some(m => m.id === newMsg.id)) return prev; // already added
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          messages: [...updated[idx].messages, newMsg],
+          lastMessageAt: newMsg.created_at,
+        };
+        return updated.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+      });
+    };
+
     const channel = supabase.channel('admin_chats_realtime')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'chats',
         filter: `receiver_id=eq.${user.id}`
-      }, (payload) => {
-        const newMsg = payload.new as ChatMessage;
-        setConversations(prev => {
-          const updated = [...prev];
-          const otherId = newMsg.sender_id;
-          const existingIdx = updated.findIndex(c => c.otherUserId === otherId);
-          
-          if (existingIdx >= 0) {
-            updated[existingIdx].messages.push(newMsg);
-            updated[existingIdx].lastMessageAt = newMsg.created_at;
-          } else {
-            fetchAllData(); // refresh for new user
-          }
-          return updated.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-        });
-      }).subscribe();
+      }, (payload) => upsertMessage(payload.new as ChatMessage))
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chats',
+        filter: `sender_id=eq.${user.id}`
+      }, (payload) => upsertMessage(payload.new as ChatMessage))
+      .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user, preselectedChat]);
@@ -139,6 +156,7 @@ export default function AdminChats() {
   if (!user) return null;
 
   const activeConversation = conversations.find(c => c.otherUserId === activeConvKey);
+  const otherUserRole = (activeConversation?.otherUser as any)?.role || "buyer";
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,12 +194,12 @@ export default function AdminChats() {
         return updated.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
       });
 
-      // Trigger Push Notification via Edge Function
+      // Trigger Push Notification via Edge Function — the function validates
+      // the signed-in sender and derives the "CarlyFresh Admin" identity itself.
       supabase.functions.invoke("onesignal-direct-message", {
-        body: { 
-          receiver_id: activeConversation.otherUserId, 
-          sender_name: "CarlyFresh Admin", 
-          message: msgText 
+        body: {
+          receiver_id: activeConversation.otherUserId,
+          message: msgText
         }
       }).catch(err => console.error("Push error:", err));
     }
@@ -260,7 +278,7 @@ export default function AdminChats() {
                 <div className="flex flex-col">
                   {displayList.map(item => {
                     const isActive = activeConvKey === item.userId;
-                    const name = item.user?.business_name || item.user?.full_name || 'Unknown User';
+                    const name = getChatDisplayName(item.user, item.role);
                     
                     return (
                       <button
@@ -285,8 +303,8 @@ export default function AdminChats() {
                       >
                         <div className="flex items-center justify-between w-full">
                           <span className="font-semibold text-sm truncate">{name}</span>
-                          <span className="text-[9px] uppercase tracking-wider font-semibold text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded ml-2">
-                            {item.role}
+                          <span className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ml-2 ${getRoleTagClasses(item.role)}`}>
+                            {getRoleLabel(item.role)}
                           </span>
                         </div>
                         {item.user?.email && (
@@ -325,8 +343,11 @@ export default function AdminChats() {
                   </Button>
                   <div className="flex flex-col">
                     <h3 className="font-semibold font-display">
-                      {activeConversation.otherUser?.business_name || activeConversation.otherUser?.full_name || 'Unknown User'}
+                      {getChatDisplayName(activeConversation.otherUser, otherUserRole)}
                     </h3>
+                    <span className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded w-fit ${getRoleTagClasses(otherUserRole)}`}>
+                      {getRoleLabel(otherUserRole)}
+                    </span>
                     {(activeConversation.otherUser as any)?.email && (
                       <span className="text-xs text-muted-foreground font-body">
                         {(activeConversation.otherUser as any).email}
@@ -345,8 +366,21 @@ export default function AdminChats() {
                       const isMe = msg.sender_id === user.id;
                       return (
                         <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] rounded-2xl px-4 py-2 font-body text-sm ${isMe ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-muted text-foreground rounded-tl-sm'}`}>
-                            {msg.message}
+                          <div className={`flex max-w-[80%] flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
+                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                              <span className="font-semibold text-foreground/80">
+                                {isMe ? "You" : getChatDisplayName(activeConversation.otherUser, otherUserRole)}
+                              </span>
+                              {!isMe && (
+                                <span className={`rounded px-1 py-px text-[9px] font-bold uppercase tracking-wide ${getRoleTagClasses(otherUserRole)}`}>
+                                  {getRoleLabel(otherUserRole)}
+                                </span>
+                              )}
+                              <span>{formatMessageTime(msg.created_at)}</span>
+                            </div>
+                            <div className={`rounded-2xl px-4 py-2 font-body text-sm ${isMe ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-muted text-foreground rounded-tl-sm'}`}>
+                              {msg.message}
+                            </div>
                           </div>
                         </div>
                       );
