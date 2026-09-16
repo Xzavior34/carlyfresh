@@ -6,7 +6,7 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 interface Payload {
-  template: "supplier_new_order" | "driver_job_available" | "order_status_update" | "test";
+  template: "supplier_new_order" | "driver_job_available" | "order_status_update" | "vendor_prep_delay" | "test";
   to: string | string[];
   data?: Record<string, unknown>;
   subject?: string;
@@ -50,6 +50,18 @@ function renderTemplate(p: Payload): { subject: string; html: string } {
         subject: `Order #${d.order_number ?? ""} update: ${d.status ?? ""}`,
         html: `<p>Your order is now <b>${d.status ?? ""}</b>.</p>`,
       };
+    case "vendor_prep_delay": {
+      const orderNumber = String(d.order_number ?? d.order_id ?? "");
+      return {
+        subject: `⚠️ Urgent: Order #${orderNumber} Preparation Alert (20 Mins Elapsed)`,
+        html: `<h2>Order Preparation Urgency Alert</h2>
+<p>Order <b>#${orderNumber}</b> has exceeded <b>20 minutes</b> of preparation time at the vendor station.</p>
+<p><b>Vendor:</b> ${d.vendor_name ?? "Store / Kitchen"}</p>
+<p><b>Customer:</b> ${d.buyer_name ?? "Customer"}</p>
+<p><b>Status:</b> Please expedite packaging and click <b>Ready (Link Driver)</b> in the CarlyFresh dashboard immediately to connect the nearest available driver.</p>
+<p><a href="${APP_URL}/vendor/orders" style="background:#1f5e3a;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">View Order Dashboard</a></p>`,
+      };
+    }
     default:
       return { subject: p.subject ?? "Test email", html: "<p>Stub email</p>" };
   }

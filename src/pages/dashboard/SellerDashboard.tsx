@@ -330,8 +330,7 @@ export default function SellerDashboard() {
 
   const handleAcceptOrder = async (order: Order) => {
     setAccepting(true);
-    const updatePayload = { status: "accepted" as const };
-    console.log("Payload being sent to Supabase:", updatePayload);
+    const updatePayload = { status: "preparing" as const };
     const { error } = await supabase
       .from("orders")
       .update(updatePayload as never)
@@ -343,9 +342,18 @@ export default function SellerDashboard() {
       return;
     }
 
-    toast.success(`Order #${order.order_number} accepted — now Processing!`);
+    // Set 15m timer
+    const deadline = Date.now() + 15 * 60 * 1000;
+    localStorage.setItem(`carlyfresh_prep_deadline_${order.id}`, deadline.toString());
+
+    toast.success(`Order #${order.order_number} accepted — 15-minute preparation started!`);
     setIncomingOrder(null);
     fetchData();
+
+    // Trigger push notification
+    supabase.functions.invoke("notify-order-status", {
+      body: { record: { ...order, status: "preparing" } },
+    }).catch(console.error);
   };
 
   const handleAdvanceOrder = async (orderId: string, currentStatus: string) => {
@@ -360,7 +368,18 @@ export default function SellerDashboard() {
       return;
     }
 
-    toast.success("Order marked as packaged!");
+    localStorage.removeItem(`carlyfresh_prep_deadline_${orderId}`);
+
+    // Trigger driver proximity dispatch
+    supabase.functions.invoke("dispatch-driver-proximity", {
+      body: {
+        order_id: orderId,
+        pickup_address: "Vendor Location",
+        payout_amount: 1500,
+      },
+    }).catch(console.error);
+
+    toast.success("Order marked Ready/Packaged! 🚚 Nearby available drivers alerted.");
     fetchData();
   };
 

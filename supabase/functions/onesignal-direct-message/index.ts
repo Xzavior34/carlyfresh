@@ -64,10 +64,11 @@ serve(async (req) => {
       );
     }
 
-    // 2. Derive the sender's display identity from the database — never from the browser.
-    const [roleRes, profileRes] = await Promise.all([
+    // 2. Derive the sender's display identity from the database    // 2. Resolve sender & receiver details
+    const [roleRes, profileRes, receiverRes] = await Promise.all([
       supabase.from('user_roles').select('role').eq('user_id', senderId).maybeSingle(),
       supabase.from('profiles').select('business_name, full_name').eq('user_id', senderId).maybeSingle(),
+      supabase.from('profiles').select('push_token').eq('user_id', receiver_id).maybeSingle(),
     ]);
 
     const role = roleRes.data?.role ?? 'buyer';
@@ -92,16 +93,22 @@ serve(async (req) => {
       );
     }
 
-    const body = {
+    const pushToken = receiverRes.data?.push_token;
+    const body: Record<string, any> = {
       app_id: ONESIGNAL_APP_ID,
-      include_aliases: {
-        external_id: [receiver_id],
-      },
       target_channel: 'push',
       headings: { en: `New message from ${senderName}` },
       contents: { en: message },
-      data: { app: 'CarlyFresh', sender_id: senderId },
+      data: { app: 'CarlyFresh', sender_id: senderId, receiver_id },
     };
+
+    if (pushToken) {
+      body.include_subscription_ids = [pushToken];
+    } else {
+      body.include_aliases = {
+        external_id: [receiver_id],
+      };
+    }
 
     const response = await fetch('https://onesignal.com/api/v1/notifications', {
       method: 'POST',
