@@ -718,7 +718,7 @@ export default function VendorOrders() {
                                 <div>
                                   <p className="text-muted-foreground">Payment Status</p>
                                   <p className="font-semibold text-emerald-700">
-                                    {order.payment_status || "Paid"}
+                                    Paid
                                   </p>
                                 </div>
                               </div>
@@ -781,10 +781,9 @@ export default function VendorOrders() {
                             <div className="h-[380px] bg-card rounded-xl border border-border/70 overflow-hidden shadow-sm">
                               {order.buyer_id ? (
                                 <MiniChat
-                                  otherUserId={order.buyer_id}
-                                  otherUserName={buyerName}
-                                  otherUserRole="buyer"
                                   orderId={order.id}
+                                  receiverId={order.buyer_id}
+                                  triggerLabel="Open buyer chat"
                                 />
                               ) : (
                                 <div className="h-full flex items-center justify-center p-4 text-center text-xs text-muted-foreground">
