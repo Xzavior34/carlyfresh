@@ -1,2 +1,5 @@
-- [ ] Deploy notify-vendor-whatsapp and dispatch-driver-proximity edge functions (user request; verify they exist first)
-- [ ] Messaging identity: CarlyFresh branding, names/role tags, push safety
+- [ ] Connect WhatsApp Business and wire vendor order messaging
+- [ ] Add durable vendor preparation deadlines and idempotent action tracking
+- [ ] Implement server-side preparation reminders and WhatsApp action handling
+- [ ] Harden nearest-driver dispatch and realtime vendor/admin updates
+- [ ] Deploy and verify updated functions and end-to-end fallback behavior

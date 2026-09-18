@@ -517,16 +517,25 @@ export type Database = {
           delivery_address: string
           delivery_window: string | null
           driver_assignment_deadline: string | null
+          driver_dispatch_at: string | null
           fulfillment_stage: string | null
           id: string
           items: Json
           metadata: Json | null
           order_number: number
+          preparation_deadline: string | null
+          preparation_extension_count: number
+          preparation_reminder_sent_at: string | null
+          ready_at: string | null
           status: Database["public"]["Enums"]["order_status"]
           supplier_response_deadline: string | null
           total_amount: number
           updated_at: string
+          vendor_decision_at: string | null
+          vendor_decision_source: string | null
           vendor_id: string
+          whatsapp_new_order_sent_at: string | null
+          whatsapp_prep_reminder_sent_at: string | null
         }
         Insert: {
           assigned_driver_id?: string | null
@@ -535,16 +544,25 @@ export type Database = {
           delivery_address?: string
           delivery_window?: string | null
           driver_assignment_deadline?: string | null
+          driver_dispatch_at?: string | null
           fulfillment_stage?: string | null
           id?: string
           items?: Json
           metadata?: Json | null
           order_number?: number
+          preparation_deadline?: string | null
+          preparation_extension_count?: number
+          preparation_reminder_sent_at?: string | null
+          ready_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           supplier_response_deadline?: string | null
           total_amount?: number
           updated_at?: string
+          vendor_decision_at?: string | null
+          vendor_decision_source?: string | null
           vendor_id: string
+          whatsapp_new_order_sent_at?: string | null
+          whatsapp_prep_reminder_sent_at?: string | null
         }
         Update: {
           assigned_driver_id?: string | null
@@ -553,16 +571,25 @@ export type Database = {
           delivery_address?: string
           delivery_window?: string | null
           driver_assignment_deadline?: string | null
+          driver_dispatch_at?: string | null
           fulfillment_stage?: string | null
           id?: string
           items?: Json
           metadata?: Json | null
           order_number?: number
+          preparation_deadline?: string | null
+          preparation_extension_count?: number
+          preparation_reminder_sent_at?: string | null
+          ready_at?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           supplier_response_deadline?: string | null
           total_amount?: number
           updated_at?: string
+          vendor_decision_at?: string | null
+          vendor_decision_source?: string | null
           vendor_id?: string
+          whatsapp_new_order_sent_at?: string | null
+          whatsapp_prep_reminder_sent_at?: string | null
         }
         Relationships: [
           {
