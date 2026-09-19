@@ -190,16 +190,13 @@ export default function Checkout() {
     if (
       typeof window !== "undefined" &&
       "Notification" in window &&
-      Notification.permission !== "granted"
+      Notification.permission === "default"
     ) {
-      toast({
-        title: "Enable Notifications First",
-        description:
-          "Please tap the Enable Notifications button (bottom-right) to receive live order updates before placing your order.",
-        variant: "destructive",
-      });
-
-      return;
+      try {
+        await Notification.requestPermission();
+      } catch (e) {
+        // Continue checkout without blocking
+      }
     }
 
     setProcessing(true);

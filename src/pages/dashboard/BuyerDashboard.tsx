@@ -49,12 +49,15 @@ const trackingSteps = [
 function getStepIndex(status: string): number {
   const map: Record<string, number> = {
     pending: 0,
-    confirmed: 1,
+    confirmed: 0,
+    paid: 0,
     accepted: 1,
     preparing: 1,
     processing: 1,
     packaged: 1,
+    driver_assigned: 2,
     "in-transit": 2,
+    "in_transit": 2,
     delivered: 3,
   };
   return map[status] ?? 0;

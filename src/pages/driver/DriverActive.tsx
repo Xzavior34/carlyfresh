@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { formatNaira } from "@/lib/formatters";
 import { toast } from "@/hooks/use-toast";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
+import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 
 interface OrderItem {
   name: string;
@@ -199,7 +200,7 @@ export default function DriverActive() {
               <p className="font-body text-sm font-semibold text-primary">{formatNaira(Number(job.payout_amount))} payout</p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2 pt-2">
+              <div className="flex flex-wrap items-center gap-2 pt-2">
                 {/* Navigate */}
                 <Button
                   size="sm"
@@ -209,6 +210,22 @@ export default function DriverActive() {
                 >
                   <ExternalLink className="h-3 w-3" /> View Route
                 </Button>
+
+                {/* WhatsApp Customer */}
+                <WhatsAppOrderButton
+                  order={{
+                    id: job.order_id,
+                    order_number: job.order_number,
+                    created_at: job.created_at,
+                    status: job.status,
+                    total_amount: job.order_total,
+                    delivery_address: job.dropoff_address,
+                    delivery_window: job.delivery_window,
+                    items: job.order_items,
+                  }}
+                  label="WhatsApp Customer"
+                  size="sm"
+                />
 
                 {job.status === "accepted" && (
                   <Button 
