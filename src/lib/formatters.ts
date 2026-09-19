@@ -2,8 +2,9 @@
  * Shared formatting utilities for the CarlyFresh marketplace.
  */
 
-export const formatNaira = (amount: number): string => {
-  return `₦${amount.toLocaleString("en-NG")}`;
+export const formatNaira = (amount: number | string | null | undefined): string => {
+  const num = Number(amount || 0);
+  return `₦${isNaN(num) ? "0" : num.toLocaleString("en-NG")}`;
 };
 
 export const getStatusColor = (status: string): string => {
