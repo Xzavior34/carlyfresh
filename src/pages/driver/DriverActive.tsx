@@ -32,6 +32,8 @@ interface JobWithOrder {
   order_number: number | null;
   order_total: number;
   delivery_window: string | null;
+  buyer_name?: string | null;
+  buyer_phone?: string | null;
 }
 
 export default function DriverActive() {
@@ -44,25 +46,42 @@ export default function DriverActive() {
     if (!user) return;
     const { data } = await supabase
       .from("delivery_jobs")
-      .select("*, orders(order_number, total_amount, items, delivery_window)")
+      .select("*, orders(order_number, total_amount, items, delivery_window, buyer_id)")
       .eq("driver_id", user.id)
       .in("status", ["accepted", "in-transit"])
       .order("created_at", { ascending: false });
 
     if (data) {
-      const mapped: JobWithOrder[] = data.map((job: any) => ({
-        id: job.id,
-        order_id: job.order_id,
-        pickup_address: job.pickup_address,
-        dropoff_address: job.dropoff_address,
-        payout_amount: job.payout_amount,
-        status: job.status,
-        created_at: job.created_at,
-        order_items: Array.isArray(job.orders?.items) ? job.orders.items : [],
-        order_number: job.orders?.order_number ?? null,
-        order_total: job.orders?.total_amount ?? 0,
-        delivery_window: job.orders?.delivery_window ?? null,
-      }));
+      const buyerIds = Array.from(new Set(data.map((j: any) => j.orders?.buyer_id).filter(Boolean))) as string[];
+      let buyerMap: Record<string, any> = {};
+      if (buyerIds.length > 0) {
+        const { data: buyers } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, phone")
+          .in("user_id", buyerIds);
+        if (buyers) {
+          buyers.forEach((b: any) => { buyerMap[b.user_id] = b; });
+        }
+      }
+
+      const mapped: JobWithOrder[] = data.map((job: any) => {
+        const buyer = job.orders?.buyer_id ? buyerMap[job.orders.buyer_id] : null;
+        return {
+          id: job.id,
+          order_id: job.order_id,
+          pickup_address: job.pickup_address,
+          dropoff_address: job.dropoff_address,
+          payout_amount: job.payout_amount,
+          status: job.status,
+          created_at: job.created_at,
+          order_items: Array.isArray(job.orders?.items) ? job.orders.items : [],
+          order_number: job.orders?.order_number ?? null,
+          order_total: job.orders?.total_amount ?? 0,
+          delivery_window: job.orders?.delivery_window ?? null,
+          buyer_name: buyer?.full_name ?? null,
+          buyer_phone: buyer?.phone ?? null,
+        };
+      });
       setJobs(mapped);
     }
     setLoading(false);
@@ -222,8 +241,14 @@ export default function DriverActive() {
                     delivery_address: job.dropoff_address,
                     delivery_window: job.delivery_window,
                     items: job.order_items,
+                    buyer: job.buyer_name || job.buyer_phone ? {
+                      full_name: job.buyer_name,
+                      phone: job.buyer_phone,
+                    } : null,
                   }}
-                  label="WhatsApp Customer"
+                  recipientPhone={job.buyer_phone}
+                  context="to_buyer"
+                  label={job.buyer_phone ? `WhatsApp Customer (${job.buyer_name || "Buyer"})` : "WhatsApp Customer"}
                   size="sm"
                 />
 

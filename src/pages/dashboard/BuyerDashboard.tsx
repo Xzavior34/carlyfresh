@@ -68,6 +68,7 @@ export default function BuyerDashboard() {
   const { addItem } = useCart();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [vendorMap, setVendorMap] = useState<Record<string, { full_name?: string | null; phone?: string | null; business_name?: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
@@ -81,7 +82,23 @@ export default function BuyerDashboard() {
         .select("*")
         .eq("buyer_id", user.id)
         .order("created_at", { ascending: false });
-      if (data) setOrders(data);
+      if (data) {
+        setOrders(data);
+        const vendorIds = Array.from(new Set(data.map((o) => o.vendor_id).filter(Boolean))) as string[];
+        if (vendorIds.length > 0) {
+          const { data: vendorProfiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name, phone, business_name")
+            .in("user_id", vendorIds);
+          if (vendorProfiles) {
+            const vMap: Record<string, any> = {};
+            vendorProfiles.forEach((vp) => {
+              vMap[vp.user_id] = vp;
+            });
+            setVendorMap(vMap);
+          }
+        }
+      }
       setLoading(false);
     };
     fetchOrders();
@@ -240,8 +257,15 @@ export default function BuyerDashboard() {
                     delivery_address: activeOrder.delivery_address,
                     delivery_window: activeOrder.delivery_window,
                     items: activeOrder.items as any[],
+                    vendor: activeOrder.vendor_id ? vendorMap[activeOrder.vendor_id] : null,
                   }}
-                  label="Send Order Details to WhatsApp"
+                  recipientPhone={activeOrder.vendor_id ? vendorMap[activeOrder.vendor_id]?.phone : null}
+                  context="to_vendor"
+                  label={
+                    activeOrder.vendor_id && vendorMap[activeOrder.vendor_id]?.phone
+                      ? `Send to Seller (${vendorMap[activeOrder.vendor_id]?.business_name || "WhatsApp"})`
+                      : "Send Order Details to WhatsApp"
+                  }
                   size="sm"
                 />
               </div>
@@ -387,7 +411,10 @@ export default function BuyerDashboard() {
                                 delivery_address: order.delivery_address,
                                 delivery_window: order.delivery_window,
                                 items: order.items as any[],
+                                vendor: order.vendor_id ? vendorMap[order.vendor_id] : null,
                               }}
+                              recipientPhone={order.vendor_id ? vendorMap[order.vendor_id]?.phone : null}
+                              context="to_vendor"
                               size="sm"
                               label="WhatsApp"
                               className="h-7 text-xs px-2"

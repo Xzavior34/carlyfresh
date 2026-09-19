@@ -23,6 +23,7 @@ interface Props {
   size?: "default" | "sm" | "lg" | "icon";
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   showIcon?: boolean;
+  context?: "general" | "to_vendor" | "to_buyer" | "to_driver";
 }
 
 export default function WhatsAppOrderButton({
@@ -33,10 +34,11 @@ export default function WhatsAppOrderButton({
   size = "sm",
   variant = "outline",
   showIcon = true,
+  context = "general",
 }: Props) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openWhatsAppOrderDetails(order, recipientPhone);
+    openWhatsAppOrderDetails(order, recipientPhone, context);
   };
 
   return (

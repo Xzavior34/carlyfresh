@@ -1,4 +1,4 @@
-﻿/**
+/**
  * WhatsApp Helper Utilities for CarlyFresh
  * Provides structured message formatting for orders and direct click-to-chat URLs
  */
@@ -34,7 +34,10 @@ export function normalizePhoneForWhatsApp(phone?: string | null): string {
 /**
  * Formats a clean, readable WhatsApp receipt and tracking message for any order
  */
-export function formatOrderWhatsAppMessage(order: WhatsAppOrderData): string {
+export function formatOrderWhatsAppMessage(
+  order: WhatsAppOrderData,
+  context: "general" | "to_vendor" | "to_buyer" | "to_driver" = "general"
+): string {
   const orderNum = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
   const dateStr = order.created_at
     ? new Date(order.created_at).toLocaleDateString("en-NG", {
@@ -49,57 +52,68 @@ export function formatOrderWhatsAppMessage(order: WhatsAppOrderData): string {
   const statusLabel = (order.status || "Pending").toUpperCase().replace(/_/g, " ");
   const amountStr = formatNaira(Number(order.total_amount || 0));
 
-  // Extract items
+  // Extract items with quantities and subtotals
   const itemsList: string[] = [];
-  if (Array.isArray(order.items)) {
-    order.items.forEach((item: any) => {
-      const name = item?.name || item?.product?.name || "Item";
+  if (Array.isArray(order.items) && order.items.length > 0) {
+    order.items.forEach((item: any, idx: number) => {
+      const name = item?.name || item?.product_name || item?.title || item?.product?.name || `Item ${idx + 1}`;
       const qty = item?.quantity || 1;
       const unit = item?.unit ? ` ${item.unit}` : "";
-      const price = item?.price ? ` - ${formatNaira(Number(item.price) * Number(qty))}` : "";
-      itemsList.push(`• ${name} (x${qty}${unit})${price}`);
+      const priceVal = Number(item?.price || item?.unit_price || 0);
+      const priceStr = priceVal > 0 ? ` ➔ ${formatNaira(priceVal * Number(qty))}` : "";
+      itemsList.push(`• *${name}* × ${qty}${unit}${priceStr}`);
     });
   }
 
   const appBaseUrl = typeof window !== "undefined" ? window.location.origin : "https://carlyfresh.com";
   const trackingLink = `${appBaseUrl}/orders/${order.id}`;
 
-  let msg = `🛒 *CarlyFresh Order Details*\n`;
-  msg += `────────────────────────\n`;
-  msg += `📋 *Order ID:* ${orderNum}\n`;
-  msg += `📅 *Date:* ${dateStr}\n`;
-  msg += `🏷️ *Status:* ${statusLabel}\n`;
-  msg += `💰 *Total Amount:* ${amountStr}\n\n`;
+  let header = `🛒 *CARLYFRESH ORDER SUMMARY*`;
+  if (context === "to_vendor") {
+    header = `🛒 *NEW ORDER NOTIFICATION — CarlyFresh*\n_Hello Seller, here are the full details for the new order placed at your store:_`;
+  } else if (context === "to_buyer") {
+    header = `🛒 *YOUR CARLYFRESH ORDER RECEIPT*\n_Hello, here is the confirmation & receipt for your recent order:_`;
+  } else if (context === "to_driver") {
+    header = `🚚 *CARLYFRESH DELIVERY JOB DETAILS*\n_Hello Driver, here are the pickup and dropoff details for this job:_`;
+  }
+
+  let msg = `${header}\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `📋 *Order Number:* ${orderNum}\n`;
+  msg += `📅 *Date & Time:* ${dateStr}\n`;
+  msg += `🏷️ *Current Status:* ${statusLabel}\n`;
+  msg += `💰 *Total Amount:* ${amountStr}\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
   if (itemsList.length > 0) {
-    msg += `📦 *Items Purchased:*\n`;
+    msg += `📦 *Items Ordered (${itemsList.length}):*\n`;
     msg += `${itemsList.join("\n")}\n\n`;
   }
 
-  if (order.delivery_address) {
-    msg += `📍 *Delivery Address:* ${order.delivery_address}\n`;
-  }
-
+  msg += `📍 *Delivery Details:*\n`;
+  msg += `• *Address:* ${order.delivery_address || "Store / Kitchen Pickup"}\n`;
   if (order.delivery_window) {
-    msg += `🕒 *Delivery Window:* ${order.delivery_window}\n`;
+    msg += `• *Time Slot:* ${order.delivery_window}\n`;
   }
 
   if (order.buyer?.full_name || order.buyer?.phone) {
     const buyerPhone = order.buyer?.phone ? ` (${order.buyer.phone})` : "";
-    msg += `👤 *Customer:* ${order.buyer?.full_name || "Customer"}${buyerPhone}\n`;
+    msg += `• *Customer:* ${order.buyer?.full_name || "Customer"}${buyerPhone}\n`;
   }
 
   if (order.vendor?.business_name || order.vendor?.full_name) {
-    msg += `🏪 *Vendor:* ${order.vendor?.business_name || order.vendor?.full_name}\n`;
+    const vendorPhone = order.vendor?.phone ? ` (${order.vendor.phone})` : "";
+    msg += `• *Vendor Store:* ${order.vendor?.business_name || order.vendor?.full_name}${vendorPhone}\n`;
   }
 
   if (order.driver?.full_name) {
-    msg += `🚗 *Assigned Driver:* ${order.driver.full_name}\n`;
+    const driverPhone = order.driver?.phone ? ` (${order.driver.phone})` : "";
+    msg += `• *Assigned Driver:* ${order.driver.full_name}${driverPhone}\n`;
   }
 
-  msg += `\n🔗 *Track Live Order:* ${trackingLink}\n`;
-  msg += `────────────────────────\n`;
-  msg += `_Fresh groceries delivered directly to your doorstep with CarlyFresh!_`;
+  msg += `\n🔗 *Track Live Order & Status:*\n${trackingLink}\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `_Thank you for using CarlyFresh! Fresh groceries delivered fast._`;
 
   return msg;
 }
@@ -119,8 +133,12 @@ export function getWhatsAppUrl(phone?: string | null, text?: string): string {
 /**
  * Opens WhatsApp in a new tab with the formatted order details
  */
-export function openWhatsAppOrderDetails(order: WhatsAppOrderData, recipientPhone?: string | null): void {
-  const message = formatOrderWhatsAppMessage(order);
+export function openWhatsAppOrderDetails(
+  order: WhatsAppOrderData,
+  recipientPhone?: string | null,
+  context: "general" | "to_vendor" | "to_buyer" | "to_driver" = "general"
+): void {
+  const message = formatOrderWhatsAppMessage(order, context);
   const url = getWhatsAppUrl(recipientPhone, message);
   if (typeof window !== "undefined") {
     window.open(url, "_blank", "noopener,noreferrer");

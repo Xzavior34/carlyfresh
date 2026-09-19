@@ -235,6 +235,7 @@ export default function OrderTracking() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
+  const [vendor, setVendor] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo | null>(null);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
@@ -310,6 +311,18 @@ export default function OrderTracking() {
         setOrder(data);
         orderRef.current = data;
         fetchDeliveryInfo(data);
+
+        // Fetch vendor profile for direct WhatsApp DM routing
+        if (data.vendor_id) {
+          const { data: vendorData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("user_id", data.vendor_id)
+            .maybeSingle();
+          if (vendorData) {
+            setVendor(vendorData);
+          }
+        }
       }
       setLoading(false);
     };
@@ -410,9 +423,27 @@ export default function OrderTracking() {
                         delivery_address: order.delivery_address,
                         delivery_window: order.delivery_window,
                         items: order.items as any[],
-                        driver: deliveryInfo?.driver,
+                        vendor: vendor
+                          ? {
+                              business_name: vendor.business_name,
+                              full_name: vendor.full_name,
+                              phone: vendor.phone,
+                            }
+                          : null,
+                        driver: deliveryInfo?.driver
+                          ? {
+                              full_name: deliveryInfo.driver.full_name,
+                              phone: deliveryInfo.driver.phone,
+                            }
+                          : null,
                       }}
-                      label="Send Order Details to WhatsApp"
+                      recipientPhone={vendor?.phone}
+                      context="to_vendor"
+                      label={
+                        vendor?.phone
+                          ? `Send Order to Seller (${vendor.business_name || "WhatsApp"})`
+                          : "Send Order Details to WhatsApp"
+                      }
                       size="sm"
                     />
                   </div>
