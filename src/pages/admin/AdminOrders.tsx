@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
+import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Order = Tables<"orders">;
@@ -210,6 +211,25 @@ export default function AdminOrders() {
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
+                            <WhatsAppOrderButton
+                              order={{
+                                id: order.id,
+                                order_number: order.order_number,
+                                created_at: order.created_at,
+                                status: order.status,
+                                total_amount: order.total_amount,
+                                delivery_address: order.delivery_address,
+                                delivery_window: order.delivery_window,
+                                items: items,
+                                buyer: order.buyer,
+                                vendor: order.vendor,
+                                driver: order.driver,
+                              }}
+                              recipientPhone={order.buyer?.phone}
+                              size="icon"
+                              className="h-8 w-8"
+                              label="WhatsApp Details"
+                            />
                             <Button
                               size="sm"
                               variant="ghost"
@@ -242,14 +262,35 @@ export default function AdminOrders() {
                                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                                     <User className="h-3.5 w-3.5 text-primary" /> Buyer Details
                                   </span>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs font-body gap-1"
-                                    onClick={() => startChatWith(order.buyer_id, buyerName)}
-                                  >
-                                    <MessageSquare className="h-3 w-3" /> Message Buyer
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <WhatsAppOrderButton
+                                      order={{
+                                        id: order.id,
+                                        order_number: order.order_number,
+                                        created_at: order.created_at,
+                                        status: order.status,
+                                        total_amount: order.total_amount,
+                                        delivery_address: order.delivery_address,
+                                        delivery_window: order.delivery_window,
+                                        items: items,
+                                        buyer: order.buyer,
+                                        vendor: order.vendor,
+                                        driver: order.driver,
+                                      }}
+                                      recipientPhone={order.buyer?.phone}
+                                      label="WhatsApp"
+                                      size="sm"
+                                      className="h-7 text-xs px-2"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs font-body gap-1"
+                                      onClick={() => startChatWith(order.buyer_id, buyerName)}
+                                    >
+                                      <MessageSquare className="h-3 w-3" /> Chat
+                                    </Button>
+                                  </div>
                                 </div>
                                 <p className="font-body text-sm font-semibold text-foreground">{buyerName}</p>
                                 {order.buyer?.phone && <p className="font-body text-xs text-muted-foreground">Phone: {order.buyer.phone}</p>}
@@ -273,14 +314,35 @@ export default function AdminOrders() {
                                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                                     <Store className="h-3.5 w-3.5 text-amber-600" /> Vendor / Store
                                   </span>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs font-body gap-1"
-                                    onClick={() => startChatWith(order.vendor_id, vendorName)}
-                                  >
-                                    <MessageSquare className="h-3 w-3" /> Message Vendor
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <WhatsAppOrderButton
+                                      order={{
+                                        id: order.id,
+                                        order_number: order.order_number,
+                                        created_at: order.created_at,
+                                        status: order.status,
+                                        total_amount: order.total_amount,
+                                        delivery_address: order.delivery_address,
+                                        delivery_window: order.delivery_window,
+                                        items: items,
+                                        buyer: order.buyer,
+                                        vendor: order.vendor,
+                                        driver: order.driver,
+                                      }}
+                                      recipientPhone={order.vendor?.phone}
+                                      label="WhatsApp"
+                                      size="sm"
+                                      className="h-7 text-xs px-2"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs font-body gap-1"
+                                      onClick={() => startChatWith(order.vendor_id, vendorName)}
+                                    >
+                                      <MessageSquare className="h-3 w-3" /> Chat
+                                    </Button>
+                                  </div>
                                 </div>
                                 <p className="font-body text-sm font-semibold text-foreground">{vendorName}</p>
                                 {order.vendor?.phone && <p className="font-body text-xs text-muted-foreground">Phone: {order.vendor.phone}</p>}
@@ -299,14 +361,35 @@ export default function AdminOrders() {
                                     <Package className="h-3.5 w-3.5 text-blue-600" /> Items & Logistics
                                   </span>
                                   {order.driver && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs font-body gap-1"
-                                      onClick={() => startChatWith(order.driver!.user_id, driverName)}
-                                    >
-                                      <MessageSquare className="h-3 w-3" /> Message Driver
-                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                      <WhatsAppOrderButton
+                                        order={{
+                                          id: order.id,
+                                          order_number: order.order_number,
+                                          created_at: order.created_at,
+                                          status: order.status,
+                                          total_amount: order.total_amount,
+                                          delivery_address: order.delivery_address,
+                                          delivery_window: order.delivery_window,
+                                          items: items,
+                                          buyer: order.buyer,
+                                          vendor: order.vendor,
+                                          driver: order.driver,
+                                        }}
+                                        recipientPhone={order.driver.phone}
+                                        label="WhatsApp"
+                                        size="sm"
+                                        className="h-7 text-xs px-2"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs font-body gap-1"
+                                        onClick={() => startChatWith(order.driver!.user_id, driverName)}
+                                      >
+                                        <MessageSquare className="h-3 w-3" /> Chat
+                                      </Button>
+                                    </div>
                                   )}
                                 </div>
                                 <div className="space-y-1 max-h-28 overflow-y-auto">

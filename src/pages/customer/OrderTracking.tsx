@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Order Tracking Page — Real-time order status updates
  * Milestones: pending → confirmed → preparing → driver_assigned → in-transit → delivered
  * Includes: Driver profile card, delivery_jobs joined with profiles
@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatNaira, getStatusColor } from "@/lib/formatters";
+import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Order = Tables<"orders">;
@@ -398,19 +399,23 @@ export default function OrderTracking() {
                       {order.status.replace("_", " ")}
                     </Badge>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="font-body gap-2 text-xs w-fit"
-                    onClick={() => {
-                      const msg = encodeURIComponent(
-                        `Track my CarlyFresh grocery order #${order.order_number} here: ${window.location.href}`
-                      );
-                      window.open(`https://wa.me/?text=${msg}`, "_blank");
-                    }}
-                  >
-                    <Share2 className="h-3.5 w-3.5" /> Share via WhatsApp
-                  </Button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <WhatsAppOrderButton
+                      order={{
+                        id: order.id,
+                        order_number: order.order_number,
+                        created_at: order.created_at,
+                        status: order.status,
+                        total_amount: order.total_amount,
+                        delivery_address: order.delivery_address,
+                        delivery_window: order.delivery_window,
+                        items: order.items as any[],
+                        driver: deliveryInfo?.driver,
+                      }}
+                      label="Send Order Details to WhatsApp"
+                      size="sm"
+                    />
+                  </div>
                   <p className="font-body text-sm text-muted-foreground">
                     Placed on{" "}
                     {new Date(order.created_at).toLocaleDateString("en-NG", { dateStyle: "long" })}

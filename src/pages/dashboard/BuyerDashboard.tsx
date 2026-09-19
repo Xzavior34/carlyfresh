@@ -33,6 +33,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 import LeaveReviewModal from "@/components/products/LeaveReviewModal";
 import ProductCard from "@/components/products/ProductCard";
+import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import { toast } from "@/hooks/use-toast";
 
 type Order = Tables<"orders">;
@@ -218,14 +219,28 @@ export default function BuyerDashboard() {
                 })}
               </div>
 
-              {/* Order details */}
-              <div className="flex flex-wrap gap-4 pt-4 border-t border-border/50">
+              {/* Order details & WhatsApp actions */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border/50">
                 <div className="font-body text-sm">
                   <span className="text-muted-foreground">Items: </span>
                   <span className="text-foreground font-medium">
                     {Array.isArray(activeOrder.items) ? (activeOrder.items as any[]).length : 0} item(s)
                   </span>
                 </div>
+                <WhatsAppOrderButton
+                  order={{
+                    id: activeOrder.id,
+                    order_number: activeOrder.order_number,
+                    created_at: activeOrder.created_at,
+                    status: activeOrder.status,
+                    total_amount: activeOrder.total_amount,
+                    delivery_address: activeOrder.delivery_address,
+                    delivery_window: activeOrder.delivery_window,
+                    items: activeOrder.items as any[],
+                  }}
+                  label="Send Order Details to WhatsApp"
+                  size="sm"
+                />
               </div>
             </CardContent>
           </Card>
@@ -358,16 +373,33 @@ export default function BuyerDashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {order.status === "delivered" && (
-                            <Button
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <WhatsAppOrderButton
+                              order={{
+                                id: order.id,
+                                order_number: order.order_number,
+                                created_at: order.created_at,
+                                status: order.status,
+                                total_amount: order.total_amount,
+                                delivery_address: order.delivery_address,
+                                delivery_window: order.delivery_window,
+                                items: order.items as any[],
+                              }}
                               size="sm"
-                              variant="outline"
-                              className="h-7 px-2 font-body text-xs gap-1"
-                              onClick={(e) => { e.stopPropagation(); setReviewOrder(order); }}
-                            >
-                              ★ Leave a Review
-                            </Button>
-                          )}
+                              label="WhatsApp"
+                              className="h-7 text-xs px-2"
+                            />
+                            {order.status === "delivered" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 font-body text-xs gap-1"
+                                onClick={() => setReviewOrder(order)}
+                              >
+                                ★ Review
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

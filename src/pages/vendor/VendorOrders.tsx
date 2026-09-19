@@ -43,6 +43,7 @@ import { formatNaira, getStatusColor } from "@/lib/formatters";
 import type { Tables } from "@/integrations/supabase/types";
 import { DashboardSkeleton } from "@/components/ui/DashboardSkeleton";
 import MiniChat from "@/components/chat/MiniChat";
+import WhatsAppOrderButton from "@/components/common/WhatsAppOrderButton";
 import { toast } from "sonner";
 
 type Order = Tables<"orders">;
@@ -667,7 +668,24 @@ export default function VendorOrders() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <WhatsAppOrderButton
+                        order={{
+                          id: order.id,
+                          order_number: order.order_number,
+                          created_at: order.created_at,
+                          status: order.status,
+                          total_amount: order.total_amount,
+                          delivery_address: order.delivery_address,
+                          delivery_window: order.delivery_window,
+                          items: items,
+                          buyer: order.buyer,
+                          driver: order.driver,
+                        }}
+                        recipientPhone={buyerPhone}
+                        label="WhatsApp Buyer"
+                        size="sm"
+                      />
                       <Button
                         size="sm"
                         variant="outline"
@@ -721,6 +739,25 @@ export default function VendorOrders() {
                                     Paid
                                   </p>
                                 </div>
+                              </div>
+                              <div className="pt-2 border-t border-border/50 flex justify-end">
+                                <WhatsAppOrderButton
+                                  order={{
+                                    id: order.id,
+                                    order_number: order.order_number,
+                                    created_at: order.created_at,
+                                    status: order.status,
+                                    total_amount: order.total_amount,
+                                    delivery_address: order.delivery_address,
+                                    delivery_window: order.delivery_window,
+                                    items: items,
+                                    buyer: order.buyer,
+                                    driver: order.driver,
+                                  }}
+                                  recipientPhone={buyerPhone}
+                                  label="Send Receipt to Customer WhatsApp"
+                                  size="sm"
+                                />
                               </div>
                             </div>
 
