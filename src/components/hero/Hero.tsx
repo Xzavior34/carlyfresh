@@ -44,17 +44,42 @@ const Hero = () => {
               Experience freshness like never before.
             </p>
             
-            <div className="pt-1">
+            <div className="flex flex-wrap items-center gap-4 pt-1">
               <Link to="/shop">
                 <motion.span
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl"
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 font-body text-sm font-semibold text-accent-foreground shadow-lg transition-shadow hover:shadow-xl cursor-pointer"
                 >
-                  Buy Now
+                  Shop Now
                   <ArrowRight size={18} />
                 </motion.span>
               </Link>
+              <Link to="/shop?tab=baskets">
+                <motion.span
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md px-6 py-4 font-body text-sm font-semibold text-white transition-all cursor-pointer"
+                >
+                  🧺 Curated Baskets
+                </motion.span>
+              </Link>
+            </div>
+
+            {/* Live Trust Badges */}
+            <div className="mt-8 flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 px-3.5 py-1.5 text-xs font-body text-white/90">
+                <span className="text-emerald-400">⚡</span>
+                <span className="font-semibold">45-Min Express Dispatch</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 px-3.5 py-1.5 text-xs font-body text-white/90">
+                <span className="text-emerald-400">🌿</span>
+                <span className="font-semibold">100% Farm Fresh</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 px-3.5 py-1.5 text-xs font-body text-white/90">
+                <span className="text-amber-400">★</span>
+                <span className="font-semibold">4.9/5 (2,000+ Reviews)</span>
+              </div>
             </div>
           </motion.div>
 

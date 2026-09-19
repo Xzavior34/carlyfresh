@@ -1,4 +1,4 @@
-﻿import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Trash2, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
@@ -74,21 +74,37 @@ export default function Cart() {
                           ) : null}
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center rounded-xl border border-input bg-background/50 p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                              className="h-8 w-8 rounded-lg flex items-center justify-center font-body text-base font-semibold text-foreground/80 hover:bg-muted active:scale-95 transition-all"
+                              aria-label="Decrease quantity"
+                            >
+                              -
+                            </button>
                             <Input
                               type="number"
                               min={1}
                               value={item.quantity}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val)) updateQuantity(item.id, val);
+                                if (!isNaN(val)) updateQuantity(item.id, Math.max(1, val));
                               }}
-                              className="w-20 h-9 text-center font-body tabular-nums"
+                              className="w-14 h-8 text-center font-body tabular-nums border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                             />
-                            <span className="text-xs text-muted-foreground font-body whitespace-nowrap">{item.unit || "pcs"}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="h-8 w-8 rounded-lg flex items-center justify-center font-body text-base font-semibold text-foreground/80 hover:bg-muted active:scale-95 transition-all"
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
                           </div>
+                          <span className="text-xs text-muted-foreground font-body whitespace-nowrap">{item.unit || "pcs"}</span>
                           <p className="font-display font-bold text-foreground whitespace-nowrap">{formatNaira(item.price * item.quantity)}</p>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => removeItem(item.id)}>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10" onClick={() => removeItem(item.id)} title="Remove item">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
