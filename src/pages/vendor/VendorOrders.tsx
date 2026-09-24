@@ -689,14 +689,14 @@ export default function VendorOrders() {
                   <div className="p-4 sm:p-5 bg-card/60 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Accept / Reject if pending */}
-                      {(order.status === "pending" || order.status === "confirmed") && (
+                      {(order.status === "pending" || order.status === "confirmed" || order.status === "awaiting_supplier") && (
                         <>
                           <Button
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-body text-xs gap-1.5 font-semibold"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-body text-xs gap-1.5 font-semibold shadow-sm"
                             onClick={() => handleAcceptOrder(order)}
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Accept (Start 15m Prep)
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Accept & Start Processing
                           </Button>
                           <Button
                             size="sm"
@@ -712,12 +712,12 @@ export default function VendorOrders() {
                         </>
                       )}
 
-                      {/* 15-Minute Countdown Actions if preparing */}
+                      {/* 15-Minute Countdown Actions if preparing / processing */}
                       {order.status === "preparing" && (
                         <>
                           <Button
                             size="sm"
-                            className="bg-primary text-primary-foreground font-body text-xs gap-1.5 font-semibold shadow-sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-body text-xs gap-1.5 font-semibold shadow-sm"
                             disabled={dispatching}
                             onClick={() => handleConfirmPreparedAndSend(order)}
                           >
@@ -726,7 +726,7 @@ export default function VendorOrders() {
                             ) : (
                               <Send className="h-3.5 w-3.5" />
                             )}
-                            Ready (Dispatch Driver)
+                            Ready for Delivery (Dispatch Nearest Driver)
                           </Button>
                           <Button
                             size="sm"
@@ -737,7 +737,7 @@ export default function VendorOrders() {
                               setShowChecklistModal(true);
                             }}
                           >
-                            <ClipboardList className="h-3.5 w-3.5" /> Prepare Checklist
+                            <ClipboardList className="h-3.5 w-3.5" /> Packing Helper
                           </Button>
                           <Button
                             size="sm"
@@ -753,16 +753,16 @@ export default function VendorOrders() {
                             className="font-body text-xs gap-1.5 text-muted-foreground hover:text-foreground"
                             onClick={() => handlePrintPackingSlip(order)}
                           >
-                            <Printer className="h-3.5 w-3.5" /> Packing Slip
+                            <Printer className="h-3.5 w-3.5" /> Slip
                           </Button>
                         </>
                       )}
 
                       {/* Ready / Packaged state */}
                       {order.status === "packaged" && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-body text-emerald-700 font-medium flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Packaged & ready for pickup
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-body text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Ready for Delivery (Searching Nearest Driver)
                           </span>
                           <Button
                             size="sm"
@@ -773,6 +773,15 @@ export default function VendorOrders() {
                           >
                             <Truck className="h-3.5 w-3.5 text-primary" /> Re-dispatch Drivers
                           </Button>
+                        </div>
+                      )}
+
+                      {/* Driver Assigned state */}
+                      {order.status === "driver_assigned" && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-body text-primary font-semibold flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
+                            <Truck className="h-3.5 w-3.5" /> Driver Assigned: {order.driver?.full_name || "Driver"}
+                          </span>
                         </div>
                       )}
                     </div>

@@ -329,7 +329,42 @@ function renderTemplate(p: Payload): { subject: string; html: string } {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // 5. CUSTOMER: DRIVER ASSIGNED
+    // 5. CUSTOMER: ORDER PACKAGED & READY FOR DELIVERY
+    // ──────────────────────────────────────────────────────────────────────────
+    case "order_packaged": {
+      const content = `
+        <h2 style="color: #1a2e22; font-size: 20px; font-weight: 700; margin: 0 0 8px;">Order Packaged & Ready for Delivery! 📦</h2>
+        <p style="color: #4a5d50; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">
+          Hi ${buyerName}, great news! The farm has finished harvesting and securely packaging order <strong>${orderNumber}</strong>. We are matching the nearest available express driver for rapid pickup.
+        </p>
+
+        ${renderProgressStepper(1)}
+
+        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
+          <h4 style="margin: 0 0 8px; color: #166534; font-size: 13px; text-transform: uppercase;">100% Farm-Fresh Sealed</h4>
+          <p style="margin: 0; font-size: 13px; color: #1e293b;">
+            All produce has passed quality inspection and is safely packed for pickup.
+          </p>
+        </div>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="text-align: center;">
+          <tr>
+            <td align="center">
+              <a href="${trackUrl}" style="display: inline-block; background-color: #2a6b47; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(42,107,71,0.25);">
+                📍 Track Order Live
+              </a>
+            </td>
+          </tr>
+        </table>
+      `;
+      return {
+        subject: `📦 Order ${orderNumber} is packaged & ready for delivery — CarlyFresh`,
+        html: getEmailWrapper("Order Packaged", content),
+      };
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 6. CUSTOMER: DRIVER ASSIGNED
     // ──────────────────────────────────────────────────────────────────────────
     case "order_driver_assigned": {
       const driverFullName = String(d.driver_name || "Assigned Driver");

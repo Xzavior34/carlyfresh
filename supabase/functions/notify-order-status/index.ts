@@ -92,13 +92,14 @@ Deno.serve(async (req) => {
           link,
         });
       }
-    } else if (status === "packaged") {
+    } else if (status === "packaged" || status === "ready_for_pickup") {
+      emailTemplate = "order_packaged";
       if (buyerId) {
         inAppRows.push({
           user_id: buyerId,
           type: "order_packaged",
           title: "Order Ready & Packaged 📦",
-          message: `Order #${orderNumber} is packaged and waiting for driver pickup.`,
+          message: `Order #${orderNumber} is freshly packaged and ready for driver pickup.`,
           link,
         });
       }

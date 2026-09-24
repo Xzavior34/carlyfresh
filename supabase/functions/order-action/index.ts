@@ -260,7 +260,96 @@ Deno.serve(async (req) => {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // 4. VENDOR DECLINE ACTION
+    // 4. VENDOR READY FOR DELIVERY ACTION (DISPATCHES NEAREST DRIVER)
+    // ──────────────────────────────────────────────────────────────────────────
+    if (act === "vendor_ready" || act === "ready_for_delivery" || act === "mark_ready") {
+      const now = new Date().toISOString();
+      const { data: order, error } = await admin
+        .from("orders")
+        .update({
+          status: "packaged",
+          prepared_at: now,
+          updated_at: now,
+        })
+        .eq("id", targetOrderId)
+        .in("status", ["preparing", "processing", "pending", "confirmed"])
+        .select()
+        .maybeSingle();
+
+      if (error || !order) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Order not found or not in preparation" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const orderLabel = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
+
+      // 1. Notify buyer that goods are packaged
+      await admin.from("notifications").insert([
+        {
+          user_id: order.buyer_id,
+          type: "order_packaged",
+          title: "Order Ready & Packaged 📦",
+          message: `Your order ${orderLabel} is freshly packaged and ready. We are matching the nearest driver for pickup!`,
+          link: `/orders/${order.id}`,
+        },
+      ]);
+
+      // 2. Trigger proximity driver dispatch
+      let dispatchResult = null;
+      try {
+        const dispatchUrl = `${SUPABASE_URL}/functions/v1/dispatch-driver-proximity`;
+        const dispatchRes = await fetch(dispatchUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SERVICE_KEY}`,
+          },
+          body: JSON.stringify({
+            order_id: order.id,
+            vendor_lat: body.vendor_lat,
+            vendor_lon: body.vendor_lon,
+            pickup_address: order.delivery_address ? "Vendor Store / Farm" : "Vendor Farm",
+            dropoff_address: order.delivery_address,
+            payout_amount: 1500,
+          }),
+        });
+        dispatchResult = await dispatchRes.json();
+      } catch (err) {
+        console.error("Error triggering proximity driver dispatch:", err);
+      }
+
+      // 3. Trigger email notification to customer
+      try {
+        const notifyUrl = `${SUPABASE_URL}/functions/v1/notify-order-status`;
+        await fetch(notifyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SERVICE_KEY}`,
+          },
+          body: JSON.stringify({
+            record: { ...order, status: "packaged" },
+          }),
+        });
+      } catch (err) {
+        console.error("Error calling notify-order-status:", err);
+      }
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          message: "Order marked ready for delivery. Nearest driver dispatched!",
+          order,
+          dispatch: dispatchResult,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 5. VENDOR DECLINE ACTION
     // ──────────────────────────────────────────────────────────────────────────
     if (act === "vendor_decline" || act === "reject") {
       const now = new Date().toISOString();

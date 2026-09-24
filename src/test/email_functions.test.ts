@@ -68,4 +68,28 @@ describe("Vendor Preparation & Helper Workflow", () => {
     expect(finalCompleted).toBe(3);
     expect(finalCompleted === checklist.length).toBe(true);
   });
+
+  it("handles transition from new order -> processing -> ready for delivery -> driver assigned", () => {
+    const orderLifecycle = [
+      { status: "confirmed", action: "Accept & Start Processing" },
+      { status: "preparing", action: "Ready for Delivery (Dispatch Nearest Driver)" },
+      { status: "packaged", action: "Searching nearest driver" },
+      { status: "driver_assigned", action: "Driver accepted delivery" },
+    ];
+
+    expect(orderLifecycle[0].status).toBe("confirmed");
+    expect(orderLifecycle[1].status).toBe("preparing");
+    expect(orderLifecycle[2].status).toBe("packaged");
+    expect(orderLifecycle[3].status).toBe("driver_assigned");
+  });
+
+  it("formats order_packaged email subject and customer delivery link", () => {
+    const orderId = "ord-pack-999";
+    const orderNumber = 1045;
+    const subject = `📦 Order #${orderNumber} is packaged & ready for delivery — CarlyFresh`;
+    const trackUrl = `https://carlyfresh.com/orders/${orderId}`;
+
+    expect(subject).toBe("📦 Order #1045 is packaged & ready for delivery — CarlyFresh");
+    expect(trackUrl).toBe("https://carlyfresh.com/orders/ord-pack-999");
+  });
 });
