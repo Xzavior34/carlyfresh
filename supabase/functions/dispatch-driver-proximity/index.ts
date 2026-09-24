@@ -350,6 +350,39 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 9. Send Email to Driver with Accept CTA Button
+    let emailSent = false;
+    try {
+      const { data: driverUser } = await supabase.auth.admin.getUserById(chosen.driver_id);
+      const driverEmail = driverUser?.user?.email;
+      if (driverEmail) {
+        const emailUrl = `${SUPABASE_URL}/functions/v1/send-transactional-email`;
+        const emailRes = await fetch(emailUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SERVICE_ROLE}`,
+          },
+          body: JSON.stringify({
+            template: "driver_job_assigned",
+            to: driverEmail,
+            data: {
+              order_id: order.id,
+              order_number: order.order_number,
+              driver_name: chosen.profile?.full_name || "Driver Partner",
+              payout_amount: payoutAmount,
+              pickup_address: body?.pickup_address || "Vendor Farm / Store",
+              dropoff_address: order.delivery_address || "Customer Location",
+              timeout_seconds: timeoutSeconds,
+            },
+          }),
+        });
+        emailSent = emailRes.ok;
+      }
+    } catch (emailErr) {
+      console.error("[dispatch-driver-proximity] Email error:", emailErr);
+    }
+
     return json({
       ok: true,
       order_id: order.id,
@@ -362,6 +395,7 @@ Deno.serve(async (req) => {
       timeout_seconds: timeoutSeconds,
       deadline: deadlineIso,
       push_sent: pushSent,
+      email_sent: emailSent,
       remaining_candidates: candidates.length - 1,
     });
   } catch (error) {

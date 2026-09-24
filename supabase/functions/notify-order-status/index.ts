@@ -186,6 +186,39 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4b. Send Email to Vendor when customer purchases their products
+    if ((status === "paid" || status === "confirmed") && vendorId) {
+      try {
+        const { data: vendorUser } = await supabase.auth.admin.getUserById(vendorId);
+        const vendorEmail = vendorUser?.user?.email;
+        if (vendorEmail) {
+          const emailUrl = `${SUPABASE_URL}/functions/v1/send-transactional-email`;
+          await fetch(emailUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              template: "vendor_new_order",
+              to: vendorEmail,
+              data: {
+                order_id: orderData.id,
+                order_number: orderNumber,
+                vendor_name: (orderData as any)?.vendor?.business_name || "Vendor Partner",
+                items: orderData.items,
+                total_amount: orderData.total_amount,
+                delivery_address: orderData.delivery_address,
+                delivery_window: orderData.delivery_window,
+              },
+            }),
+          });
+        }
+      } catch (vendorEmailErr) {
+        console.error("[notify-order-status] Vendor email error:", vendorEmailErr);
+      }
+    }
+
     // 5. Trigger Push Notification via OneSignal
     try {
       const pushUrl = `${SUPABASE_URL}/functions/v1/onesignal-dispatcher`;
