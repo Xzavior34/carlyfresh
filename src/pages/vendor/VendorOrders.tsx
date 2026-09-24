@@ -25,6 +25,10 @@ import {
   AlertCircle,
   Send,
   Phone,
+  ClipboardList,
+  Printer,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -189,6 +193,69 @@ export default function VendorOrders() {
   // Decline confirmation modal
   const [declineOrder, setDeclineOrder] = useState<DetailedOrder | null>(null);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
+
+  // Preparation Checklist & Helper state
+  const [checklistOrder, setChecklistOrder] = useState<DetailedOrder | null>(null);
+  const [showChecklistModal, setShowChecklistModal] = useState(false);
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+
+  const toggleCheckItem = (orderId: string, idx: number) => {
+    const key = `${orderId}_${idx}`;
+    setCheckedItems((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handlePrintPackingSlip = (order: DetailedOrder) => {
+    const items = Array.isArray(order.items) ? (order.items as any[]) : [];
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Please allow popups to print packing slips.");
+      return;
+    }
+    const html = `
+      <html>
+        <head>
+          <title>Packing Slip - Order #${order.order_number || order.id.slice(0, 8)}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1e293b; }
+            .header { border-bottom: 2px solid #166534; padding-bottom: 12px; margin-bottom: 20px; }
+            .title { font-size: 22px; font-weight: bold; color: #166534; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+            th { background-color: #f8fafc; font-size: 12px; text-transform: uppercase; }
+            .total { font-size: 18px; font-weight: bold; text-align: right; margin-top: 16px; color: #166534; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">CarlyFresh — Grocery Packing Slip</div>
+            <p>Order #${order.order_number || order.id.slice(0, 8)} • Date: ${new Date(order.created_at).toLocaleString()}</p>
+            <p><strong>Customer Destination:</strong> ${order.delivery_address || "Standard Delivery"}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Item / Produce</th>
+                <th>Quantity</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items
+                .map(
+                  (i) =>
+                    `<tr><td><strong>${i.name || i.product_name || "Item"}</strong></td><td>${i.quantity || 1} ${i.unit || ""}</td><td>₦${Number(i.price || 0).toLocaleString("en-NG")}</td></tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>
+          <div class="total">Total: ₦${Number(order.total_amount).toLocaleString("en-NG")}</div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
 
@@ -659,7 +726,18 @@ export default function VendorOrders() {
                             ) : (
                               <Send className="h-3.5 w-3.5" />
                             )}
-                            Ready (Link Driver)
+                            Ready (Dispatch Driver)
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="font-body text-xs gap-1.5 border border-primary/20 bg-primary/10 hover:bg-primary/20 text-primary"
+                            onClick={() => {
+                              setChecklistOrder(order);
+                              setShowChecklistModal(true);
+                            }}
+                          >
+                            <ClipboardList className="h-3.5 w-3.5" /> Prepare Checklist
                           </Button>
                           <Button
                             size="sm"
@@ -667,7 +745,15 @@ export default function VendorOrders() {
                             className="font-body text-xs gap-1.5"
                             onClick={() => handleExtendPrepTime(order)}
                           >
-                            <Clock className="h-3.5 w-3.5" /> Not Ready (+5 Mins)
+                            <Clock className="h-3.5 w-3.5" /> +5 Mins
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="font-body text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                            onClick={() => handlePrintPackingSlip(order)}
+                          >
+                            <Printer className="h-3.5 w-3.5" /> Packing Slip
                           </Button>
                         </>
                       )}
@@ -1010,11 +1096,126 @@ export default function VendorOrders() {
           </DialogHeader>
 
           <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
-            <Button variant="outline" className="font-body" onClick={() => setShowDeclineModal(false)}>
+            <Button
+              variant="outline"
+              className="font-body"
+              onClick={() => {
+                setShowDeclineModal(false);
+                setDeclineOrder(null);
+              }}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" className="font-body" onClick={handleDeclineOrder}>
-              Confirm Decline
+            <Button
+              variant="destructive"
+              className="font-body"
+              disabled={declineLoading}
+              onClick={handleConfirmDecline}
+            >
+              {declineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Decline"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── 4. PREPARATION & PACKING CHECKLIST HELPER DIALOG ── */}
+      <Dialog open={showChecklistModal} onOpenChange={setShowChecklistModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-primary font-display font-bold">
+              <ClipboardList className="h-5 w-5 text-emerald-600" />
+              <DialogTitle className="text-xl">
+                Harvest & Packing Helper — Order #{checklistOrder?.order_number || checklistOrder?.id.slice(0, 8)}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="font-body text-xs">
+              Check off each fresh item as you harvest and package it. Once all items are packed, click dispatch to immediately alert the nearest available driver.
+            </DialogDescription>
+          </DialogHeader>
+
+          {checklistOrder && (
+            <div className="space-y-4 py-2">
+              {/* Progress Count */}
+              {(() => {
+                const items = Array.isArray(checklistOrder.items) ? (checklistOrder.items as any[]) : [];
+                const packedCount = items.filter((_, idx) => checkedItems[`${checklistOrder.id}_${idx}`]).length;
+                const pct = items.length > 0 ? Math.round((packedCount / items.length) * 100) : 0;
+                return (
+                  <div className="space-y-1.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 p-3 rounded-xl">
+                    <div className="flex justify-between items-center text-xs font-body font-semibold text-emerald-800 dark:text-emerald-300">
+                      <span>Packing Progress</span>
+                      <span>{packedCount} of {items.length} items ({pct}%)</span>
+                    </div>
+                    <div className="w-full bg-emerald-200/60 dark:bg-emerald-900/40 h-2 rounded-full overflow-hidden">
+                      <div className="bg-emerald-600 h-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Checkable Items List */}
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1 divide-y divide-border/40">
+                {(Array.isArray(checklistOrder.items) ? (checklistOrder.items as any[]) : []).map((item: any, idx: number) => {
+                  const isChecked = Boolean(checkedItems[`${checklistOrder.id}_${idx}`]);
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => toggleCheckItem(checklistOrder.id, idx)}
+                      className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors pt-2.5 ${
+                        isChecked ? "bg-emerald-500/10 text-emerald-950 dark:text-emerald-200" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <button type="button" className="mt-0.5 text-primary">
+                        {isChecked ? (
+                          <CheckSquare className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <Square className="h-5 w-5 text-muted-foreground/60" />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-body text-sm font-semibold ${isChecked ? "line-through opacity-70" : "text-foreground"}`}>
+                          {item.name || item.product_name || `Produce item ${idx + 1}`}
+                        </p>
+                        <p className="font-body text-xs text-muted-foreground">
+                          Qty: <strong>{item.quantity || 1} {item.unit || ""}</strong> • ₦{Number(item.price || 0).toLocaleString("en-NG")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Quality & Handling Tips */}
+              <div className="bg-muted/40 p-3 rounded-lg border border-border/60 text-xs font-body space-y-1 text-muted-foreground">
+                <p className="font-semibold text-foreground flex items-center gap-1">
+                  🌿 Farm Quality Guarantee
+                </p>
+                <p>Ensure delicate items (tomatoes, soft fruits) are packed on top and leafy greens stay chilled.</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-body gap-1.5"
+              onClick={() => checklistOrder && handlePrintPackingSlip(checklistOrder)}
+            >
+              <Printer className="h-4 w-4" /> Print Slip
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-body gap-1.5 flex-1 font-semibold"
+              disabled={dispatching}
+              onClick={() => {
+                if (checklistOrder) {
+                  setShowChecklistModal(false);
+                  handleConfirmPreparedAndSend(checklistOrder);
+                }
+              }}
+            >
+              {dispatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Mark Ready & Dispatch Nearest Driver
             </Button>
           </DialogFooter>
         </DialogContent>
