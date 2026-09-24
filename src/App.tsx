@@ -10,6 +10,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+import IncomingOfferModal from "./components/notifications/IncomingOfferModal";
+
 // Public pages
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
@@ -195,6 +197,7 @@ const App = () => (
           <BrowserRouter>
             <ScrollToTop />
             <OneSignalInitializer />
+            <IncomingOfferModal />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />

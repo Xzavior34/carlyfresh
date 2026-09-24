@@ -1,8 +1,11 @@
 // Supabase Edge Function — dispatch-driver-proximity
-// Finds nearby available drivers (using recent driver_locations) and assigns
-// the closest one to an order. Accepts either a database webhook payload
-// ({ record: order }) or a direct call ({ order_id, pickup?, radius_km? }).
-// Auth: verify_jwt = false; uses the service role key server-side.
+// Finds the most available driver based on availability markers:
+// 1. Proximity to pickup point (Haversine formula)
+// 2. Current active workload (active deliveries count)
+// 3. Driver rating (0-5 stars)
+// 4. Online ping recency (driver_locations / profiles)
+// 5. Excludes drivers who declined or timed out (cascading fallback)
+// Sets a confirmation deadline (90s SLA) and notifies the driver with an Accept button.
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -70,36 +73,43 @@ Deno.serve(async (req) => {
       return json({ error: "order_id is required." }, 400);
     }
 
-    const radiusKm = Number(body?.radius_km) || 15;
-    const stalenessMinutes = Number(body?.staleness_minutes) || 30;
+    const radiusKm = Number(body?.radius_km) || 25;
+    const stalenessMinutes = Number(body?.staleness_minutes) || 120; // 2 hours window
+    const timeoutSeconds = Number(body?.timeout_seconds) || 90; // 90 seconds to accept
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
     // 1. Load the order.
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, order_number, vendor_id, buyer_id, assigned_driver_id, status, metadata, delivery_address")
+      .select("id, order_number, vendor_id, buyer_id, assigned_driver_id, status, metadata, delivery_address, total_amount")
       .eq("id", orderId)
       .maybeSingle();
 
     if (orderError) return json({ error: orderError.message }, 400);
     if (!order) return json({ error: "Order not found." }, 404);
 
-    // Never re-assign an order that already has a driver unless explicitly forced.
-    if (order.assigned_driver_id && !body?.force) {
+    // If order already has a confirmed driver (status in-transit or delivered) and not forced, skip.
+    if (order.assigned_driver_id && ["in-transit", "delivered"].includes(order.status) && !body?.force) {
       return json({
         skipped: true,
-        reason: "Order already has an assigned driver.",
+        reason: "Order is already actively in-transit or delivered.",
         driver_id: order.assigned_driver_id,
       });
     }
 
-    // 2. Resolve pickup coordinates (body > order metadata > none).
+    // 2. Resolve excluded driver IDs (from request body or order metadata)
+    const existingMeta = (order.metadata && typeof order.metadata === "object" ? order.metadata : {}) as Record<string, any>;
+    const previousDeclined: string[] = Array.isArray(existingMeta.declined_drivers) ? existingMeta.declined_drivers : [];
+    const requestExcluded: string[] = Array.isArray(body?.exclude_driver_ids) ? body.exclude_driver_ids : [];
+    const excludeSet = new Set([...previousDeclined, ...requestExcluded]);
+
+    // 3. Resolve pickup coordinates
     const pickup = extractPickup(body?.pickup) ?? extractPickup(order.metadata);
     const staleBefore = new Date(Date.now() - stalenessMinutes * 60_000).toISOString();
 
-    // 3. Find candidate drivers: role = driver with a recent location ping.
-    const [rolesRes, locationsRes, activeJobsRes] = await Promise.all([
+    // 4. Fetch all candidate drivers with roles, profiles, locations, and active job counts
+    const [rolesRes, locationsRes, profilesRes, activeJobsRes] = await Promise.all([
       supabase.from("user_roles").select("user_id").eq("role", "driver"),
       supabase
         .from("driver_locations")
@@ -107,27 +117,32 @@ Deno.serve(async (req) => {
         .gte("updated_at", staleBefore)
         .order("updated_at", { ascending: false }),
       supabase
+        .from("profiles")
+        .select("user_id, full_name, phone, driver_rating, push_token"),
+      supabase
         .from("delivery_jobs")
-        .select("driver_id")
-        .in("status", ["accepted", "assigned", "picked_up", "in_transit", "in-transit"]),
+        .select("driver_id, status")
+        .in("status", ["accepted", "assigned", "picked_up", "in_transit", "in-transit", "awaiting_driver"]),
     ]);
 
-    if (rolesRes.error || locationsRes.error || activeJobsRes.error) {
-      const first = rolesRes.error || locationsRes.error || activeJobsRes.error;
-      return json({ error: first?.message ?? "Failed to load drivers." }, 400);
+    if (rolesRes.error) return json({ error: rolesRes.error.message }, 400);
+
+    const driverRoleIds = new Set((rolesRes.data ?? []).map((r) => r.user_id));
+    const profileMap = new Map((profilesRes.data ?? []).map((p) => [p.user_id, p]));
+
+    // Count active jobs per driver
+    const activeJobsCount = new Map<string, number>();
+    for (const job of activeJobsRes.data ?? []) {
+      if (job.driver_id) {
+        activeJobsCount.set(job.driver_id, (activeJobsCount.get(job.driver_id) || 0) + 1);
+      }
     }
 
-    const driverIds = new Set((rolesRes.data ?? []).map((r) => r.user_id));
-    const busyDrivers = new Set((activeJobsRes.data ?? []).map((j) => j.driver_id));
-
-    // Latest location per driver.
-    const latestLocation = new Map<string, { lat: number; lng: number; updated_at: string }>();
+    // Map latest location per driver
+    const latestLocations = new Map<string, { lat: number; lng: number; updated_at: string }>();
     for (const loc of locationsRes.data ?? []) {
-      if (!driverIds.has(loc.driver_id)) continue;
-      if (busyDrivers.has(loc.driver_id)) continue;
-      if (loc.driver_id === order.vendor_id || loc.driver_id === order.buyer_id) continue;
-      if (!latestLocation.has(loc.driver_id)) {
-        latestLocation.set(loc.driver_id, {
+      if (!latestLocations.has(loc.driver_id)) {
+        latestLocations.set(loc.driver_id, {
           lat: Number(loc.latitude),
           lng: Number(loc.longitude),
           updated_at: loc.updated_at,
@@ -135,85 +150,158 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (latestLocation.size === 0) {
-      return json({
-        skipped: true,
-        reason: "No available drivers with a recent location. Order stays open for manual assignment.",
+    // 5. Build candidate list with availability markers
+    interface Candidate {
+      driver_id: string;
+      profile?: any;
+      has_location: boolean;
+      distance_km: number | null;
+      active_jobs: number;
+      rating: number;
+      last_active: string;
+      composite_score: number; // lower = better
+    }
+
+    const candidates: Candidate[] = [];
+
+    for (const dId of driverRoleIds) {
+      if (excludeSet.has(dId)) continue;
+      if (dId === order.vendor_id || dId === order.buyer_id) continue;
+
+      const loc = latestLocations.get(dId);
+      const profile = profileMap.get(dId);
+      const rating = Number(profile?.driver_rating ?? 5.0);
+      const activeJobs = activeJobsCount.get(dId) || 0;
+      const lastActive = loc?.updated_at || profile?.updated_at || "";
+
+      let dist: number | null = null;
+      if (pickup && loc) {
+        dist = distanceKm(pickup, loc);
+      }
+
+      // Compute Availability Composite Score:
+      // - Distance: 1 km = 1 point (or 15 pts if no GPS)
+      // - Workload penalty: +8 points per active job
+      // - Rating reward: -2 points per star above 3.0
+      const distScore = dist != null ? dist : 15;
+      const workloadScore = activeJobs * 8;
+      const ratingScore = (rating - 3) * 2;
+      const compositeScore = distScore + workloadScore - ratingScore;
+
+      candidates.push({
+        driver_id: dId,
+        profile,
+        has_location: Boolean(loc),
+        distance_km: dist,
+        active_jobs: activeJobs,
+        rating,
+        last_active: lastActive,
+        composite_score: compositeScore,
       });
     }
 
-    // 4. Rank drivers: by distance to pickup when coordinates exist, else by recency.
-    const ranked = [...latestLocation.entries()]
-      .map(([driver_id, loc]) => ({
-        driver_id,
-        ...loc,
-        distance_km: pickup ? distanceKm(pickup, loc) : null,
-      }))
-      .sort((a, b) => {
-        if (a.distance_km != null && b.distance_km != null) return a.distance_km - b.distance_km;
-        return b.updated_at.localeCompare(a.updated_at);
-      });
+    // Sort by composite score ascending (most available first)
+    candidates.sort((a, b) => a.composite_score - b.composite_score);
 
-    const eligible = pickup ? ranked.filter((d) => (d.distance_km ?? Infinity) <= radiusKm) : ranked;
-    const chosen = eligible[0] ?? null;
-
-    if (!chosen) {
+    if (candidates.length === 0) {
       return json({
         skipped: true,
-        reason: `No available driver within ${radiusKm} km of the pickup point.`,
-        nearest_driver_km: ranked[0]?.distance_km ?? null,
+        reason: "No eligible drivers available at this moment. Delivery open in public pool.",
+        excluded_count: excludeSet.size,
       });
     }
 
-    // 5. Assign the driver to the order and its delivery job.
-    const [orderUpdate, jobUpdate] = await Promise.all([
-      supabase
-        .from("orders")
-        .update({ assigned_driver_id: chosen.driver_id, status: "driver_assigned", updated_at: new Date().toISOString() })
-        .eq("id", order.id)
-        .select("id")
-        .single(),
-      supabase
+    // Choose the top candidate
+    const chosen = candidates[0];
+    const now = new Date();
+    const deadline = new Date(now.getTime() + timeoutSeconds * 1000);
+    const deadlineIso = deadline.toISOString();
+
+    const payoutAmount = Number(body?.payout_amount || 1500);
+
+    // 6. Ensure delivery_jobs record exists and update with SLA deadline & claim token
+    const claimToken = `claim_${order.id}_${chosen.driver_id}_${Date.now()}`;
+    const updatedMeta = {
+      ...existingMeta,
+      current_offer: {
+        driver_id: chosen.driver_id,
+        offered_at: now.toISOString(),
+        deadline: deadlineIso,
+        timeout_seconds: timeoutSeconds,
+      },
+      declined_drivers: Array.from(excludeSet),
+    };
+
+    // Update order
+    const { error: orderUpErr } = await supabase
+      .from("orders")
+      .update({
+        assigned_driver_id: chosen.driver_id,
+        driver_assignment_deadline: deadlineIso,
+        status: "driver_assigned", // offered / assigned with confirmation window
+        metadata: updatedMeta,
+        updated_at: now.toISOString(),
+      })
+      .eq("id", order.id);
+
+    if (orderUpErr) {
+      return json({ error: `Failed to update order: ${orderUpErr.message}` }, 400);
+    }
+
+    // Check or upsert delivery_job
+    const { data: existingJob } = await supabase
+      .from("delivery_jobs")
+      .select("id")
+      .eq("order_id", order.id)
+      .maybeSingle();
+
+    if (existingJob) {
+      await supabase
         .from("delivery_jobs")
-        .update({ driver_id: chosen.driver_id, status: "assigned", updated_at: new Date().toISOString() })
-        .eq("order_id", order.id)
-        .select("id")
-        .single(),
-    ]);
-
-    if (orderUpdate.error || jobUpdate.error) {
-      const first = orderUpdate.error || jobUpdate.error;
-      return json({ error: first?.message ?? "Failed to assign driver." }, 400);
+        .update({
+          driver_id: chosen.driver_id,
+          status: "awaiting_driver",
+          sla_deadline: deadlineIso,
+          claim_token: claimToken,
+          payout_amount: payoutAmount,
+          pickup_address: body?.pickup_address || "Vendor Location",
+          dropoff_address: order.delivery_address || "Customer Address",
+          updated_at: now.toISOString(),
+        })
+        .eq("id", existingJob.id);
+    } else {
+      await supabase
+        .from("delivery_jobs")
+        .insert({
+          order_id: order.id,
+          driver_id: chosen.driver_id,
+          status: "awaiting_driver",
+          sla_deadline: deadlineIso,
+          claim_token: claimToken,
+          payout_amount: payoutAmount,
+          pickup_address: body?.pickup_address || "Vendor Location",
+          dropoff_address: order.delivery_address || "Customer Address",
+        });
     }
 
-    // 6. Notify in-app and via push (best-effort).
-    const orderLabel = order.order_number ? `#${order.order_number}` : "";
+    // 7. Send In-App Actionable Notification with direct Accept Link
+    const orderLabel = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
     await supabase.from("notifications").insert([
       {
         user_id: chosen.driver_id,
-        type: "delivery_assigned",
-        title: "New delivery near you",
-        message: `You were assigned order ${orderLabel}. Pick it up and deliver on time.`,
-        link: "/driver/active",
-      },
-      {
-        user_id: order.buyer_id,
-        type: "order_driver_assigned",
-        title: "Driver assigned",
-        message: `A driver is heading to pick up your order ${orderLabel}.`,
-        link: `/orders/${order.id}`,
+        type: "delivery_offer",
+        title: `🚨 New Delivery Offer: ₦${payoutAmount.toLocaleString("en-NG")}`,
+        message: `Order ${orderLabel} assigned to you based on your availability. Accept within ${timeoutSeconds}s before it passes to the next driver.`,
+        link: `/driver?accept=${order.id}&deadline=${encodeURIComponent(deadlineIso)}`,
       },
     ]);
 
+    // 8. Send OneSignal Push Notification with interactive Action Buttons
     let pushSent = false;
-    if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("push_token")
-        .eq("user_id", chosen.driver_id)
-        .maybeSingle();
-      if (profile?.push_token) {
-        const res = await fetch("https://onesignal.com/api/v1/notifications", {
+    const driverPushToken = chosen.profile?.push_token;
+    if (ONESIGNAL_APP_ID && ONESIGNAL_REST_API_KEY && driverPushToken) {
+      try {
+        const pushRes = await fetch("https://onesignal.com/api/v1/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -221,12 +309,31 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             app_id: ONESIGNAL_APP_ID,
-            include_subscription_ids: [profile.push_token],
-            headings: { en: "CarlyFresh" },
-            contents: { en: `New delivery assigned ${orderLabel}. Open your driver app for pickup details.` },
+            include_subscription_ids: [driverPushToken],
+            headings: { en: `🚚 New Delivery Offer: ₦${payoutAmount.toLocaleString("en-NG")}` },
+            contents: {
+              en: `Order ${orderLabel} waiting for pickup. Tap to Accept within ${timeoutSeconds}s!`,
+            },
+            url: `https://carlyfresh.com/driver?accept=${order.id}`,
+            data: {
+              type: "delivery_offer",
+              order_id: order.id,
+              payout: payoutAmount,
+              deadline: deadlineIso,
+            },
+            web_buttons: [
+              { id: "accept", text: "✅ Accept Delivery", url: `https://carlyfresh.com/driver?accept=${order.id}` },
+              { id: "decline", text: "❌ Decline", url: `https://carlyfresh.com/driver?decline=${order.id}` },
+            ],
+            buttons: [
+              { id: "accept", text: "✅ Accept Delivery" },
+              { id: "decline", text: "❌ Decline" },
+            ],
           }),
         });
-        pushSent = res.ok;
+        pushSent = pushRes.ok;
+      } catch (pushErr) {
+        console.error("[dispatch-driver-proximity] Push error:", pushErr);
       }
     }
 
@@ -234,9 +341,15 @@ Deno.serve(async (req) => {
       ok: true,
       order_id: order.id,
       driver_id: chosen.driver_id,
+      payout_amount: payoutAmount,
       distance_km: chosen.distance_km,
-      pickup_coordinates_used: Boolean(pickup),
+      rating: chosen.rating,
+      active_jobs: chosen.active_jobs,
+      composite_score: chosen.composite_score,
+      timeout_seconds: timeoutSeconds,
+      deadline: deadlineIso,
       push_sent: pushSent,
+      remaining_candidates: candidates.length - 1,
     });
   } catch (error) {
     console.error("[dispatch-driver-proximity]", error);

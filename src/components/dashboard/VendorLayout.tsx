@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Package, ShoppingCart, Wallet, LogOut, Star, MessageSquare } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
+import NotificationPopover from "@/components/notifications/NotificationPopover";
 
 const navItems = [
   { title: "Overview", url: "/vendor", icon: LayoutDashboard },
@@ -69,6 +70,7 @@ export default function VendorLayout() {
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-background/95 backdrop-blur-sm px-4 md:px-6">
             <SidebarTrigger />
             <div className="flex-1" />
+            <NotificationPopover />
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-xs font-semibold text-primary font-body">VD</span>
             </div>

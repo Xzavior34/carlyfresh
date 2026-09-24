@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Package,
@@ -145,10 +145,33 @@ const clearPrepDeadline = (orderId: string) => {
 export default function VendorOrders() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<DetailedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Handle push notification deep links (?open=ID&accept=true)
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    const autoAccept = searchParams.get("accept") === "true";
+    const autoDecline = searchParams.get("decline") === "true";
+
+    if (openId && orders.length > 0) {
+      const target = orders.find((o) => o.id === openId);
+      if (target) {
+        setExpandedRow(openId);
+        if (autoAccept && (target.status === "pending" || target.status === "confirmed")) {
+          handleAcceptOrder(target);
+          setSearchParams({}, { replace: true });
+        } else if (autoDecline) {
+          setDeclineOrder(target);
+          setShowDeclineModal(true);
+          setSearchParams({}, { replace: true });
+        }
+      }
+    }
+  }, [searchParams, orders]);
 
   // Preparation countdown timers (orderId -> remaining seconds)
   const [prepTimers, setPrepTimers] = useState<Record<string, number>>({});
