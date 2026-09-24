@@ -40,6 +40,7 @@ interface Payload {
 
 const APP_URL = Deno.env.get("APP_URL") ?? "https://carlyfresh.com";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? Deno.env.get("RESEND_FROM") ?? "CarlyFresh <orders@carlyfresh.com>";
 
 function getEmailWrapper(title: string, contentHtml: string): string {
   return `<!DOCTYPE html>
@@ -549,7 +550,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "CarlyFresh <orders@carlyfresh.com>",
+        from: FROM_EMAIL,
         to: recipients,
         subject,
         html,

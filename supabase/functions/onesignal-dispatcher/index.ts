@@ -50,6 +50,16 @@ Deno.serve(async (req) => {
         { id: "accept_order", text: "✅ Accept Order" },
         { id: "decline_order", text: "❌ Decline" },
       ];
+    } else if (status === "preparing") {
+      targetUserId = record.buyer_id ?? record.customer_id;
+      pushTitle = `🥦 Produce Being Prepared`;
+      pushMessage = `The farm has accepted order ${orderNum} and is harvesting/packaging your items.`;
+      actionUrl = `https://carlyfresh.com/orders/${record.id}`;
+    } else if (status === "packaged" || status === "ready_for_pickup") {
+      targetUserId = record.buyer_id ?? record.customer_id;
+      pushTitle = `📦 Order Ready & Packaged`;
+      pushMessage = `Order ${orderNum} is freshly packaged and ready. Finding nearest driver!`;
+      actionUrl = `https://carlyfresh.com/orders/${record.id}`;
     } else if (status === "awaiting_driver" || status === "driver_assigned") {
       // If it's sent to the driver for acceptance
       if (record.assigned_driver_id && record.status === "awaiting_driver") {
@@ -96,21 +106,13 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     // Query profiles to get push_token
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("push_token")
       .eq("user_id", targetUserId)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile?.push_token) {
-      console.log(`No push_token for user_id ${targetUserId}`);
-      return new Response(
-        JSON.stringify({ skipped: true, reason: "Target user has no push token registered" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const pushToken = profile.push_token;
+    const pushToken = profile?.push_token;
 
     if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
       return new Response(
@@ -121,7 +123,7 @@ Deno.serve(async (req) => {
 
     const payload: any = {
       app_id: ONESIGNAL_APP_ID,
-      include_subscription_ids: [pushToken],
+      target_channel: "push",
       headings: { en: pushTitle },
       contents: { en: pushMessage },
       url: actionUrl,
@@ -130,6 +132,14 @@ Deno.serve(async (req) => {
         status: status,
       },
     };
+
+    if (pushToken) {
+      payload.include_subscription_ids = [pushToken];
+    } else {
+      payload.include_aliases = {
+        external_id: [targetUserId],
+      };
+    }
 
     if (webButtons.length > 0) payload.web_buttons = webButtons;
     if (buttons.length > 0) payload.buttons = buttons;
