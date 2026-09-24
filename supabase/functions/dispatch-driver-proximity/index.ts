@@ -200,8 +200,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Sort by composite score ascending (most available first)
-    candidates.sort((a, b) => a.composite_score - b.composite_score);
+    // Sort primarily by nearest location distance (km), then by workload & rating
+    candidates.sort((a, b) => {
+      // 1. If both have GPS distance, closest driver to pickup location is always ranked first
+      if (a.distance_km != null && b.distance_km != null) {
+        if (Math.abs(a.distance_km - b.distance_km) > 0.3) {
+          return a.distance_km - b.distance_km;
+        }
+      }
+      // 2. Proximity GPS data takes precedence over unlocated drivers
+      if (a.distance_km != null && b.distance_km == null) return -1;
+      if (b.distance_km != null && a.distance_km == null) return 1;
+
+      // 3. Composite score for workload, rating, and recency
+      return a.composite_score - b.composite_score;
+    });
 
     if (candidates.length === 0) {
       return json({
