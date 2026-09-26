@@ -1,3 +1,4 @@
+- [ ] Fix login "Failed to fetch" in preview
 - [ ] Connect WhatsApp Business and wire vendor order messaging
 - [ ] Add durable vendor preparation deadlines and idempotent action tracking
 - [ ] Implement server-side preparation reminders and WhatsApp action handling
