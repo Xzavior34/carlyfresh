@@ -1,3 +1,4 @@
+- [ ] Reduce repetitive SLA database checks to the agreed 15-minute window without deleting business records
 - [ ] Fix login "Failed to fetch" in preview
 - [ ] Connect WhatsApp Business and wire vendor order messaging
 - [ ] Add durable vendor preparation deadlines and idempotent action tracking
