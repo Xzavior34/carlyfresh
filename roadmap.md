@@ -1,4 +1,6 @@
-- [ ] Reduce repetitive SLA database checks to the agreed 15-minute window without deleting business records
+- [x] Add targeted indexes for pending supplier and expired driver SLA lookups without deleting records
+- [ ] Set the live SLA schedule to every 15 minutes in Lovable Cloud Jobs
+- [ ] Choose a retention period before pruning scheduled-job execution history
 - [ ] Fix login "Failed to fetch" in preview
 - [ ] Connect WhatsApp Business and wire vendor order messaging
 - [ ] Add durable vendor preparation deadlines and idempotent action tracking
