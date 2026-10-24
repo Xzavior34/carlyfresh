@@ -258,6 +258,9 @@ export default function VendorOrders() {
   };
 
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  // Current vendor order ids — lets the broad delivery_jobs realtime feed be
+  // filtered client-side so unrelated platform-wide job updates don't refetch.
+  const vendorOrderIdsRef = useRef<Set<string>>(new Set());
 
   // ── Fetch orders and joined profiles/jobs ──────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -267,6 +270,9 @@ export default function VendorOrders() {
       .select("*")
       .eq("vendor_id", user.id)
       .order("created_at", { ascending: false });
+
+    if (rawOrders) vendorOrderIdsRef.current = new Set(rawOrders.map((o) => o.id));
+
 
     if (!rawOrders) {
       setLoading(false);
@@ -417,6 +423,16 @@ export default function VendorOrders() {
     fetchOrders();
     if (!user) return;
 
+    // Debounced refresh — bursts of realtime events coalesce into one refetch.
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const refreshSoon = () => {
+      if (refreshTimer) return;
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        fetchOrders();
+      }, 500);
+    };
+
     const channel = supabase
       .channel(`vendor-orders-live-${user.id}`)
       .on(
@@ -427,17 +443,25 @@ export default function VendorOrders() {
             const newOrd = payload.new as Order;
             toast.info(`🚨 New Order #${newOrd.order_number || newOrd.id.slice(0, 8)} received! Accept or Reject.`);
           }
-          fetchOrders();
+          refreshSoon();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_jobs" },
-        () => fetchOrders()
+        (payload) => {
+          // delivery_jobs has no vendor column — only react when the job belongs
+          // to one of this vendor's known orders.
+          const orderId =
+            (payload.new as { order_id?: string } | null)?.order_id ??
+            (payload.old as { order_id?: string } | null)?.order_id;
+          if (orderId && vendorOrderIdsRef.current.has(orderId)) refreshSoon();
+        }
       );
 
     channel.subscribe();
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [user, fetchOrders]);
