@@ -138,19 +138,20 @@ const Shop = () => {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    // Single products fetch — featured / buyers-love lists are derived from the
+    // same rows instead of issuing two extra duplicate queries.
     Promise.all([
       supabase.from("products").select("*").eq("in_stock", true).order("created_at", { ascending: false }),
-      supabase.from("products").select("*").eq("is_featured", true).eq("in_stock", true).order("created_at", { ascending: false }).limit(8),
-      supabase.from("products").select("*").eq("is_buyer_favourite", true).eq("in_stock", true).order("created_at", { ascending: false }).limit(8),
       supabase.from("baskets" as any).select("*, basket_items(*, product:products(*))").order("created_at", { ascending: false }).limit(6),
-    ]).then(([allRes, featRes, loveRes, basketsRes]) => {
+    ]).then(([allRes, basketsRes]) => {
       if (!mounted) return;
       if (allRes.data) {
-        setProducts(allRes.data as Product[]);
-        setCategories(["All", ...Array.from(new Set(allRes.data.map((p: any) => p.category).filter(Boolean)))]);
+        const all = allRes.data as Product[];
+        setProducts(all);
+        setFeatured(all.filter((p) => p.is_featured).slice(0, 8));
+        setBuyersLove(all.filter((p) => p.is_buyer_favourite).slice(0, 8));
+        setCategories(["All", ...Array.from(new Set(all.map((p: any) => p.category).filter(Boolean)))]);
       }
-      if (featRes.data) setFeatured(featRes.data as Product[]);
-      if (loveRes.data) setBuyersLove(loveRes.data as Product[]);
       if (basketsRes.data) setBaskets(basketsRes.data as any[]);
       setLoading(false);
     });

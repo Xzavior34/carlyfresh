@@ -145,7 +145,7 @@ export default function IncomingOfferModal() {
         .from("orders")
         .select("id, order_number, total_amount, items, supplier_response_deadline, status, delivery_address")
         .eq("vendor_id", user.id)
-        .in("status", ["pending", "awaiting_supplier"])
+        .in("status", ["pending"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

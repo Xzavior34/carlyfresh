@@ -193,6 +193,7 @@ export default function VendorOrders() {
   // Decline confirmation modal
   const [declineOrder, setDeclineOrder] = useState<DetailedOrder | null>(null);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineLoading, setDeclineLoading] = useState(false);
 
   // Preparation Checklist & Helper state
   const [checklistOrder, setChecklistOrder] = useState<DetailedOrder | null>(null);
@@ -258,6 +259,9 @@ export default function VendorOrders() {
   };
 
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  // Current vendor order ids — lets the broad delivery_jobs realtime feed be
+  // filtered client-side so unrelated platform-wide job updates don't refetch.
+  const vendorOrderIdsRef = useRef<Set<string>>(new Set());
 
   // ── Fetch orders and joined profiles/jobs ──────────────────────────────────
   const fetchOrders = useCallback(async () => {
@@ -267,6 +271,9 @@ export default function VendorOrders() {
       .select("*")
       .eq("vendor_id", user.id)
       .order("created_at", { ascending: false });
+
+    if (rawOrders) vendorOrderIdsRef.current = new Set(rawOrders.map((o) => o.id));
+
 
     if (!rawOrders) {
       setLoading(false);
@@ -417,6 +424,16 @@ export default function VendorOrders() {
     fetchOrders();
     if (!user) return;
 
+    // Debounced refresh — bursts of realtime events coalesce into one refetch.
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const refreshSoon = () => {
+      if (refreshTimer) return;
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        fetchOrders();
+      }, 500);
+    };
+
     const channel = supabase
       .channel(`vendor-orders-live-${user.id}`)
       .on(
@@ -427,17 +444,25 @@ export default function VendorOrders() {
             const newOrd = payload.new as Order;
             toast.info(`🚨 New Order #${newOrd.order_number || newOrd.id.slice(0, 8)} received! Accept or Reject.`);
           }
-          fetchOrders();
+          refreshSoon();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "delivery_jobs" },
-        () => fetchOrders()
+        (payload) => {
+          // delivery_jobs has no vendor column — only react when the job belongs
+          // to one of this vendor's known orders.
+          const orderId =
+            (payload.new as { order_id?: string } | null)?.order_id ??
+            (payload.old as { order_id?: string } | null)?.order_id;
+          if (orderId && vendorOrderIdsRef.current.has(orderId)) refreshSoon();
+        }
       );
 
     channel.subscribe();
     return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [user, fetchOrders]);
@@ -472,6 +497,7 @@ export default function VendorOrders() {
 
   const handleDeclineOrder = async () => {
     if (!declineOrder) return;
+    setDeclineLoading(true);
     try {
       const { error } = await supabase
         .from("orders")
@@ -487,6 +513,8 @@ export default function VendorOrders() {
       fetchOrders();
     } catch (err: any) {
       toast.error(err.message || "Failed to decline order");
+    } finally {
+      setDeclineLoading(false);
     }
   };
 
@@ -689,7 +717,7 @@ export default function VendorOrders() {
                   <div className="p-4 sm:p-5 bg-card/60 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Accept / Reject if pending */}
-                      {(order.status === "pending" || order.status === "confirmed" || order.status === "awaiting_supplier") && (
+                      {(order.status === "pending" || order.status === "confirmed") && (
                         <>
                           <Button
                             size="sm"
@@ -1119,7 +1147,7 @@ export default function VendorOrders() {
               variant="destructive"
               className="font-body"
               disabled={declineLoading}
-              onClick={handleConfirmDecline}
+              onClick={handleDeclineOrder}
             >
               {declineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Decline"}
             </Button>
