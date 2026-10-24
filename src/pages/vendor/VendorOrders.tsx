@@ -193,6 +193,7 @@ export default function VendorOrders() {
   // Decline confirmation modal
   const [declineOrder, setDeclineOrder] = useState<DetailedOrder | null>(null);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineLoading, setDeclineLoading] = useState(false);
 
   // Preparation Checklist & Helper state
   const [checklistOrder, setChecklistOrder] = useState<DetailedOrder | null>(null);
@@ -496,6 +497,7 @@ export default function VendorOrders() {
 
   const handleDeclineOrder = async () => {
     if (!declineOrder) return;
+    setDeclineLoading(true);
     try {
       const { error } = await supabase
         .from("orders")
@@ -511,6 +513,8 @@ export default function VendorOrders() {
       fetchOrders();
     } catch (err: any) {
       toast.error(err.message || "Failed to decline order");
+    } finally {
+      setDeclineLoading(false);
     }
   };
 
@@ -713,7 +717,7 @@ export default function VendorOrders() {
                   <div className="p-4 sm:p-5 bg-card/60 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Accept / Reject if pending */}
-                      {(order.status === "pending" || order.status === "confirmed" || order.status === "awaiting_supplier") && (
+                      {(order.status === "pending" || order.status === "confirmed") && (
                         <>
                           <Button
                             size="sm"
@@ -1143,7 +1147,7 @@ export default function VendorOrders() {
               variant="destructive"
               className="font-body"
               disabled={declineLoading}
-              onClick={handleConfirmDecline}
+              onClick={handleDeclineOrder}
             >
               {declineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Decline"}
             </Button>
