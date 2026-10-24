@@ -19,13 +19,13 @@ const Footer = () => {
               52 Ikwere Road, Port Harcourt
             </p>
             <a
-              href="https://instagram.com/carlyfresh5"
+              href="https://www.instagram.com/carlyfresh01"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-body text-sm font-medium text-primary transition-colors hover:bg-primary/20"
             >
               <Instagram size={18} />
-              @Carlyfresh5
+              @Carlyfresh01
             </a>
           </div>
           <div>

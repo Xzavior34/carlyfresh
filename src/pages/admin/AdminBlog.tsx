@@ -131,7 +131,7 @@ export default function AdminBlog() {
                 excerpt: payload.excerpt,
                 image_url: payload.cover_image_url,
                 post_url: "https://carlyfresh.com/blog/" + payload.slug,
-                instagram_target: "https://www.instagram.com/carlyfresh5/",
+                instagram_target: "https://www.instagram.com/carlyfresh01/",
               }),
             }).catch((e) => console.warn("Social webhook failed:", e));
             toast.success("📱 Instagram webhook sent");
